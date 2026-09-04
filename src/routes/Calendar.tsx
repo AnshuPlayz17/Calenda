@@ -18,6 +18,7 @@ import { AgendaView } from '@/features/calendar/AgendaView'
 import { EventDialog } from '@/features/events/EventDialog'
 import { DayDialog } from '@/features/calendar/DayDialog'
 import { Button } from '@/components/ui/Button'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CategoryDot } from '@/components/ui/CategoryDot'
 import { cn } from '@/lib/cn'
@@ -84,7 +85,7 @@ export function CalendarPage() {
       }
     : null
 
-  const { data: events = [], isLoading } = useEvents(filters)
+  const { data: events = [], isLoading, isError, refetch, isFetching } = useEvents(filters)
   const { data: assignments = [] } = useUpcomingAssignments(current?.id, 200)
 
   // Assignments are shown on the calendar without being stored twice --
@@ -319,6 +320,8 @@ export function CalendarPage() {
         <div className="flex flex-col gap-2">
           <Skeleton className="h-[420px] w-full rounded-xl" />
         </div>
+      ) : isError ? (
+        <ErrorState what="your calendar" retrying={isFetching} onRetry={() => void refetch()} />
       ) : view === 'month' ? (
         <MonthView anchor={anchor} events={items} onSelect={openEdit} onSelectDay={openDay} />
       ) : view === 'week' ? (

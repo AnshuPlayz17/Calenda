@@ -4,6 +4,7 @@ import { Lightbulb, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { categoryColor } from '@/components/ui/CategoryDot'
@@ -18,7 +19,8 @@ import { agendaLabel } from '@/lib/datetime'
  */
 export function SuggestionsPage() {
   const { current } = useSchoolYear()
-  const { data: suggestions = [], isLoading } = useMySuggestions(current?.id)
+  const { data: suggestions = [], isLoading, isError, refetch, isFetching } =
+    useMySuggestions(current?.id)
   const [dialogOpen, setDialogOpen] = useState(false)
   const reduce = useReducedMotion()
 
@@ -48,6 +50,8 @@ export function SuggestionsPage() {
           <Skeleton className="h-16 w-full rounded-xl" />
           <Skeleton className="h-16 w-full rounded-xl" />
         </div>
+      ) : isError ? (
+        <ErrorState what="your suggestions" retrying={isFetching} onRetry={() => void refetch()} />
       ) : suggestions.length === 0 ? (
         <Card>
           <EmptyState

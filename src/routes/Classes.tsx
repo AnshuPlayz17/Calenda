@@ -5,6 +5,7 @@ import { Archive, GraduationCap, Plus, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ClassDialog } from '@/features/classes/ClassDialog'
 import { useArchiveClass, useClasses } from '@/features/classes/queries'
@@ -15,7 +16,8 @@ import { cn } from '@/lib/cn'
 export function ClassesPage() {
   const { current } = useSchoolYear()
   const [showArchived, setShowArchived] = useState(false)
-  const { data: classes = [], isLoading } = useClasses(current?.id, showArchived)
+  const { data: classes = [], isLoading, isError, refetch, isFetching } =
+    useClasses(current?.id, showArchived)
   const archive = useArchiveClass()
   const reduce = useReducedMotion()
 
@@ -56,6 +58,8 @@ export function ClassesPage() {
           <Skeleton className="h-28 rounded-xl" />
           <Skeleton className="h-28 rounded-xl" />
         </div>
+      ) : isError ? (
+        <ErrorState what="your classes" retrying={isFetching} onRetry={() => void refetch()} />
       ) : visible.length === 0 ? (
         <Card>
           <EmptyState

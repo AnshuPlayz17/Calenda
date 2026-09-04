@@ -30,6 +30,17 @@ function offsetLabel(minutes: number): string {
   return OFFSETS.find((o) => o.minutes === minutes)?.label ?? `${minutes} min`
 }
 
+/** ISO weekdays, Monday first, matching what the scheduler stores. */
+const QUIET_DAYS: Array<{ iso: number; label: string }> = [
+  { iso: 1, label: 'Mon' },
+  { iso: 2, label: 'Tue' },
+  { iso: 3, label: 'Wed' },
+  { iso: 4, label: 'Thu' },
+  { iso: 5, label: 'Fri' },
+  { iso: 6, label: 'Sat' },
+  { iso: 7, label: 'Sun' },
+]
+
 export function NotificationsPage() {
   const { data, isLoading } = useNotificationPreferences()
   const { data: categories = [] } = useCategories()
@@ -208,10 +219,59 @@ export function NotificationsPage() {
             {(prefs.quiet_start || prefs.quiet_end) && (
               <Button variant="ghost" size="sm"
                       onClick={() => void updatePrefs.mutateAsync({
-                        quiet_start: null, quiet_end: null,
+                        quiet_start: null, quiet_end: null, quiet_days: [],
                       })}>
                 Clear
               </Button>
+            )}
+
+            {(prefs.quiet_start || prefs.quiet_end) && (
+              <div className="w-full">
+                <p className="label-caps mb-2">On these days</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUIET_DAYS.map(({ iso, label }) => {
+                    // An empty list means every day, so every chip reads as on.
+                    const everyDay = (prefs.quiet_days ?? []).length === 0
+                    const on = everyDay || (prefs.quiet_days ?? []).includes(iso)
+                    return (
+                      <button
+                        key={iso}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => {
+                          const current = everyDay
+                            ? QUIET_DAYS.map((d) => d.iso)
+                            : [...(prefs.quiet_days ?? [])]
+                          const next = on
+                            ? current.filter((d) => d !== iso)
+                            : [...current, iso].sort((a, b) => a - b)
+                          // Turning the last day off would mean "every day"
+                          // again, which is the opposite of what was asked, so
+                          // clearing the window entirely is the honest result.
+                          void updatePrefs.mutateAsync(
+                            next.length === 0
+                              ? { quiet_start: null, quiet_end: null, quiet_days: [] }
+                              : { quiet_days: next.length === 7 ? [] : next },
+                          )
+                        }}
+                        className={cn(
+                          'h-8 w-11 rounded-lg border text-[12.5px] transition-colors duration-150',
+                          on
+                            ? 'border-brand bg-brand-subtle font-medium text-brand'
+                            : 'border-border text-text-muted hover:border-border-strong hover:text-text',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-[12.5px] text-text-subtle">
+                  {(prefs.quiet_days ?? []).length === 0
+                    ? 'Every day.'
+                    : 'Other days are unaffected.'}
+                </p>
+              </div>
             )}
           </div>
         </Card>
@@ -304,10 +364,15 @@ function Switch({
       )}
       style={{ transitionTimingFunction: 'var(--ease-out)' }}
     >
+      {/* Anchored with an explicit left. Without one, an absolutely positioned
+          child falls back to its static position inside the button -- which a
+          button centres -- so the knob started 20px in and the translate pushed
+          it clean off the end of the track and out of the row. */}
       <span
         className={cn(
-          'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-          on ? 'translate-x-[18px]' : 'translate-x-0.5',
+          'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm',
+          'transition-transform duration-200',
+          on ? 'translate-x-4' : 'translate-x-0',
         )}
         style={{ transitionTimingFunction: 'var(--ease-out)' }}
       />

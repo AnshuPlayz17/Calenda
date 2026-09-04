@@ -7,6 +7,7 @@ import {
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { NoteEditor } from '@/features/notebook/NoteEditor'
 import { AssignmentDialog } from '@/features/assignments/AssignmentDialog'
@@ -127,7 +128,7 @@ export function ClassWorkspace() {
 // ----------------------------------------------------------------- notes --
 
 function NotesTab({ classId }: { classId: string }) {
-  const { data: pages = [], isLoading } = usePages(classId)
+  const { data: pages = [], isLoading, isError, refetch, isFetching } = usePages(classId)
   const createPage = useCreatePage(classId)
   const deletePage = useDeletePage()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -144,6 +145,7 @@ function NotesTab({ classId }: { classId: string }) {
   const selected = pages.find((p) => p.id === selectedId) ?? null
 
   if (isLoading) return <Skeleton className="h-64 w-full rounded-xl" />
+  if (isError) return <ErrorState what="these notes" retrying={isFetching} onRetry={() => void refetch()} />
 
   return (
     <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -224,12 +226,13 @@ const STATUS_LABEL: Record<Assignment['status'], string> = {
 }
 
 function AssignmentsTab({ classId }: { classId: string }) {
-  const { data: assignments = [], isLoading } = useAssignments(classId)
+  const { data: assignments = [], isLoading, isError, refetch, isFetching } = useAssignments(classId)
   const setStatus = useSetAssignmentStatus()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Assignment | null>(null)
 
   if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />
+  if (isError) return <ErrorState what="these assignments" retrying={isFetching} onRetry={() => void refetch()} />
 
   return (
     <div className="flex flex-col gap-3">
@@ -314,7 +317,7 @@ function AssignmentsTab({ classId }: { classId: string }) {
 // ----------------------------------------------------------------- tasks --
 
 function TasksTab({ classId }: { classId: string }) {
-  const { data: tasks = [], isLoading } = useTasks(classId)
+  const { data: tasks = [], isLoading, isError, refetch, isFetching } = useTasks(classId)
   const create = useCreateTask(classId)
   const toggle = useToggleTask()
   const remove = useDeleteTask()
@@ -329,6 +332,7 @@ function TasksTab({ classId }: { classId: string }) {
   }
 
   if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />
+  if (isError) return <ErrorState what="these tasks" retrying={isFetching} onRetry={() => void refetch()} />
 
   return (
     <div className="flex flex-col gap-3">
