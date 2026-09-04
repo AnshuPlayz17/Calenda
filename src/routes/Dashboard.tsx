@@ -115,172 +115,179 @@ export function Dashboard() {
       </motion.div>
 
       <div className="grid items-start gap-4 lg:grid-cols-3">
-        <motion.div {...rise(2)} className="lg:col-span-2">
-          <Card>
-            <CardHeader
-              title="Today"
-              action={
-                <Link to="/calendar"
-                      className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
-                  Calendar <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-              }
-            />
-            {isLoading ? (
-              <div className="flex flex-col gap-2 px-5 pb-5">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : todayEvents.length === 0 ? (
-              <EmptyState
-                icon={CalendarDays}
-                title="Nothing scheduled today"
-                description="A clear day. Anything you add will show up here."
-              />
-            ) : (
-              <ul className="flex flex-col gap-1.5 px-5 pb-5">
-                {todayEvents.map((e) => <EventRow key={e.id} event={e} />)}
-              </ul>
-            )}
-          </Card>
-        </motion.div>
-
-        <motion.div {...rise(3)}>
-          <Card>
-            <CardHeader title="Coming up" />
-            {isLoading ? (
-              <div className="flex flex-col gap-2 px-5 pb-5">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : upcoming.length === 0 ? (
-              <EmptyState
-                icon={Sparkles}
-                title="You're all caught up"
-                description="Nothing in the next two months."
-              />
-            ) : (
-              <ul className="flex flex-col gap-1.5 px-5 pb-5">
-                {upcoming.slice(0, 5).map((e) => <EventRow key={e.id} event={e} showDate />)}
-              </ul>
-            )}
-          </Card>
-        </motion.div>
-
-        <motion.div {...rise(4)}>
-          <Card>
-            <CardHeader
-              title="Due soon"
-              action={
-                <Link to="/classes"
-                      className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
-                  Classes <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-              }
-            />
-            {assignments.length === 0 ? (
-              <EmptyState
-                icon={ClipboardList}
-                title="Nothing due"
-                description="Deadlines you add to a class collect here automatically."
-              />
-            ) : (
-              <ul className="flex flex-col gap-1.5 px-5 pb-5">
-                {assignments.map((a) => (
-                  <li key={a.id}
-                      className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-medium text-text">
-                        {a.title}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[12px] text-text-muted">
-                        {a.className}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-[11.5px] tabular text-text-subtle">
-                      {a.due_at
-                        ? new Date(a.due_at).toLocaleDateString('en-CA', {
-                            month: 'short', day: 'numeric',
-                          })
-                        : '—'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </motion.div>
-
-        <motion.div {...rise(5)}>
-          <Card>
-            <CardHeader title="Classes" />
-            {classes.length === 0 ? (
-              <EmptyState
-                icon={GraduationCap}
-                title="No classes yet"
-                description="Add your first class to keep notes, assignments and deadlines together."
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <motion.div {...rise(2)}>
+            <Card>
+              <CardHeader
+                title="Today"
                 action={
-                  <Link to="/classes"
-                        className="text-[13px] text-brand no-underline hover:underline">
-                    Add a class
+                  <Link to="/calendar"
+                        className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
+                    Calendar <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>
                 }
               />
-            ) : (
-              <ul className="flex flex-col gap-1.5 px-5 pb-5">
-                {classes.slice(0, 5).map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      to={`/classes/${c.id}`}
-                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text">
-                        {c.name}
-                      </span>
-                      {c.course_code && (
-                        <span className="shrink-0 font-mono text-[11px] uppercase text-brand">
-                          {c.course_code}
+              {isLoading ? (
+                <div className="flex flex-col gap-2 px-5 pb-5">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : todayEvents.length === 0 ? (
+                <EmptyState
+                  icon={CalendarDays}
+                  title="Nothing scheduled today"
+                  description="A clear day. Anything you add will show up here."
+                  size="compact"
+                />
+              ) : (
+                <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                  {todayEvents.map((e) => <EventRow key={e.id} event={e} />)}
+                </ul>
+              )}
+            </Card>
+          </motion.div>
+          <div className="grid items-start gap-4 sm:grid-cols-2">
+            <motion.div {...rise(4)}>
+              <Card>
+                <CardHeader
+                  title="Due soon"
+                  action={
+                    <Link to="/classes"
+                          className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
+                      Classes <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  }
+                />
+                {assignments.length === 0 ? (
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="Nothing due"
+                    description="Deadlines you add to a class collect here automatically."
+                    size="compact"
+                  />
+                ) : (
+                  <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                    {assignments.map((a) => (
+                      <li key={a.id}
+                          className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5">
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-2 block text-[13.5px] font-medium leading-snug text-text">
+                            {a.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[12px] text-text-muted">
+                            {a.className}
+                          </span>
                         </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </motion.div>
+                        <span className="shrink-0 text-[11.5px] tabular text-text-subtle">
+                          {a.due_at
+                            ? new Date(a.due_at).toLocaleDateString('en-CA', {
+                                month: 'short', day: 'numeric',
+                              })
+                            : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </motion.div>
+            <motion.div {...rise(5)}>
+              <Card>
+                <CardHeader title="Classes" />
+                {classes.length === 0 ? (
+                  <EmptyState
+                    icon={GraduationCap}
+                    title="No classes yet"
+                    description="Add your first class to keep notes, assignments and deadlines together."
+                    action={
+                      <Link to="/classes"
+                            className="text-[13px] text-brand no-underline hover:underline">
+                        Add a class
+                      </Link>
+                    }
+                  />
+                ) : (
+                  <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                    {classes.slice(0, 5).map((c) => (
+                      <li key={c.id}>
+                        <Link
+                          to={`/classes/${c.id}`}
+                          className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text">
+                            {c.name}
+                          </span>
+                          {c.course_code && (
+                            <span className="shrink-0 font-mono text-[11px] uppercase text-brand">
+                              {c.course_code}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </motion.div>
+          </div>
+        </div>
 
-        <motion.div {...rise(6)}>
-          <Card>
-            <CardHeader title="Recent notes" />
-            {recentNotes.length === 0 ? (
-              <EmptyState
-                icon={NotebookPen}
-                title="Your notebook is empty"
-                description="Pages you write in a class notebook show up here."
-              />
-            ) : (
-              <ul className="flex flex-col gap-1.5 px-5 pb-5">
-                {recentNotes.map((p) => (
-                  <li key={p.id}>
-                    <Link
-                      to={`/classes/${p.class_id}`}
-                      className="block rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
-                    >
-                      <span className="block truncate text-[13.5px] font-medium text-text">
-                        {p.title || 'Untitled'}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[12px] text-text-muted">
-                        {p.className}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </motion.div>
+        <div className="flex flex-col gap-4">
+          <motion.div {...rise(3)}>
+            <Card>
+              <CardHeader title="Coming up" />
+              {isLoading ? (
+                <div className="flex flex-col gap-2 px-5 pb-5">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : upcoming.length === 0 ? (
+                <EmptyState
+                  icon={Sparkles}
+                  title="You're all caught up"
+                  description="Nothing in the next two months."
+                  size="compact"
+                />
+              ) : (
+                <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                  {upcoming.slice(0, 5).map((e) => <EventRow key={e.id} event={e} showDate />)}
+                </ul>
+              )}
+            </Card>
+          </motion.div>
+          <motion.div {...rise(6)}>
+            <Card>
+              <CardHeader title="Recent notes" />
+              {recentNotes.length === 0 ? (
+                <EmptyState
+                  icon={NotebookPen}
+                  title="Your notebook is empty"
+                  description="Pages you write in a class notebook show up here."
+                  size="compact"
+                />
+              ) : (
+                <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                  {recentNotes.map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        to={`/classes/${p.class_id}`}
+                        className="block rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+                      >
+                        <span className="block truncate text-[13.5px] font-medium text-text">
+                          {p.title || 'Untitled'}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[12px] text-text-muted">
+                          {p.className}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </motion.div>
+        </div>
       </div>
 
       <EventDialog open={dialogOpen} onClose={() => setDialogOpen(false)} event={null} />
@@ -298,7 +305,12 @@ function EventRow({ event, showDate }: { event: EventWithCategory; showDate?: bo
         style={{ background: categoryColor(event.category) }}
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium text-text">{event.title}</span>
+        {/* Two lines, not an ellipsis. In a third-width column "National Day
+            for Truth and Reconciliation" clipped to "National Day for Tru..."
+            which tells the reader nothing they did not already know. */}
+        <span className="line-clamp-2 block text-[13.5px] font-medium leading-snug text-text">
+          {event.title}
+        </span>
         {event.description && (
           <span className="mt-0.5 block truncate text-[12px] text-text-muted">
             {event.description}
