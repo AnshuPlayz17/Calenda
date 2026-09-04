@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import { CalendarPlus, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react'
 import {
@@ -6,7 +7,10 @@ import {
 } from '@/lib/datetime'
 import type { PlainDate } from '@/lib/events'
 import type { EventWithCategory } from '@/lib/types'
+import type { CalendarItem } from '@/features/assignments/toCalendarItem'
 import { useCategories, useEvents } from '@/features/events/queries'
+import { useUpcomingAssignments } from '@/features/classes/queries'
+import { mergeCalendarItems } from '@/features/assignments/toCalendarItem'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import { MonthView } from '@/features/calendar/MonthView'
 import { WeekView } from '@/features/calendar/WeekView'
@@ -29,6 +33,7 @@ export function CalendarPage() {
   const { current, loading: yearLoading } = useSchoolYear()
   const { data: categories = [] } = useCategories()
   const reduce = useReducedMotion()
+  const navigate = useNavigate()
 
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState<PlainDate>(todayPlain)
@@ -67,6 +72,15 @@ export function CalendarPage() {
     : null
 
   const { data: events = [], isLoading } = useEvents(filters)
+  const { data: assignments = [] } = useUpcomingAssignments(current?.id, 200)
+
+  // Assignments are shown on the calendar without being stored twice --
+  // they are derived from the assignment rows at read time.
+  const assignmentCategory = categories.find((c) => c.slug === 'assignment') ?? null
+  const items = useMemo(
+    () => mergeCalendarItems(events, assignments, assignmentCategory),
+    [events, assignments, assignmentCategory],
+  )
 
   function openNew(date?: PlainDate) {
     setEditing(null)
@@ -75,6 +89,13 @@ export function CalendarPage() {
   }
 
   function openEdit(e: EventWithCategory) {
+    // A derived assignment is not an event row, so the event editor cannot
+    // save it. Send the user to the class that owns it instead.
+    const item = e as CalendarItem
+    if (item.assignmentId) {
+      navigate('/classes')
+      return
+    }
     setDayOpen(null)
     setEditing(e)
     setDefaultDate(undefined)
@@ -261,16 +282,16 @@ export function CalendarPage() {
           <Skeleton className="h-[420px] w-full rounded-xl" />
         </div>
       ) : view === 'month' ? (
-        <MonthView anchor={anchor} events={events} onSelect={openEdit} onSelectDay={openDay} />
+        <MonthView anchor={anchor} events={items} onSelect={openEdit} onSelectDay={openDay} />
       ) : view === 'week' ? (
-        <WeekView anchor={anchor} events={events} onSelect={openEdit} />
+        <WeekView anchor={anchor} events={items} onSelect={openEdit} />
       ) : (
-        <AgendaView events={events} onSelect={openEdit} />
+        <AgendaView events={items} onSelect={openEdit} />
       )}
 
       <DayDialog
         date={dayOpen}
-        events={events}
+        events={items}
         onClose={() => setDayOpen(null)}
         onSelect={openEdit}
         onCreate={(d) => { setDayOpen(null); openNew(d) }}

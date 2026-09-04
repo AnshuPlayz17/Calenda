@@ -10,7 +10,9 @@ import { SignIn } from '@/routes/SignIn'
 import { AuthCallback } from '@/routes/AuthCallback'
 import { Dashboard } from '@/routes/Dashboard'
 import { NotFound } from '@/routes/NotFound'
-import { ClassesPage, NotificationsPage } from '@/routes/sections'
+import { NotificationsPage } from '@/routes/sections'
+import { ClassesPage } from '@/routes/Classes'
+import { ClassWorkspace } from '@/routes/ClassWorkspace'
 import { SettingsPage } from '@/routes/Settings'
 import { SuggestionsPage } from '@/routes/Suggestions'
 import { AdminPage } from '@/routes/Admin'
@@ -82,6 +84,7 @@ export function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="classes" element={<ClassesPage />} />
+                <Route path="classes/:classId" element={<ClassWorkspace />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="suggestions" element={<SuggestionsPage />} />
                 <Route path="settings" element={<SettingsPage />} />

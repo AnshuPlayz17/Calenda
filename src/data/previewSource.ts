@@ -6,7 +6,8 @@
  * says so, rather than pretending they are saved.
  */
 import type {
-  EventCategory, EventWithCategory, NewEventInput, SchoolYear,
+  Assignment, EventCategory, EventWithCategory, NewAssignmentInput, NewEventInput,
+  NotebookPage, SchoolClass, SchoolYear, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -94,6 +95,49 @@ function seed(): EventWithCategory[] {
 }
 
 const store: EventWithCategory[] = seed()
+
+// Class-side stores. Seeded with two classes so the preview shows a real
+// workspace rather than an empty shell.
+const classes: SchoolClass[] = []
+const pages: NotebookPage[] = []
+const assignments: Assignment[] = []
+const tasks: Task[] = []
+
+function assignmentFields(input: NewAssignmentInput) {
+  return {
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    due_at: previewDueInstant(input),
+    due_all_day: input.dueAllDay,
+    priority: input.priority,
+    status: input.status,
+    estimated_minutes: input.estimatedMinutes ?? null,
+    completed_at: input.status === 'completed' ? new Date().toISOString() : null,
+  }
+}
+
+/** An all-day deadline is the END of that day, not midnight at its start. */
+function previewDueInstant(input: NewAssignmentInput): string | null {
+  if (!input.dueDate) return null
+  const [y, m, d] = input.dueDate.split('-').map(Number)
+  if (!y || !m || !d) return null
+  if (input.dueAllDay) return new Date(y, m - 1, d, 23, 59).toISOString()
+  const [hh, mm] = (input.dueTime ?? '23:59').split(':').map(Number)
+  return new Date(y, m - 1, d, hh ?? 23, mm ?? 59).toISOString()
+}
+
+function seedClasses() {
+  const now = new Date().toISOString()
+  const make = (name: string, code: string, teacher: string): SchoolClass => ({
+    id: nextId(), owner_id: OWNER_ID, school_year_id: YEAR_ID, name,
+    course_code: code, teacher, room: null, color_token: null,
+    is_archived: false, archived_at: null, shared_with_parents: false,
+    created_at: now, updated_at: now,
+  })
+  classes.push(make('Computer Science', 'ICS3U', 'Mr. Chen'))
+  classes.push(make('Functions', 'MCR3U', 'Ms. Patel'))
+}
+seedClasses()
 
 function fromInput(input: NewEventInput, id: string, schoolYearId: string): EventWithCategory {
   const now = new Date().toISOString()
@@ -191,6 +235,216 @@ export const previewSource: DataSource = {
 
   async listAllForYear(schoolYearId) {
     return store.filter((e) => e.school_year_id === schoolYearId)
+  },
+
+
+  // ------------------------------------------------------------ classes --
+
+  async listClasses(schoolYearId, includeArchived = false) {
+    return classes
+      .filter((c) => c.school_year_id === schoolYearId)
+      .filter((c) => includeArchived || !c.is_archived)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  async getClass(id) {
+    return classes.find((c) => c.id === id) ?? null
+  },
+
+  async createClass(input, schoolYearId) {
+    const now = new Date().toISOString()
+    const row: SchoolClass = {
+      id: nextId(),
+      owner_id: OWNER_ID,
+      school_year_id: schoolYearId,
+      name: input.name.trim(),
+      course_code: input.courseCode?.trim().toUpperCase() || null,
+      teacher: input.teacher?.trim() || null,
+      room: input.room?.trim() || null,
+      color_token: input.colorToken ?? null,
+      is_archived: false,
+      archived_at: null,
+      shared_with_parents: false,
+      created_at: now,
+      updated_at: now,
+    }
+    classes.push(row)
+    return row
+  },
+
+  async updateClass(id, input) {
+    const row = classes.find((c) => c.id === id)
+    if (!row) throw new Error('That class no longer exists.')
+    Object.assign(row, {
+      name: input.name.trim(),
+      course_code: input.courseCode?.trim().toUpperCase() || null,
+      teacher: input.teacher?.trim() || null,
+      room: input.room?.trim() || null,
+      color_token: input.colorToken ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    return row
+  },
+
+  async setClassArchived(id, archived) {
+    const row = classes.find((c) => c.id === id)
+    if (!row) return
+    row.is_archived = archived
+    row.archived_at = archived ? new Date().toISOString() : null
+  },
+
+  async deleteClass(id) {
+    const i = classes.findIndex((c) => c.id === id)
+    if (i !== -1) classes.splice(i, 1)
+    // Cascade, as the foreign keys would.
+    for (let j = pages.length - 1; j >= 0; j--) if (pages[j]!.class_id === id) pages.splice(j, 1)
+    for (let j = assignments.length - 1; j >= 0; j--) {
+      if (assignments[j]!.class_id === id) assignments.splice(j, 1)
+    }
+    for (let j = tasks.length - 1; j >= 0; j--) if (tasks[j]!.class_id === id) tasks.splice(j, 1)
+  },
+
+  // ----------------------------------------------------------- notebook --
+
+  async listPages(classId) {
+    return pages
+      .filter((p) => p.class_id === classId && !p.is_archived)
+      .sort((a, b) => a.position - b.position)
+  },
+
+  async createPage(classId, parentId, title = 'Untitled') {
+    const siblings = pages.filter((p) => p.class_id === classId && p.parent_page_id === parentId)
+    const position = Math.max(0, ...siblings.map((p) => p.position)) + 1000
+    const now = new Date().toISOString()
+    const row: NotebookPage = {
+      id: nextId(),
+      class_id: classId,
+      owner_id: OWNER_ID,
+      parent_page_id: parentId,
+      title,
+      icon: null,
+      content: {},
+      content_text: '',
+      position,
+      is_archived: false,
+      shared_with_parents: false,
+      created_at: now,
+      updated_at: now,
+    }
+    pages.push(row)
+    return row
+  },
+
+  async updatePage(id, patch) {
+    const row = pages.find((p) => p.id === id)
+    if (!row) return
+    if (patch.title !== undefined) row.title = patch.title
+    if (patch.content !== undefined) row.content = patch.content
+    if (patch.contentText !== undefined) row.content_text = patch.contentText
+    row.updated_at = new Date().toISOString()
+  },
+
+  async deletePage(id) {
+    const i = pages.findIndex((p) => p.id === id)
+    if (i !== -1) pages.splice(i, 1)
+  },
+
+  async recentPages(limit) {
+    return [...pages]
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+      .slice(0, limit)
+      .map((p) => ({
+        ...p,
+        className: classes.find((c) => c.id === p.class_id)?.name ?? 'Class',
+      }))
+  },
+
+  // -------------------------------------------------------- assignments --
+
+  async listAssignments(classId) {
+    return assignments
+      .filter((a) => a.class_id === classId)
+      .sort((a, b) => (a.due_at ?? '9999').localeCompare(b.due_at ?? '9999'))
+  },
+
+  async listUpcomingAssignments(schoolYearId, limit) {
+    const inYear = new Set(
+      classes.filter((c) => c.school_year_id === schoolYearId).map((c) => c.id))
+    return assignments
+      .filter((a) => inYear.has(a.class_id) && a.status !== 'completed')
+      .sort((a, b) => (a.due_at ?? '9999').localeCompare(b.due_at ?? '9999'))
+      .slice(0, limit)
+      .map((a) => ({
+        ...a,
+        className: classes.find((c) => c.id === a.class_id)?.name ?? 'Class',
+      }))
+  },
+
+  async createAssignment(classId, input) {
+    const now = new Date().toISOString()
+    const row: Assignment = {
+      id: nextId(),
+      class_id: classId,
+      owner_id: OWNER_ID,
+      ...assignmentFields(input),
+      event_id: null,
+      shared_with_parents: false,
+      created_at: now,
+      updated_at: now,
+    }
+    assignments.push(row)
+    return row
+  },
+
+  async updateAssignment(id, input) {
+    const row = assignments.find((a) => a.id === id)
+    if (!row) throw new Error('That assignment no longer exists.')
+    Object.assign(row, assignmentFields(input), { updated_at: new Date().toISOString() })
+    return row
+  },
+
+  async setAssignmentStatus(id, status) {
+    const row = assignments.find((a) => a.id === id)
+    if (!row) return
+    row.status = status
+    row.completed_at = status === 'completed' ? new Date().toISOString() : null
+    row.updated_at = new Date().toISOString()
+  },
+
+  async deleteAssignment(id) {
+    const i = assignments.findIndex((a) => a.id === id)
+    if (i !== -1) assignments.splice(i, 1)
+  },
+
+  // -------------------------------------------------------------- tasks --
+
+  async listTasks(classId) {
+    return tasks
+      .filter((t) => t.class_id === classId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+  },
+
+  async createTask(classId, title) {
+    const now = new Date().toISOString()
+    const row: Task = {
+      id: nextId(), owner_id: OWNER_ID, class_id: classId, title: title.trim(),
+      notes: null, due_at: null, priority: 'normal', status: 'not_started',
+      completed_at: null, created_at: now, updated_at: now,
+    }
+    tasks.push(row)
+    return row
+  },
+
+  async toggleTask(id, done) {
+    const row = tasks.find((t) => t.id === id)
+    if (!row) return
+    row.status = done ? 'completed' : 'not_started'
+    row.completed_at = done ? new Date().toISOString() : null
+  },
+
+  async deleteTask(id) {
+    const i = tasks.findIndex((t) => t.id === id)
+    if (i !== -1) tasks.splice(i, 1)
   },
 
   async clearAll(schoolYearId) {

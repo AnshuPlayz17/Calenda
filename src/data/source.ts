@@ -7,7 +7,8 @@
  * a project exists -- and the UI never learns which one it is talking to.
  */
 import type {
-  CalendarEvent, EventCategory, EventWithCategory, NewEventInput, SchoolYear,
+  Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
+  NewClassInput, NewEventInput, NotebookPage, SchoolClass, SchoolYear, Task,
 } from '@/lib/types'
 import type { PlainDate } from '@/lib/events'
 
@@ -66,6 +67,45 @@ export interface DataSource {
     schoolYearId: string,
     options: ImportOptions,
   ): Promise<number>
+
+  // ------------------------------------------------------------ classes --
+
+  listClasses(schoolYearId: string, includeArchived?: boolean): Promise<SchoolClass[]>
+  getClass(id: string): Promise<SchoolClass | null>
+  createClass(input: NewClassInput, schoolYearId: string): Promise<SchoolClass>
+  updateClass(id: string, input: NewClassInput): Promise<SchoolClass>
+  setClassArchived(id: string, archived: boolean): Promise<void>
+  deleteClass(id: string): Promise<void>
+
+  // ----------------------------------------------------------- notebook --
+
+  listPages(classId: string): Promise<NotebookPage[]>
+  createPage(classId: string, parentId: string | null, title?: string): Promise<NotebookPage>
+  updatePage(
+    id: string,
+    patch: { title?: string; content?: unknown; contentText?: string },
+  ): Promise<void>
+  deletePage(id: string): Promise<void>
+  /** Most recently edited pages across every class, for the dashboard. */
+  recentPages(limit: number): Promise<Array<NotebookPage & { className: string }>>
+
+  // -------------------------------------------------------- assignments --
+
+  listAssignments(classId: string): Promise<Assignment[]>
+  /** Everything due across all classes, for the dashboard and calendar. */
+  listUpcomingAssignments(schoolYearId: string, limit: number):
+    Promise<Array<Assignment & { className: string }>>
+  createAssignment(classId: string, input: NewAssignmentInput): Promise<Assignment>
+  updateAssignment(id: string, input: NewAssignmentInput): Promise<Assignment>
+  setAssignmentStatus(id: string, status: Assignment['status']): Promise<void>
+  deleteAssignment(id: string): Promise<void>
+
+  // -------------------------------------------------------------- tasks --
+
+  listTasks(classId: string): Promise<Task[]>
+  createTask(classId: string | null, title: string): Promise<Task>
+  toggleTask(id: string, done: boolean): Promise<void>
+  deleteTask(id: string): Promise<void>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first
