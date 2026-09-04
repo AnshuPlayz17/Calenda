@@ -148,6 +148,44 @@ membership at $99 USD/year to create the Service ID and signing key. The button,
 callback route and linking logic all ship — set `enabled: true` in
 `src/lib/providers.ts` once the credentials exist.
 
+## Notifications
+
+Preferences, per-category reminder offsets, quiet hours and web-push
+subscription all work as soon as the migrations are applied. **Sending**
+needs two more things, and until they exist reminders queue but never go out:
+
+1. **Deploy the dispatcher**
+
+   ```bash
+   supabase functions deploy notify-dispatch
+   ```
+
+2. **Give it credentials**
+
+   ```bash
+   npx web-push generate-vapid-keys          # once
+   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...
+   supabase secrets set RESEND_API_KEY=...   # resend.com, free tier
+   ```
+
+   Put the **public** VAPID key in `VITE_VAPID_PUBLIC_KEY` as a repository
+   variable too -- the browser needs it to subscribe, and it is safe to
+   publish. The private key never leaves Supabase.
+
+Then either add `SUPABASE_FUNCTION_URL` as a repository secret (the hourly
+`reminders.yml` workflow pokes it), or schedule it inside Postgres with
+`pg_cron`. Both are safe to run together: `claim_due_reminders()` marks rows
+sent as it claims them under `for update skip locked`, so two dispatchers
+cannot send the same reminder.
+
+### Why not SMS
+
+Text messaging is not free for a Canadian number. Carrier email-to-SMS
+gateways -- the old workaround -- were shut down through 2024-25 (Bell ended
+theirs on 2025-12-31), and Twilio offers trial credit rather than a free tier.
+The channel enum includes `sms` and the phone/consent columns exist, so adding
+it later is credentials plus a verification flow, not a rebuild.
+
 ## Deployment
 
 `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`, which

@@ -8,8 +8,8 @@
  */
 import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
-  NewClassInput, NewEventInput, NotebookPage, ParentLink, SchoolClass, SchoolYear,
-  Shareable, Task,
+  CategoryPreference, NewClassInput, NewEventInput, NotebookPage, NotificationPreferences,
+  ParentLink, QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import type { PlainDate } from '@/lib/events'
 
@@ -119,6 +119,22 @@ export interface DataSource {
   revokeParentLink(id: string): Promise<void>
   /** Turns parent visibility on or off for one resource. */
   setSharedWithParents(kind: Shareable, id: string, shared: boolean): Promise<void>
+
+  // ------------------------------------------------------ notifications --
+
+  getNotificationPreferences(): Promise<{
+    prefs: NotificationPreferences
+    categories: CategoryPreference[]
+  }>
+  updateNotificationPreferences(patch: Partial<NotificationPreferences>): Promise<void>
+  updateCategoryPreference(
+    categoryId: string,
+    patch: { enabled?: boolean; offsets?: number[] },
+  ): Promise<void>
+  /** Reminders already queued, so a person can see what is coming. */
+  listQueuedReminders(limit: number): Promise<QueuedReminder[]>
+  savePushSubscription(sub: PushSubscriptionJSON): Promise<void>
+  removePushSubscription(endpoint: string): Promise<void>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first

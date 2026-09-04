@@ -1,0 +1,25 @@
+name: Send reminders
+
+# Hourly, anchored to the creation minute rather than :00 so it does not queue
+# behind everyone else's hourly jobs.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Nothing is sent from here. This only pokes the Edge Function, which
+      # holds the credentials and does the work.
+      - name: Invoke the dispatcher
+        run: |
+          if [ -z "${{ secrets.SUPABASE_FUNCTION_URL }}" ]; then
+            echo "SUPABASE_FUNCTION_URL not set — skipping."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST \
+            "${{ secrets.SUPABASE_FUNCTION_URL }}/notify-dispatch" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
