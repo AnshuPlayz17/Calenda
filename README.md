@@ -34,7 +34,11 @@ npm run build   # production bundle
 
 ## Database
 
-Migrations are plain SQL, applied in order:
+**Setting up a new project:** paste [`supabase/setup.sql`](supabase/setup.sql)
+into the Supabase SQL Editor and run it once. It is the three migrations
+concatenated, in order.
+
+For ongoing work the migrations are separate files:
 
 ```
 supabase/migrations/0001_init.sql   schema, indexes, constraints
@@ -42,7 +46,18 @@ supabase/migrations/0002_rls.sql    row-level security -- the permission boundar
 supabase/migrations/0003_seed.sql   categories and the current school year
 ```
 
-Run them through the Supabase SQL editor or `supabase db push`.
+### Verifying the security policies
+
+The policies are the entire permission boundary, so they have adversarial
+tests: each one attempts an access that must fail, and requires it to fail.
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql
+```
+
+It covers a linked parent reading an unshared event, an admin reading private
+notebooks and Google refresh tokens, a user self-publishing a community event,
+and a user promoting themselves to admin. Any failure exits non-zero.
 
 **Promoting the first admin** is a deliberate one-time SQL statement. There is
 no application code path that grants admin, so a bug cannot create one.

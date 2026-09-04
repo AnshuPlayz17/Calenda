@@ -57,7 +57,16 @@ $$;
 create or replace function guard_profile_role() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if new.role is distinct from old.role and not is_admin() then
+  -- auth.uid() is null for the service role, a migration, and the Supabase SQL
+  -- editor. Those are the only ways to bootstrap the very first admin, so they
+  -- are allowed through -- there is no admin yet to authorise it.
+  --
+  -- This does not open a hole for anonymous clients: they also have a null
+  -- uid, but the profiles_update policy requires id = auth.uid() or is_admin(),
+  -- so their UPDATE matches no rows and never reaches this trigger.
+  if new.role is distinct from old.role
+     and auth.uid() is not null
+     and not is_admin() then
     raise exception 'role may not be changed';
   end if;
   return new;
