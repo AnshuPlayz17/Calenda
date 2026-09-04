@@ -24,6 +24,16 @@ export type EventFilters = {
 
 export type ReviewAction = 'approve' | 'reject'
 
+export type ImportOptions = {
+  /**
+   * Google events keep their origin's privacy: they belong to the person who
+   * imported them and are never published to the community. Only an admin
+   * importing the school calendar creates community events.
+   */
+  visibility: 'private' | 'community'
+  source: 'pdf_import' | 'google'
+}
+
 /** A resolved import row, ready to be written. */
 export type ImportWrite = {
   title: string
@@ -51,7 +61,11 @@ export interface DataSource {
   reviewEvent(id: string, action: ReviewAction, note?: string): Promise<void>
   /** Everything already in this school year, for duplicate comparison. */
   listAllForYear(schoolYearId: string): Promise<EventWithCategory[]>
-  importEvents(writes: ImportWrite[], schoolYearId: string): Promise<number>
+  importEvents(
+    writes: ImportWrite[],
+    schoolYearId: string,
+    options: ImportOptions,
+  ): Promise<number>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first

@@ -40,7 +40,11 @@ function optionsFor(row: AnalysedRow): Resolution[] {
 export function ImportPanel() {
   const { current } = useSchoolYear()
   const { data: existing = [], isLoading } = useAllForYear(current?.id)
-  const runImport = useImportEvents(current?.id)
+  // The school calendar is community content, published by an admin.
+  const runImport = useImportEvents(current?.id, {
+    visibility: 'community',
+    source: 'pdf_import',
+  })
   const clearAll = useClearAll(current?.id)
   const reduce = useReducedMotion()
 

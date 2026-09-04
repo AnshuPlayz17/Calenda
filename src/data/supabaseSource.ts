@@ -9,7 +9,9 @@ import type {
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
-import type { DataSource, EventFilters, ImportWrite, ReviewAction } from './source'
+import type {
+  DataSource, EventFilters, ImportOptions, ImportWrite, ReviewAction,
+} from './source'
 
 const EVENT_COLUMNS = '*, category:event_categories(*)'
 
@@ -188,7 +190,7 @@ export const supabaseSource: DataSource = {
     return (data ?? []) as unknown as EventWithCategory[]
   },
 
-  async importEvents(writes: ImportWrite[], schoolYearId) {
+  async importEvents(writes: ImportWrite[], schoolYearId, options: ImportOptions) {
     if (writes.length === 0) return 0
 
     const { data: auth } = await supabase.auth.getUser()
@@ -216,13 +218,14 @@ export const supabaseSource: DataSource = {
       is_all_day: true,
       start_date: w.startDate,
       end_date: w.endDate,
-      visibility: 'community' as const,
-      // An admin performing the import is the approval; asking them to then
-      // approve their own import would be theatre.
+      visibility: options.visibility,
+      // An admin importing the school calendar IS the approval; asking them to
+      // then approve their own import would be theatre. A private import needs
+      // no approval at all.
       status: 'approved' as const,
-      approved_by: auth.user!.id,
-      approved_at: now,
-      source: 'pdf_import' as const,
+      approved_by: options.visibility === 'community' ? auth.user!.id : null,
+      approved_at: options.visibility === 'community' ? now : null,
+      source: options.source,
       content_hash: contentHash(w.title, w.startDate),
     }))
 

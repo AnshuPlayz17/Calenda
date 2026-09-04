@@ -12,7 +12,8 @@ import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
 import { SCHOOL_YEAR_2026_27, schoolEvents2026_27 } from './schoolCalendar'
 import {
-  matchesFilters, type DataSource, type EventFilters, type ImportWrite, type ReviewAction,
+  matchesFilters, type DataSource, type EventFilters, type ImportOptions,
+  type ImportWrite, type ReviewAction,
 } from './source'
 
 const YEAR_ID = 'preview-year-2026-27'
@@ -198,7 +199,7 @@ export const previewSource: DataSource = {
     }
   },
 
-  async importEvents(writes: ImportWrite[], schoolYearId) {
+  async importEvents(writes: ImportWrite[], schoolYearId, options: ImportOptions) {
     const now = new Date().toISOString()
     for (const w of writes) {
       // A replace swaps the existing row out rather than leaving both behind.
@@ -222,13 +223,13 @@ export const previewSource: DataSource = {
         end_date: w.endDate,
         start_at: null,
         end_at: null,
-        visibility: 'community',
+        visibility: options.visibility,
         status: 'approved',
         shared_with_parents: false,
-        approved_by: OWNER_ID,
-        approved_at: now,
+        approved_by: options.visibility === 'community' ? OWNER_ID : null,
+        approved_at: options.visibility === 'community' ? now : null,
         review_note: null,
-        source: 'pdf_import',
+        source: options.source,
         content_hash: contentHash(w.title, w.startDate),
         created_at: now,
         updated_at: now,
