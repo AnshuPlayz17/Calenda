@@ -7,7 +7,7 @@
  */
 import type {
   Assignment, EventCategory, EventWithCategory, NewAssignmentInput, NewEventInput,
-  NotebookPage, SchoolClass, SchoolYear, Task,
+  NotebookPage, ParentLink, SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -102,6 +102,8 @@ const classes: SchoolClass[] = []
 const pages: NotebookPage[] = []
 const assignments: Assignment[] = []
 const tasks: Task[] = []
+const parentLinks: ParentLink[] = []
+const previewInvites = new Set<string>()
 
 function assignmentFields(input: NewAssignmentInput) {
   return {
@@ -237,6 +239,57 @@ export const previewSource: DataSource = {
     return store.filter((e) => e.school_year_id === schoolYearId)
   },
 
+
+  // ---------------------------------------------------- parent sharing --
+
+  async listParentLinks() {
+    return parentLinks
+  },
+
+  async createParentInvite() {
+    // Same shape as the real one: 8 characters, no ambiguous glyphs.
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+    let code = ''
+    for (let i = 0; i < 8; i++) {
+      code += alphabet[Math.floor(Math.random() * alphabet.length)]
+    }
+    previewInvites.add(code)
+    return code
+  },
+
+  async redeemParentInvite(code) {
+    const normalised = code.trim().toUpperCase()
+    if (!previewInvites.has(normalised)) {
+      throw new Error('That code is not valid. Ask for a new one.')
+    }
+    previewInvites.delete(normalised)
+    const now = new Date().toISOString()
+    parentLinks.push({
+      id: nextId(),
+      parent_id: 'preview-parent',
+      student_id: OWNER_ID,
+      status: 'accepted',
+      accepted_at: now,
+      created_at: now,
+      other_name: 'Sample Parent',
+      other_role: 'parent',
+    })
+    return 'Sample Parent'
+  },
+
+  async revokeParentLink(id) {
+    const i = parentLinks.findIndex((l) => l.id === id)
+    if (i !== -1) parentLinks.splice(i, 1)
+  },
+
+  async setSharedWithParents(kind: Shareable, id, shared) {
+    const target =
+      kind === 'event' ? store.find((e) => e.id === id)
+      : kind === 'class' ? classes.find((c) => c.id === id)
+      : kind === 'notebook_page' ? pages.find((p) => p.id === id)
+      : assignments.find((a) => a.id === id)
+    if (target) target.shared_with_parents = shared
+  },
 
   // ------------------------------------------------------------ classes --
 

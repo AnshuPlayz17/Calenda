@@ -71,6 +71,17 @@ It covers a linked parent reading an unshared event, an admin reading private
 notebooks and Google refresh tokens, a user self-publishing a community event,
 and a user promoting themselves to admin. Any failure exits non-zero.
 
+Parent invites have their own suite, since redeeming a code grants standing
+access to another person's shared content:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/parent_invite_test.sql
+```
+
+It covers single use, expiry, self-redemption, code enumeration (every failure
+returns the same message, so a wrong code cannot be told from a used one), and
+that nobody -- including a linked parent -- can list invite codes.
+
 **Promoting the first admin** is a deliberate one-time SQL statement. There is
 no application code path that grants admin, so a bug cannot create one.
 
