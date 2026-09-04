@@ -21,6 +21,11 @@ export type EventFilters = {
   categoryIds?: string[]
   /** 'all' | 'community' | 'personal' */
   scope?: 'all' | 'community' | 'personal'
+  /**
+   * Where the events came from: the school calendar PDF, your own Google
+   * calendar, a suggestion, or typed in by hand. Empty or absent means all.
+   */
+  sources?: Array<'manual' | 'pdf_import' | 'google' | 'suggestion'>
   search?: string
 }
 
@@ -154,6 +159,7 @@ export function matchesFilters(e: EventWithCategory, f: EventFilters): boolean {
   }
   if (f.scope === 'community' && e.visibility !== 'community') return false
   if (f.scope === 'personal' && e.visibility !== 'private') return false
+  if (f.sources?.length && !f.sources.includes(e.source)) return false
   if (f.search) {
     const q = f.search.toLowerCase()
     const haystack = `${e.title} ${e.description ?? ''} ${e.location ?? ''}`.toLowerCase()

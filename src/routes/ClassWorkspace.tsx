@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import {
   ArrowLeft, CheckSquare, ClipboardList, FileText, NotebookPen, Plus, Trash2,
@@ -23,7 +23,19 @@ type Tab = 'notes' | 'assignments' | 'tasks'
 export function ClassWorkspace() {
   const { classId } = useParams<{ classId: string }>()
   const { data: klass, isLoading } = useClass(classId)
-  const [tab, setTab] = useState<Tab>('notes')
+  // The tab lives in the URL so a reload, a bookmark and the back button all
+  // land where you actually were rather than resetting to notes.
+  const [params, setParams] = useSearchParams()
+  const raw = params.get('tab')
+  const tab: Tab = raw === 'assignments' || raw === 'tasks' ? raw : 'notes'
+  const setTab = (next: Tab) => {
+    setParams((prev) => {
+      const copy = new URLSearchParams(prev)
+      if (next === 'notes') copy.delete('tab')
+      else copy.set('tab', next)
+      return copy
+    }, { replace: true })
+  }
   const reduce = useReducedMotion()
 
   if (isLoading) return <Skeleton className="h-64 w-full rounded-xl" />

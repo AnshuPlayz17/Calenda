@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/lib/auth'
 import { PreviewBanner } from '@/components/PreviewBanner'
 import { usePreview } from '@/lib/preview'
+import { YearSwitcher } from '@/features/schoolYear/YearSwitcher'
 import { cn } from '@/lib/cn'
 
 const nav = [
@@ -102,6 +103,7 @@ export function AppShell() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-3 px-1 pt-4">
+        <YearSwitcher />
         <ThemeToggle />
         <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
           <div className="min-w-0">

@@ -206,6 +206,8 @@ export const previewSource: DataSource = {
   async listEvents(filters: EventFilters) {
     return store
       .filter((e) => e.school_year_id === filters.schoolYearId)
+      // Matches the Supabase source: only approved events reach a calendar.
+      .filter((e) => e.status === 'approved')
       .filter((e) => matchesFilters(e, filters))
       .sort((a, b) => a.start_date.localeCompare(b.start_date) || a.title.localeCompare(b.title))
   },
