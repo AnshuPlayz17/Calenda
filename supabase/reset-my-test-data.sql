@@ -1,137 +1,121 @@
 -- ---------------------------------------------------------------------------
--- Reset one account's test data back to how it looked before testing.
+-- Clear test data for one account.
 --
--- Run this in the Supabase SQL Editor (Dashboard -> SQL Editor -> New query).
--- It cannot be run from the app, and it deliberately does NOT touch the 49
--- imported school calendar dates -- those existed before testing and should
--- stay.
+-- Run in the Supabase SQL Editor (Dashboard -> SQL Editor -> New query). This
+-- cannot be run from the app.
 --
--- Read section 1 before running section 2. Section 1 only looks; section 2
--- deletes. Run them as two separate queries so you see what will go first.
+-- Run the sections ONE AT A TIME, in order. Section 1 only looks. Sections 2
+-- and 3 delete, each inside its own transaction so you can check the numbers
+-- and type `rollback;` instead of `commit;` if they are wrong.
+--
+-- Set your email once here, and use the same value everywhere below.
+--   anshuarunav@gmail.com
 -- ---------------------------------------------------------------------------
 
 
 -- === 1. LOOK FIRST =========================================================
--- Run this on its own. It changes nothing. Check the counts look like what
--- you expect before running section 2.
+-- Changes nothing. Check these counts look like what you expect.
 
 with me as (
   select id from auth.users where email = 'anshuarunav@gmail.com'
 )
-select 'classes'                as what,
-       count(*)                 as rows_that_will_be_deleted
-  from classes where owner_id = (select id from me)
+select 'classes'                              as what, count(*) as rows from classes            where owner_id = (select id from me)
 union all
-select 'assignments (in those classes)',
-       count(*)
-  from assignments a
-  join classes c on c.id = a.class_id
- where c.owner_id = (select id from me)
+select 'assignments in those classes',        count(*) from assignments a join classes c on c.id = a.class_id where c.owner_id = (select id from me)
 union all
-select 'notebook pages (in those classes)',
-       count(*)
-  from notebook_pages n
-  join classes c on c.id = n.class_id
- where c.owner_id = (select id from me)
+select 'notebook pages in those classes',     count(*) from notebook_pages n join classes c on c.id = n.class_id where c.owner_id = (select id from me)
 union all
-select 'tasks (in those classes)',
-       count(*)
-  from tasks t
-  join classes c on c.id = t.class_id
- where c.owner_id = (select id from me)
+select 'tasks in those classes',              count(*) from tasks t join classes c on c.id = t.class_id where c.owner_id = (select id from me)
 union all
-select 'community suggestions you submitted',
-       count(*)
-  from events
- where owner_id = (select id from me)
-   and visibility = 'community'
-   and source = 'suggestion'
+select 'your suggestions (any status)',       count(*) from events where owner_id = (select id from me) and source = 'suggestion'
 union all
-select 'personal events you created by hand',
-       count(*)
-  from events
- where owner_id = (select id from me)
-   and visibility = 'private'
-   and source = 'manual'
+select 'your own events added by hand',       count(*) from events where owner_id = (select id from me) and source = 'manual'
 union all
-select 'KEPT: imported school calendar dates',
-       count(*)
-  from events
- where source = 'pdf_import';
+select 'SHARED school calendar (section 3)',  count(*) from events where source = 'pdf_import'
+union all
+select 'imported from your Google calendar',  count(*) from events where owner_id = (select id from me) and source = 'google';
 
 
--- === 2. DELETE =============================================================
--- Only run this once section 1 looks right. One transaction: it all applies
--- or none of it does.
+-- === 2. YOUR STUFF =========================================================
+-- Classes and everything inside them, your suggestions whatever the admin
+-- decided, and events you typed in yourself. Leaves the school calendar alone.
 
 begin;
 
 with me as (
   select id from auth.users where email = 'anshuarunav@gmail.com'
 )
--- Classes go last, so their assignments/pages/tasks are removed first even
--- where a cascade would not have covered them.
 , gone_assignments as (
-  delete from assignments a
-   using classes c
-   where c.id = a.class_id
-     and c.owner_id = (select id from me)
+  delete from assignments a using classes c
+   where c.id = a.class_id and c.owner_id = (select id from me)
   returning a.id
 )
 , gone_pages as (
-  delete from notebook_pages n
-   using classes c
-   where c.id = n.class_id
-     and c.owner_id = (select id from me)
+  delete from notebook_pages n using classes c
+   where c.id = n.class_id and c.owner_id = (select id from me)
   returning n.id
 )
 , gone_tasks as (
-  delete from tasks t
-   using classes c
-   where c.id = t.class_id
-     and c.owner_id = (select id from me)
+  delete from tasks t using classes c
+   where c.id = t.class_id and c.owner_id = (select id from me)
   returning t.id
 )
 , gone_classes as (
-  delete from classes
-   where owner_id = (select id from me)
+  delete from classes where owner_id = (select id from me)
   returning id
 )
 , gone_suggestions as (
-  -- Everything you suggested during testing, whatever the admin decided.
+  -- Every suggestion you made, approved / pending / rejected alike.
   delete from events
-   where owner_id = (select id from me)
-     and visibility = 'community'
-     and source = 'suggestion'
+   where owner_id = (select id from me) and source = 'suggestion'
   returning id
 )
-, gone_personal as (
-  -- Events you typed in yourself. Imported school dates are untouched
-  -- because their source is 'pdf_import', not 'manual'.
+, gone_manual as (
+  -- Events you created by hand. 'manual' never includes imported dates.
   delete from events
-   where owner_id = (select id from me)
-     and visibility = 'private'
-     and source = 'manual'
+   where owner_id = (select id from me) and source = 'manual'
+  returning id
+)
+, gone_google as (
+  delete from events
+   where owner_id = (select id from me) and source = 'google'
   returning id
 )
 select
   (select count(*) from gone_classes)     as classes_deleted,
   (select count(*) from gone_assignments) as assignments_deleted,
-  (select count(*) from gone_pages)       as notebook_pages_deleted,
+  (select count(*) from gone_pages)       as pages_deleted,
   (select count(*) from gone_tasks)       as tasks_deleted,
   (select count(*) from gone_suggestions) as suggestions_deleted,
-  (select count(*) from gone_personal)    as personal_events_deleted;
+  (select count(*) from gone_manual)      as manual_events_deleted,
+  (select count(*) from gone_google)      as google_events_deleted;
 
--- Check the numbers above. If they look right:
+-- Numbers look right?
 commit;
--- If they do not, run this instead and nothing is lost:
+-- If not, run this instead and nothing is lost:
 -- rollback;
 
 
--- === 3. OPTIONAL: also clear queued reminders ===============================
--- Reminders were scheduled against the things you just deleted. Nothing sends
--- them yet, so this is tidiness rather than a fix.
+-- === 3. THE SHARED SCHOOL CALENDAR (optional) ==============================
+-- ONLY run this if you also want the 49 imported school dates gone.
 --
--- delete from notification_queue
---  where profile_id = (select id from auth.users
---                       where email = 'anshuarunav@gmail.com');
+-- These are not your personal data -- they are the shared calendar everyone
+-- sees. Deleting them removes them for every account, not just yours.
+--
+-- It is recoverable: Admin -> Import the school calendar puts them all back in
+-- one click, and the duplicate check will find nothing to warn about because
+-- the table will be empty.
+--
+-- Uncomment the three lines below to run it.
+
+-- begin;
+-- delete from events where source = 'pdf_import' returning title, start_date;
+-- commit;
+
+
+-- === 4. TIDY UP ============================================================
+-- Reminders were queued against things that no longer exist. Nothing sends
+-- them yet, so this is housekeeping rather than a fix.
+
+delete from notification_queue
+ where profile_id = (select id from auth.users where email = 'anshuarunav@gmail.com');
