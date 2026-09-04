@@ -28,7 +28,7 @@ export function SignIn() {
   const reduce = useReducedMotion()
   const preview = usePreview()
 
-  if (session || preview.active) return <Navigate to="/" replace />
+  if (session || preview.active) return <Navigate to="/dashboard" replace />
 
   async function withProvider(p: Provider) {
     setBusy(p); setError(null)

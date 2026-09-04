@@ -13,7 +13,7 @@ import { usePreview } from '@/lib/preview'
 import { cn } from '@/lib/cn'
 
 const nav = [
-  { to: '/', label: 'Dashboard', Icon: LayoutDashboard, end: true },
+  { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard, end: true },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
   { to: '/classes', label: 'Classes', Icon: GraduationCap },
   { to: '/notifications', label: 'Notifications', Icon: Bell },

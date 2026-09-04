@@ -15,7 +15,7 @@ export function NotFound() {
         {/* A link, not a button wrapping a link -- nesting the two is invalid
             and breaks keyboard and screen-reader behaviour. */}
         <Link
-          to="/"
+          to="/dashboard"
           className="mt-1 inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
         >
           Back to dashboard
