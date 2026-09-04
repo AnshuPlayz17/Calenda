@@ -6,7 +6,8 @@
 import { supabase } from '@/lib/supabase'
 import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
-  NewEventInput, NotebookPage, ParentLink, SchoolClass, SchoolYear, Shareable, Task,
+  CategoryPreference, NewEventInput, NotebookPage, NotificationPreferences, ParentLink,
+  QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -235,6 +236,95 @@ export const supabaseSource: DataSource = {
     return rows.length
   },
 
+
+
+  // ------------------------------------------------------ notifications --
+
+  async getNotificationPreferences() {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    // Creates rows for anyone who has never opened this screen, so a new
+    // account still has working defaults rather than nothing.
+    const { error: seedError } = await supabase.rpc('ensure_notification_defaults', {
+      target: auth.user.id,
+    })
+    if (seedError) fail('load your notification settings', seedError)
+
+    const [prefsRes, catsRes] = await Promise.all([
+      supabase.from('notification_preferences').select('*')
+        .eq('profile_id', auth.user.id).single(),
+      supabase.from('notification_category_prefs')
+        .select('category_id, enabled, offsets_minutes')
+        .eq('profile_id', auth.user.id),
+    ])
+
+    if (prefsRes.error) fail('load your notification settings', prefsRes.error)
+    if (catsRes.error) fail('load your notification settings', catsRes.error)
+
+    return {
+      prefs: prefsRes.data as NotificationPreferences,
+      categories: (catsRes.data ?? []) as CategoryPreference[],
+    }
+  },
+
+  async updateNotificationPreferences(patch) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { error } = await supabase
+      .from('notification_preferences')
+      .update(patch)
+      .eq('profile_id', auth.user.id)
+    if (error) fail('save your notification settings', error)
+  },
+
+  async updateCategoryPreference(categoryId, patch) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const row: Record<string, unknown> = {}
+    if (patch.enabled !== undefined) row.enabled = patch.enabled
+    if (patch.offsets !== undefined) row.offsets_minutes = patch.offsets
+
+    const { error } = await supabase
+      .from('notification_category_prefs')
+      .update(row)
+      .eq('profile_id', auth.user.id)
+      .eq('category_id', categoryId)
+    if (error) fail('save that reminder setting', error)
+  },
+
+  async listQueuedReminders(limit) {
+    const { data, error } = await supabase
+      .from('notification_queue')
+      .select('*')
+      .order('scheduled_for')
+      .limit(limit)
+    if (error) fail('load your reminders', error)
+    return (data ?? []) as QueuedReminder[]
+  },
+
+  async savePushSubscription(sub) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
+      throw new Error('Your browser did not provide a usable push subscription.')
+    }
+
+    const { error } = await supabase.from('push_subscriptions').upsert({
+      profile_id: auth.user.id,
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+      user_agent: navigator.userAgent.slice(0, 300),
+    }, { onConflict: 'endpoint' })
+    if (error) fail('turn on notifications for this device', error)
+  },
+
+  async removePushSubscription(endpoint) {
+    const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+    if (error) fail('turn off notifications for this device', error)
+  },
 
   // ---------------------------------------------------- parent sharing --
 

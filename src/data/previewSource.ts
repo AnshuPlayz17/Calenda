@@ -7,7 +7,8 @@
  */
 import type {
   Assignment, EventCategory, EventWithCategory, NewAssignmentInput, NewEventInput,
-  NotebookPage, ParentLink, SchoolClass, SchoolYear, Shareable, Task,
+  CategoryPreference, NotebookPage, NotificationPreferences, ParentLink, QueuedReminder,
+  SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -104,6 +105,23 @@ const assignments: Assignment[] = []
 const tasks: Task[] = []
 const parentLinks: ParentLink[] = []
 const previewInvites = new Set<string>()
+
+const previewPrefs: NotificationPreferences = {
+  profile_id: OWNER_ID,
+  channels: ['email'],
+  digest_daily: false,
+  digest_daily_at: '07:00',
+  digest_weekly: false,
+  quiet_start: null,
+  quiet_end: null,
+}
+
+// One row per seeded category, matching ensure_notification_defaults().
+const previewCategoryPrefs: CategoryPreference[] = categories.map((c) => ({
+  category_id: c.id,
+  enabled: true,
+  offsets_minutes: [1440],
+}))
 
 function assignmentFields(input: NewAssignmentInput) {
   return {
@@ -239,6 +257,59 @@ export const previewSource: DataSource = {
     return store.filter((e) => e.school_year_id === schoolYearId)
   },
 
+
+  // ------------------------------------------------------ notifications --
+
+  async getNotificationPreferences() {
+    return { prefs: previewPrefs, categories: previewCategoryPrefs }
+  },
+
+  async updateNotificationPreferences(patch) {
+    Object.assign(previewPrefs, patch)
+  },
+
+  async updateCategoryPreference(categoryId, patch) {
+    const row = previewCategoryPrefs.find((c) => c.category_id === categoryId)
+    if (!row) return
+    if (patch.enabled !== undefined) row.enabled = patch.enabled
+    if (patch.offsets !== undefined) row.offsets_minutes = patch.offsets
+  },
+
+  async listQueuedReminders() {
+    // Derived rather than stored: the preview has no scheduler, so this shows
+    // what WOULD be queued for the events it already holds.
+    const now = Date.now()
+    const out: QueuedReminder[] = []
+    for (const e of store) {
+      const cat = previewCategoryPrefs.find((c) => c.category_id === e.category_id)
+      if (!cat?.enabled) continue
+      const occurs = new Date(`${e.start_date}T09:00:00`).getTime()
+      for (const off of cat.offsets_minutes) {
+        const at = occurs - off * 60_000
+        if (at <= now) continue
+        for (const ch of previewPrefs.channels) {
+          out.push({
+            id: `${e.id}-${off}-${ch}`,
+            subject_type: 'event',
+            subject_id: e.id,
+            channel: ch,
+            offset_minutes: off,
+            scheduled_for: new Date(at).toISOString(),
+            state: 'pending',
+            sent_at: null,
+            subject_title: e.title,
+          })
+        }
+      }
+    }
+    return out.sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for)).slice(0, 25)
+  },
+
+  async savePushSubscription() {
+    // Nothing to persist in preview; the browser permission is still real.
+  },
+
+  async removePushSubscription() {},
 
   // ---------------------------------------------------- parent sharing --
 

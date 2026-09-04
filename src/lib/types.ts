@@ -195,3 +195,37 @@ export type ParentLink = {
 
 /** Anything that can carry a shared_with_parents flag. */
 export type Shareable = 'event' | 'class' | 'notebook_page' | 'assignment'
+
+// --------------------------------------------------------- notifications ----
+
+export type NotifyChannel = 'email' | 'web_push' | 'sms'
+
+export type NotificationPreferences = {
+  profile_id: string
+  channels: NotifyChannel[]
+  digest_daily: boolean
+  digest_daily_at: string
+  digest_weekly: boolean
+  quiet_start: string | null
+  quiet_end: string | null
+}
+
+export type CategoryPreference = {
+  category_id: string
+  enabled: boolean
+  /** Minutes before the event. 1440 = a day, 60 = an hour. */
+  offsets_minutes: number[]
+}
+
+export type QueuedReminder = {
+  id: string
+  subject_type: string
+  subject_id: string
+  channel: NotifyChannel
+  offset_minutes: number
+  scheduled_for: string
+  state: 'pending' | 'sent' | 'failed' | 'skipped'
+  sent_at: string | null
+  /** Filled in by the client from the subject it points at. */
+  subject_title?: string
+}
