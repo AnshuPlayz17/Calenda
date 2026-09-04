@@ -1,0 +1,869 @@
+[
+  {
+    "raw_date": "September 3",
+    "dates": [
+      "2026-09-03"
+    ],
+    "date_kind": "single",
+    "title": "Special schedule - New Student Orientation Morning (no students in school in the afternoon)",
+    "start_date": "2026-09-03",
+    "end_date": "2026-09-03",
+    "span_days": 1,
+    "weekdays": [
+      "Thu"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "September 8",
+    "dates": [
+      "2026-09-08"
+    ],
+    "date_kind": "single",
+    "title": "First Day of School",
+    "start_date": "2026-09-08",
+    "end_date": "2026-09-08",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "September 10",
+    "dates": [
+      "2026-09-10"
+    ],
+    "date_kind": "single",
+    "title": "Safe Schools Assembly - split assembly day schedule",
+    "start_date": "2026-09-10",
+    "end_date": "2026-09-10",
+    "span_days": 1,
+    "weekdays": [
+      "Thu"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "September 22",
+    "dates": [
+      "2026-09-22"
+    ],
+    "date_kind": "single",
+    "title": "Curriculum Night (5:30 - 8:30 p.m.)",
+    "start_date": "2026-09-22",
+    "end_date": "2026-09-22",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": true
+  },
+  {
+    "raw_date": "September 23",
+    "dates": [
+      "2026-09-23"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-09-23",
+    "end_date": "2026-09-23",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "September 30",
+    "dates": [
+      "2026-09-30"
+    ],
+    "date_kind": "single",
+    "title": "Regular School Hours with a Special Schedule - National Day for Truth and Reconciliation",
+    "start_date": "2026-09-30",
+    "end_date": "2026-09-30",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 1",
+    "dates": [
+      "2026-10-01"
+    ],
+    "date_kind": "single",
+    "title": "Regular School Hours with a Special Schedule - House Track",
+    "start_date": "2026-10-01",
+    "end_date": "2026-10-01",
+    "span_days": 1,
+    "weekdays": [
+      "Thu"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 9",
+    "dates": [
+      "2026-10-09"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2026-10-09",
+    "end_date": "2026-10-09",
+    "span_days": 1,
+    "weekdays": [
+      "Fri"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 12",
+    "dates": [
+      "2026-10-12"
+    ],
+    "date_kind": "single",
+    "title": "Holiday Monday (Thanksgiving)",
+    "start_date": "2026-10-12",
+    "end_date": "2026-10-12",
+    "span_days": 1,
+    "weekdays": [
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 14",
+    "dates": [
+      "2026-10-14"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-10-14",
+    "end_date": "2026-10-14",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 19",
+    "dates": [
+      "2026-10-19"
+    ],
+    "date_kind": "single",
+    "title": "Designated School Break after Open House (no students in school)",
+    "start_date": "2026-10-19",
+    "end_date": "2026-10-19",
+    "span_days": 1,
+    "weekdays": [
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "October 21",
+    "dates": [
+      "2026-10-21"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-10-21",
+    "end_date": "2026-10-21",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "November 5,6 & 9",
+    "dates": [
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-09"
+    ],
+    "date_kind": "multi",
+    "title": "Parent Teacher Interviews (morning classes Nov 5 online, no students in school Nov 5 (afternoon) and all day Nov 6 & 9)",
+    "start_date": "2026-11-05",
+    "end_date": "2026-11-09",
+    "span_days": 3,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Thu"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "November 13\u201316",
+    "dates": [
+      "2026-11-13",
+      "2026-11-14",
+      "2026-11-15",
+      "2026-11-16"
+    ],
+    "date_kind": "range",
+    "title": "4-day Long Weekend (designated school break)",
+    "start_date": "2026-11-13",
+    "end_date": "2026-11-16",
+    "span_days": 4,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "November 18",
+    "dates": [
+      "2026-11-18"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-11-18",
+    "end_date": "2026-11-18",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "November 25",
+    "dates": [
+      "2026-11-25"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-11-25",
+    "end_date": "2026-11-25",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "December 1",
+    "dates": [
+      "2026-12-01"
+    ],
+    "date_kind": "single",
+    "title": "PA Day",
+    "start_date": "2026-12-01",
+    "end_date": "2026-12-01",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "December 2",
+    "dates": [
+      "2026-12-02"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-12-02",
+    "end_date": "2026-12-02",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "December 16",
+    "dates": [
+      "2026-12-16"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2026-12-16",
+    "end_date": "2026-12-16",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "December 18",
+    "dates": [
+      "2026-12-18"
+    ],
+    "date_kind": "single",
+    "title": "Shortened Day with a Special schedule - Holiday Breakfast and early dismissal",
+    "start_date": "2026-12-18",
+    "end_date": "2026-12-18",
+    "span_days": 1,
+    "weekdays": [
+      "Fri"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "December 21\u201331",
+    "dates": [
+      "2026-12-21",
+      "2026-12-22",
+      "2026-12-23",
+      "2026-12-24",
+      "2026-12-25",
+      "2026-12-26",
+      "2026-12-27",
+      "2026-12-28",
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31"
+    ],
+    "date_kind": "range",
+    "title": "Winter Break",
+    "start_date": "2026-12-21",
+    "end_date": "2026-12-31",
+    "span_days": 11,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun",
+      "Thu",
+      "Tue",
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "January 1\u20133",
+    "dates": [
+      "2027-01-01",
+      "2027-01-02",
+      "2027-01-03"
+    ],
+    "date_kind": "range",
+    "title": "Winter Break",
+    "start_date": "2027-01-01",
+    "end_date": "2027-01-03",
+    "span_days": 3,
+    "weekdays": [
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "January 4",
+    "dates": [
+      "2027-01-04"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2027-01-04",
+    "end_date": "2027-01-04",
+    "span_days": 1,
+    "weekdays": [
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "January 20",
+    "dates": [
+      "2027-01-20"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-01-20",
+    "end_date": "2027-01-20",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "February 5 & 8",
+    "dates": [
+      "2027-02-05",
+      "2027-02-08"
+    ],
+    "date_kind": "multi",
+    "title": "Parent Teacher Interviews (no students in school)",
+    "start_date": "2027-02-05",
+    "end_date": "2027-02-08",
+    "span_days": 2,
+    "weekdays": [
+      "Fri",
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "February 12 - 15",
+    "dates": [
+      "2027-02-12",
+      "2027-02-13",
+      "2027-02-14",
+      "2027-02-15"
+    ],
+    "date_kind": "range",
+    "title": "4-day Long Weekend",
+    "start_date": "2027-02-12",
+    "end_date": "2027-02-15",
+    "span_days": 4,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "March 3",
+    "dates": [
+      "2027-03-03"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-03-03",
+    "end_date": "2027-03-03",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "March 10",
+    "dates": [
+      "2027-03-10"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-03-10",
+    "end_date": "2027-03-10",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "March 15\u201325",
+    "dates": [
+      "2027-03-15",
+      "2027-03-16",
+      "2027-03-17",
+      "2027-03-18",
+      "2027-03-19",
+      "2027-03-20",
+      "2027-03-21",
+      "2027-03-22",
+      "2027-03-23",
+      "2027-03-24",
+      "2027-03-25"
+    ],
+    "date_kind": "range",
+    "title": "March Break",
+    "start_date": "2027-03-15",
+    "end_date": "2027-03-25",
+    "span_days": 11,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun",
+      "Thu",
+      "Tue",
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "March 26\u201329",
+    "dates": [
+      "2027-03-26",
+      "2027-03-27",
+      "2027-03-28",
+      "2027-03-29"
+    ],
+    "date_kind": "range",
+    "title": "4\u2013Day Long Weekend weekend (Easter)",
+    "start_date": "2027-03-26",
+    "end_date": "2027-03-29",
+    "span_days": 4,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "April 6",
+    "dates": [
+      "2027-04-06"
+    ],
+    "date_kind": "single",
+    "title": "PA Day and OSSLT (only M4 students in school for the OSSLT)",
+    "start_date": "2027-04-06",
+    "end_date": "2027-04-06",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "April 7",
+    "dates": [
+      "2027-04-07"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-04-07",
+    "end_date": "2027-04-07",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "April 14",
+    "dates": [
+      "2027-04-14"
+    ],
+    "date_kind": "single",
+    "title": "Regular School Hours with a Special Schedule - Day of Pink",
+    "start_date": "2027-04-14",
+    "end_date": "2027-04-14",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "April 21",
+    "dates": [
+      "2027-04-21"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-04-21",
+    "end_date": "2027-04-21",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "April 30",
+    "dates": [
+      "2027-04-30"
+    ],
+    "date_kind": "single",
+    "title": "PD Day and Student Study day (no students in school)",
+    "start_date": "2027-04-30",
+    "end_date": "2027-04-30",
+    "span_days": 1,
+    "weekdays": [
+      "Fri"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "May 5",
+    "dates": [
+      "2027-05-05"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-05-05",
+    "end_date": "2027-05-05",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "May 12",
+    "dates": [
+      "2027-05-12"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-05-12",
+    "end_date": "2027-05-12",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "May 19",
+    "dates": [
+      "2027-05-19"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-05-19",
+    "end_date": "2027-05-19",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "May 24",
+    "dates": [
+      "2027-05-24"
+    ],
+    "date_kind": "single",
+    "title": "Holiday Monday (Victoria Day)",
+    "start_date": "2027-05-24",
+    "end_date": "2027-05-24",
+    "span_days": 1,
+    "weekdays": [
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "May 26",
+    "dates": [
+      "2027-05-26"
+    ],
+    "date_kind": "single",
+    "title": "House Island Day",
+    "start_date": "2027-05-26",
+    "end_date": "2027-05-26",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 2",
+    "dates": [
+      "2027-06-02"
+    ],
+    "date_kind": "single",
+    "title": "Late Start (no students in school until 10 a.m.)",
+    "start_date": "2027-06-02",
+    "end_date": "2027-06-02",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": true,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 4\u2013 21",
+    "dates": [
+      "2027-06-04",
+      "2027-06-05",
+      "2027-06-06",
+      "2027-06-07",
+      "2027-06-08",
+      "2027-06-09",
+      "2027-06-10",
+      "2027-06-11",
+      "2027-06-12",
+      "2027-06-13",
+      "2027-06-14",
+      "2027-06-15",
+      "2027-06-16",
+      "2027-06-17",
+      "2027-06-18",
+      "2027-06-19",
+      "2027-06-20",
+      "2027-06-21"
+    ],
+    "date_kind": "range",
+    "title": "Exam Week (mandatory attendance)",
+    "start_date": "2027-06-04",
+    "end_date": "2027-06-21",
+    "span_days": 18,
+    "weekdays": [
+      "Fri",
+      "Mon",
+      "Sat",
+      "Sun",
+      "Thu",
+      "Tue",
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 22",
+    "dates": [
+      "2027-06-22"
+    ],
+    "date_kind": "single",
+    "title": "PA Day (no students in School)",
+    "start_date": "2027-06-22",
+    "end_date": "2027-06-22",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 23",
+    "dates": [
+      "2027-06-23"
+    ],
+    "date_kind": "single",
+    "title": "Last Day of School for Students: Exam Review and Final Assembly",
+    "start_date": "2027-06-23",
+    "end_date": "2027-06-23",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 24",
+    "dates": [
+      "2027-06-24"
+    ],
+    "date_kind": "single",
+    "title": "S6 Graduation Day",
+    "start_date": "2027-06-24",
+    "end_date": "2027-06-24",
+    "span_days": 1,
+    "weekdays": [
+      "Thu"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 25",
+    "dates": [
+      "2027-06-25"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2027-06-25",
+    "end_date": "2027-06-25",
+    "span_days": 1,
+    "weekdays": [
+      "Fri"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 28",
+    "dates": [
+      "2027-06-28"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2027-06-28",
+    "end_date": "2027-06-28",
+    "span_days": 1,
+    "weekdays": [
+      "Mon"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 29",
+    "dates": [
+      "2027-06-29"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2027-06-29",
+    "end_date": "2027-06-29",
+    "span_days": 1,
+    "weekdays": [
+      "Tue"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  },
+  {
+    "raw_date": "June 30",
+    "dates": [
+      "2027-06-30"
+    ],
+    "date_kind": "single",
+    "title": "PD Day (no students in school)",
+    "start_date": "2027-06-30",
+    "end_date": "2027-06-30",
+    "span_days": 1,
+    "weekdays": [
+      "Wed"
+    ],
+    "has_explicit_time": false,
+    "timed_event_candidate": false
+  }
+]
