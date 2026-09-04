@@ -2,18 +2,19 @@
 -- Calenda -- complete database setup
 --
 -- Paste this whole file into the Supabase SQL Editor and run it once.
--- It is the three files in supabase/migrations/ concatenated, in order:
---
---   0001_init.sql   tables, indexes, constraints
---   0002_rls.sql    row-level security -- the permission boundary
---   0003_seed.sql   event categories and the current school year
+-- Generated from supabase/migrations/ -- do not edit by hand.
 --
 -- The whole thing runs inside a single transaction, so it is ALL-OR-NOTHING.
--- If anything fails -- a dropped connection, a platform incident, a typo from
--- a partial paste -- nothing is applied and the database is left untouched.
--- You can simply run it again. There is no half-built state to clean up.
+-- If anything fails -- a dropped connection, a platform incident, a partial
+-- paste -- nothing is applied and the database is left untouched. Just run it
+-- again. There is never a half-built state to clean up.
 --
--- Safe to run on a brand-new project. Verified against PostgreSQL 16.
+-- It also records each migration in supabase_migrations.schema_migrations, the
+-- table the Supabase CLI and GitHub integration use to track what has already
+-- been applied. So running this by hand does NOT conflict with the GitHub
+-- integration: when it later deploys, it sees these as done and skips them.
+--
+-- Verified against PostgreSQL 16.
 --
 -- Afterwards, sign in to Calenda once, then make yourself the admin:
 --
@@ -23,13 +24,19 @@
 
 begin;
 
--- Fail loudly on the first problem rather than pressing on with a broken
--- schema. Combined with the transaction, this guarantees a clean rollback.
 set local statement_timeout = '120s';
 
+-- Present on hosted Supabase projects; created here so the file also works on
+-- a plain PostgreSQL database.
+create schema if not exists supabase_migrations;
+create table if not exists supabase_migrations.schema_migrations (
+  version text primary key,
+  statements text[],
+  name text
+);
 
 -- ===========================================================================
--- 0001_init.sql
+-- 20260904000100_init.sql
 -- ===========================================================================
 
 -- ============================================================================
@@ -498,7 +505,7 @@ create table notification_deliveries (
 create index notification_deliveries_idx on notification_deliveries (profile_id, delivered_at desc);
 
 -- ===========================================================================
--- 0002_rls.sql
+-- 20260904000200_rls.sql
 -- ===========================================================================
 
 -- ============================================================================
@@ -856,7 +863,7 @@ create view search_index with (security_invoker = true) as
     from tasks t;
 
 -- ===========================================================================
--- 0003_seed.sql
+-- 20260904000300_seed.sql
 -- ===========================================================================
 
 -- ============================================================================
@@ -887,7 +894,17 @@ insert into school_years (label, starts_on, ends_on, is_current) values
 on conflict (label) do nothing;
 
 -- ============================================================================
--- Everything above succeeded. Nothing is saved until this commits.
+-- Mark these migrations as applied, so the GitHub integration skips them.
+-- ============================================================================
+
+insert into supabase_migrations.schema_migrations (version, name) values
+  ('20260904000100', 'init'),
+  ('20260904000200', 'rls'),
+  ('20260904000300', 'seed')
+on conflict (version) do nothing;
+
+-- ============================================================================
+-- Nothing above is saved until this commits.
 -- ============================================================================
 
 commit;

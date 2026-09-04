@@ -35,15 +35,27 @@ npm run build   # production bundle
 ## Database
 
 **Setting up a new project:** paste [`supabase/setup.sql`](supabase/setup.sql)
-into the Supabase SQL Editor and run it once. It is the three migrations
-concatenated, in order.
+into the Supabase SQL Editor and run it once. It is generated from the
+migrations by `scripts/build-setup-sql.sh` -- don't edit it by hand.
 
-For ongoing work the migrations are separate files:
+It runs in a single transaction, so it is all-or-nothing: a dropped connection
+leaves the database untouched and you simply run it again. It also records each
+migration in `supabase_migrations.schema_migrations`, so running it by hand
+does **not** conflict with the GitHub integration -- when that later deploys,
+it sees these as applied and skips them.
+
+Migrations use the CLI's timestamp naming so both paths work:
 
 ```
-supabase/migrations/0001_init.sql   schema, indexes, constraints
-supabase/migrations/0002_rls.sql    row-level security -- the permission boundary
-supabase/migrations/0003_seed.sql   categories and the current school year
+supabase/migrations/20260904000100_init.sql   schema, indexes, constraints
+supabase/migrations/20260904000200_rls.sql    row-level security
+supabase/migrations/20260904000300_seed.sql   categories and school year
+```
+
+After adding a migration, regenerate the setup file:
+
+```bash
+./scripts/build-setup-sql.sh
 ```
 
 ### Verifying the security policies
