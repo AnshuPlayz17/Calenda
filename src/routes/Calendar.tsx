@@ -6,7 +6,7 @@ import {
   addDays, addMonths, endOfMonth, monthLabel, startOfMonth, startOfWeek, todayPlain, weekGrid,
 } from '@/lib/datetime'
 import type { PlainDate } from '@/lib/events'
-import type { EventWithCategory } from '@/lib/types'
+import type { EventSource, EventWithCategory } from '@/lib/types'
 import type { CalendarItem } from '@/features/assignments/toCalendarItem'
 import { useCategories, useEvents } from '@/features/events/queries'
 import { useUpcomingAssignments } from '@/features/classes/queries'
@@ -23,6 +23,17 @@ import { CategoryDot } from '@/components/ui/CategoryDot'
 import { cn } from '@/lib/cn'
 
 type ViewMode = 'month' | 'week' | 'agenda'
+/**
+ * The school calendar and your own imported calendar are different things to
+ * look at, so they are separately switchable rather than one undifferentiated
+ * pile of events.
+ */
+const SOURCE_FILTERS: Array<{ id: EventSource; label: string }> = [
+  { id: 'pdf_import', label: 'School calendar' },
+  { id: 'google', label: 'From Google' },
+  { id: 'manual', label: 'Added by hand' },
+]
+
 const VIEWS: Array<{ id: ViewMode; label: string }> = [
   { id: 'month', label: 'Month' },
   { id: 'week', label: 'Week' },
@@ -46,6 +57,7 @@ export function CalendarPage() {
   const [editing, setEditing] = useState<EventWithCategory | null>(null)
   const [defaultDate, setDefaultDate] = useState<PlainDate | undefined>()
   const [dayOpen, setDayOpen] = useState<PlainDate | null>(null)
+  const [sources, setSources] = useState<EventSource[]>([])
 
   // The window the current view needs. Month pads to the full six-week grid so
   // events in the leading and trailing days are fetched too.
@@ -67,6 +79,7 @@ export function CalendarPage() {
         to: range.to,
         search: search.trim() || undefined,
         scope,
+        sources,
         categoryIds: activeCategories.length ? activeCategories : undefined,
       }
     : null
@@ -211,7 +224,7 @@ export function CalendarPage() {
             Filters
             {filtersActive && (
               <span className="tabular ml-0.5 rounded-full bg-brand-contrast/20 px-1.5 text-[11px]">
-                {activeCategories.length + (scope !== 'all' ? 1 : 0)}
+                {activeCategories.length + (scope !== 'all' ? 1 : 0) + sources.length}
               </span>
             )}
           </Button>
@@ -239,6 +252,31 @@ export function CalendarPage() {
                   {s === 'all' ? 'Everything' : s}
                 </button>
               ))}
+            </div>
+
+            <p className="label-caps mb-2">Where from</p>
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {SOURCE_FILTERS.map(({ id, label }) => {
+                const on = sources.includes(id)
+                return (
+                  <button
+                    key={id}
+                    aria-pressed={on}
+                    onClick={() =>
+                      setSources((prev) =>
+                        on ? prev.filter((v) => v !== id) : [...prev, id])
+                    }
+                    className={cn(
+                      'h-7 rounded-full border px-3 text-[12.5px] transition-colors duration-150',
+                      on
+                        ? 'border-brand bg-brand-subtle font-medium text-brand'
+                        : 'border-border text-text-muted hover:border-border-strong hover:text-text',
+                    )}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
 
             <p className="label-caps mb-2">Categories</p>
@@ -269,7 +307,7 @@ export function CalendarPage() {
 
             {filtersActive && (
               <Button variant="ghost" size="sm" className="mt-3"
-                      onClick={() => { setActiveCategories([]); setScope('all') }}>
+                      onClick={() => { setActiveCategories([]); setScope('all'); setSources([]) }}>
                 Clear filters
               </Button>
             )}

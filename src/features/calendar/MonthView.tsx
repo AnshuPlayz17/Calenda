@@ -63,30 +63,43 @@ export function MonthView({
           const hidden = dayEvents.length - MAX_VISIBLE
 
           return (
+            // The whole cell opens the day, not just the date number. A 24px
+            // circle is not a target anyone finds, and on a phone the dots
+            // below are not interactive at all -- so tapping a day appeared to
+            // do nothing unless you happened to hit the number exactly.
             <div
               key={day}
+              role="button"
+              tabIndex={0}
+              aria-label={`${dayEvents.length} events on ${day}`}
+              onClick={() => onSelectDay(day)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return
+                e.preventDefault()
+                onSelectDay(day)
+              }}
               className={cn(
-                'flex min-h-[64px] flex-col gap-0.5 border-b border-r border-border p-1.5',
+                'flex min-h-[64px] cursor-pointer flex-col gap-0.5 border-b border-r border-border p-1.5',
+                'transition-colors duration-150 hover:bg-surface-2',
+                'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand',
                 'sm:min-h-[112px]',
                 i % 7 === 6 && 'border-r-0',
                 i >= 35 && 'border-b-0',
                 outside && 'bg-surface-2/45',
               )}
             >
-              <button
-                type="button"
-                onClick={() => onSelectDay(day)}
-                aria-label={`Events on ${day}`}
+              <span
+                aria-hidden
                 className={cn(
                   'tabular mb-0.5 grid h-6 w-6 shrink-0 place-items-center self-start rounded-full',
-                  'text-[12px] transition-colors duration-150 hover:bg-surface-3',
-                  isToday && 'bg-brand font-semibold text-brand-contrast hover:bg-brand-hover',
+                  'text-[12px]',
+                  isToday && 'bg-brand font-semibold text-brand-contrast',
                   !isToday && outside && 'text-text-subtle',
                   !isToday && !outside && 'text-text-muted',
                 )}
               >
                 {dayNumber(day)}
-              </button>
+              </span>
 
               {/* A month cell is too narrow on a phone for a readable title --
                   it truncates to a single letter -- so small screens get
@@ -107,17 +120,19 @@ export function MonthView({
 
               <div className="hidden flex-col gap-0.5 sm:flex">
                 {dayEvents.slice(0, MAX_VISIBLE).map((e) => (
-                  <EventChip key={`${day}-${e.id}`} event={e} onSelect={onSelect} />
+                  <div
+                    key={`${day}-${e.id}`}
+                    onClick={(ev) => ev.stopPropagation()}
+                    onKeyDown={(ev) => ev.stopPropagation()}
+                  >
+                    <EventChip event={e} onSelect={onSelect} />
+                  </div>
                 ))}
 
                 {hidden > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onSelectDay(day)}
-                    className="px-1.5 pt-0.5 text-left text-[10.5px] text-text-subtle hover:text-text"
-                  >
+                  <span className="px-1.5 pt-0.5 text-left text-[10.5px] text-text-subtle">
                     {hidden} more
-                  </button>
+                  </span>
                 )}
               </div>
             </div>

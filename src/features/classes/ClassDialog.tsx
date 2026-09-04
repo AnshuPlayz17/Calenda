@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useCreateClass, useUpdateClass } from './queries'
+import { useCreateClass, useDeleteClass, useUpdateClass } from './queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import type { NewClassInput, SchoolClass } from '@/lib/types'
 
@@ -19,12 +20,24 @@ export function ClassDialog({
   const create = useCreateClass(current?.id)
   const update = useUpdateClass()
 
+  const remove = useDeleteClass()
+
   const [form, setForm] = useState<NewClassInput>(BLANK)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [typedName, setTypedName] = useState('')
+
+  // Deleting takes the notes, assignments and tasks inside the class with it,
+  // so it asks for the name to be typed rather than for one more click. There
+  // is no password to ask for -- sign-in is through Google, and Calenda never
+  // sees one.
+  const nameMatches = existing !== null && typedName.trim() === existing.name.trim()
 
   useEffect(() => {
     if (!open) return
     setError(null)
+    setConfirmingDelete(false)
+    setTypedName('')
     setForm(existing
       ? {
           name: existing.name,
@@ -51,7 +64,18 @@ export function ClassDialog({
     }
   }
 
-  const busy = create.isPending || update.isPending
+  async function destroy() {
+    if (!existing || !nameMatches) return
+    setError(null)
+    try {
+      await remove.mutateAsync(existing.id)
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "We couldn't delete that class.")
+    }
+  }
+
+  const busy = create.isPending || update.isPending || remove.isPending
 
   return (
     <Dialog
@@ -89,6 +113,49 @@ export function ClassDialog({
                  onChange={(e) => set('room', e.target.value)} />
         </div>
       </form>
+
+      {existing && (
+        <div className="mt-6 border-t border-border pt-4">
+          {!confirmingDelete ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[13.5px] font-medium text-text">Delete this class</p>
+                <p className="text-[12.5px] text-text-muted">
+                  Archiving hides it and keeps everything. Deleting does not.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(true)}>
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Delete
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-danger-border bg-danger-subtle p-3">
+              <p className="text-[13px] text-danger">
+                This permanently deletes <strong>{existing.name}</strong>, along with its notes,
+                assignments and tasks. It cannot be undone.
+              </p>
+              <Input
+                label={`Type "${existing.name}" to confirm`}
+                value={typedName}
+                autoComplete="off"
+                className="mt-3"
+                onChange={(e) => setTypedName(e.target.value)}
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm"
+                        onClick={() => { setConfirmingDelete(false); setTypedName('') }}>
+                  Keep it
+                </Button>
+                <Button variant="danger" size="sm" disabled={!nameMatches}
+                        loading={remove.isPending} onClick={() => void destroy()}>
+                  Delete permanently
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Dialog>
   )
 }

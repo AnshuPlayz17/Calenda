@@ -74,6 +74,12 @@ export const supabaseSource: DataSource = {
       .from('events')
       .select(EVENT_COLUMNS)
       .eq('school_year_id', filters.schoolYearId)
+      // Only settled events belong on a calendar. A community event you
+      // suggested is visible to you at every status, so without this your own
+      // pending and rejected suggestions sat on your calendar as though they
+      // had been approved. Private events are 'approved' by database
+      // constraint, so this does not hide anything of your own.
+      .eq('status', 'approved')
       // Overlap, not containment, so a multi-day break spanning the window
       // edge still appears.
       .lte('start_date', filters.to)
@@ -83,6 +89,7 @@ export const supabaseSource: DataSource = {
     if (filters.categoryIds?.length) query = query.in('category_id', filters.categoryIds)
     if (filters.scope === 'community') query = query.eq('visibility', 'community')
     if (filters.scope === 'personal') query = query.eq('visibility', 'private')
+    if (filters.sources?.length) query = query.in('source', filters.sources)
     if (filters.search) {
       const q = filters.search.replace(/[%,()]/g, ' ').trim()
       if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
