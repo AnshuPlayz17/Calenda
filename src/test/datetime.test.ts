@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays, addMonths, agendaLabel, dayNumber, endOfMonth, isSameMonth,
-  monthGrid, monthLabel, parts, plain, startOfMonth, startOfWeek, weekday,
-  weekGrid,
+  monthGrid, monthLabel, parts, plain, startOfMonth, startOfWeek, timeLabel,
+  toInstant, weekday, weekGrid,
 } from '@/lib/datetime'
 
 describe('plain / parts', () => {
@@ -136,5 +136,42 @@ describe('isSameMonth', () => {
     expect(isSameMonth('2026-10-01', '2026-10-31')).toBe(true)
     expect(isSameMonth('2026-10-01', '2027-10-01')).toBe(false)
     expect(isSameMonth('2026-10-31', '2026-11-01')).toBe(false)
+  })
+})
+
+describe('timezone handling', () => {
+  // The reminder scheduler resolves everything in profiles.timezone
+  // ('America/Toronto' by default). If the UI resolved times in the browser's
+  // zone instead, a parent in Vancouver would read 12:30 p.m. on the same test
+  // their child sees at 3:30, and the reminder would quote a third time again.
+  it('reads a wall clock in the school zone, not the browser zone', () => {
+    // 2026-11-10 is EST (UTC-5): 15:30 Toronto is 20:30 UTC.
+    expect(toInstant('2026-11-10', '15:30')).toBe('2026-11-10T20:30:00.000Z')
+  })
+
+  it('accounts for daylight time', () => {
+    // 2026-06-10 is EDT (UTC-4): 15:30 Toronto is 19:30 UTC.
+    expect(toInstant('2026-06-10', '15:30')).toBe('2026-06-10T19:30:00.000Z')
+  })
+
+  it('handles the instant either side of a DST transition', () => {
+    // Toronto springs forward 2027-03-14 at 02:00.
+    expect(toInstant('2027-03-14', '01:30')).toBe('2027-03-14T06:30:00.000Z')
+    expect(toInstant('2027-03-14', '03:30')).toBe('2027-03-14T07:30:00.000Z')
+  })
+
+  it('honours an explicit zone for a user who is not in Toronto', () => {
+    expect(toInstant('2026-11-10', '15:30', 'America/Vancouver'))
+      .toBe('2026-11-10T23:30:00.000Z')
+  })
+
+  it('renders a stored instant back in the school zone', () => {
+    expect(timeLabel('2026-11-10T20:30:00.000Z')).toBe('3:30 p.m.')
+  })
+
+  it('round-trips a wall clock through storage and back', () => {
+    for (const date of ['2026-11-10', '2026-06-10', '2027-03-14', '2026-12-25'] as const) {
+      expect(timeLabel(toInstant(date, '15:30'))).toBe('3:30 p.m.')
+    }
   })
 })
