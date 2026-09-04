@@ -40,6 +40,13 @@ create table if not exists supabase_migrations.schema_migrations (
   statements text[],
   name text
 );
+
+-- Enabled with no policies, so it is default-deny. The schema is not exposed
+-- through PostgREST either, but Supabase's SQL editor rightly warns about any
+-- table created without RLS, and there is no reason to be the exception.
+-- Supabase's own migration tooling writes this as the service role, which
+-- bypasses RLS, so nothing is broken by locking it down.
+alter table supabase_migrations.schema_migrations enable row level security;
 HDR
 
 for f in supabase/migrations/*.sql; do
