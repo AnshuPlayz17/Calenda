@@ -188,3 +188,52 @@ describe('a row judged new reports no match', () => {
     expect(winter[1]!.matchRowKey).toBe(winter[0]!.key)
   })
 })
+
+describe('what the real 2026-27 calendar actually flags', () => {
+  // Locked in after running the first real import: the document contains
+  // three same-titled adjacent pairs, not one. Winter Break is the case where
+  // merging is right; the two June PD Days are genuinely separate days that
+  // happen to run consecutively.
+  it('flags exactly three rows, and names them', () => {
+    const rows = analyseImport(candidates, [])
+    const flagged = rows
+      .filter((r) => r.resolution === null)
+      .map((r) => `${r.candidate.title} ${r.candidate.startDate}`)
+
+    expect(flagged).toEqual([
+      'Winter Break 2027-01-01',
+      'PD Day 2027-06-29',
+      'PD Day 2027-06-30',
+    ])
+  })
+
+  it('does not merge the consecutive June PD days automatically', () => {
+    // Jun 25, 28, 29 and 30 are four separate PD days. Silently collapsing
+    // the consecutive three would erase two real days off the calendar.
+    // Note "PD Day" and "PA Day" are different titles in the source -- Jun 22
+    // is a PA Day. Only the four PD Days run consecutively.
+    const rows = analyseImport(candidates, [])
+    const june = rows.filter(
+      (r) => r.candidate.title === 'PD Day' && r.candidate.startDate.startsWith('2027-06'))
+    expect(june.map((r) => r.candidate.startDate)).toEqual([
+      '2027-06-25', '2027-06-28', '2027-06-29', '2027-06-30',
+    ])
+    // Two are flagged for a decision; none is resolved on the user's behalf.
+    expect(june.filter((r) => r.resolution === null)).toHaveLength(2)
+  })
+
+  it('keeps all four June PD days when they are added anyway', () => {
+    const rows = analyseImport(candidates, []).map((r) =>
+      r.resolution === null && r.candidate.title === 'PD Day'
+        ? { ...r, resolution: 'add_anyway' as const }
+        : r.resolution === null
+          ? { ...r, resolution: 'merge' as const }
+          : r)
+
+    const writes = buildWrites(rows)
+    const june = writes.filter((w) => w.title === 'PD Day' && w.startDate.startsWith('2027-06'))
+    expect(june.map((w) => w.startDate)).toEqual([
+      '2027-06-25', '2027-06-28', '2027-06-29', '2027-06-30',
+    ])
+  })
+})
