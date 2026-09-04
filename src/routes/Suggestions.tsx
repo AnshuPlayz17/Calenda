@@ -17,6 +17,16 @@ import { agendaLabel } from '@/lib/datetime'
  * What the author sees after suggesting a community event: where each one got
  * to, and why, if it was declined.
  */
+/**
+ * Waiting, settled, turned down -- in that order, because the only one you can
+ * still do anything about is the first.
+ */
+const GROUPS: Array<{ status: 'pending' | 'approved' | 'rejected'; heading: string; note: string }> = [
+  { status: 'pending',  heading: 'Waiting for review', note: 'Only you can see these' },
+  { status: 'approved', heading: 'On the shared calendar', note: 'Everyone can see these' },
+  { status: 'rejected', heading: 'Not added',            note: 'With the reason given' },
+]
+
 export function SuggestionsPage() {
   const { current } = useSchoolYear()
   const { data: suggestions = [], isLoading, isError, refetch, isFetching } =
@@ -66,14 +76,29 @@ export function SuggestionsPage() {
           />
         </Card>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {suggestions.map((e, i) => (
-            <motion.li
-              key={e.id}
-              initial={reduce ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.32, delay: Math.min(i, 8) * 0.04, ease: [0.22, 1, 0.36, 1] }}
-            >
+        <div className="flex flex-col gap-7">
+          {GROUPS.map(({ status, heading, note }) => {
+            const inGroup = suggestions.filter((e) => e.status === status)
+            if (inGroup.length === 0) return null
+            return (
+              <section key={status}>
+                <div className="mb-2.5 flex items-baseline gap-2.5 border-b border-border pb-2">
+                  <h2 className="text-[15px] font-medium text-text">{heading}</h2>
+                  <span className="tabular text-[12.5px] text-text-subtle">{inGroup.length}</span>
+                  <p className="ml-auto text-[12.5px] text-text-muted">{note}</p>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {inGroup.map((e, i) => (
+                    <motion.li
+                      key={e.id}
+                      initial={reduce ? false : { opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.32,
+                        delay: Math.min(i, 8) * 0.04,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                    >
               <Card className="flex items-start gap-3 px-4 py-3.5">
                 <span
                   aria-hidden
@@ -106,9 +131,13 @@ export function SuggestionsPage() {
                   )}
                 </div>
               </Card>
-            </motion.li>
-          ))}
-        </ul>
+                    </motion.li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
 
       <EventDialog

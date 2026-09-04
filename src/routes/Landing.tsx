@@ -75,7 +75,7 @@ function Hero() {
   const cardY = useTransform(scrollY, [0, 600], [0, reduce ? 0 : -40])
 
   return (
-    <section className="relative overflow-hidden px-5 pb-20 pt-14 sm:px-8 sm:pb-28 sm:pt-20">
+    <section className="relative overflow-hidden px-5 pb-14 pt-12 sm:px-8 sm:pb-20 sm:pt-16">
       {/* Ambient calendar grid, drawn rather than an image. */}
       <div
         aria-hidden
@@ -207,7 +207,7 @@ function UpcomingPreview() {
 
 function Problem() {
   return (
-    <section className="border-y border-border bg-surface px-5 py-20 sm:px-8 sm:py-24">
+    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
           <h2 className="max-w-[20ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
@@ -278,7 +278,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section className="px-5 py-20 sm:px-8 sm:py-24">
+    <section className="px-5 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
           <p className="label-caps">What it does</p>
@@ -305,7 +305,7 @@ function Features() {
 
 function Privacy() {
   return (
-    <section className="border-y border-border bg-surface px-5 py-20 sm:px-8 sm:py-24">
+    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-[1120px] items-start gap-10 lg:grid-cols-2">
         <Reveal>
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
@@ -347,7 +347,7 @@ function Privacy() {
 
 function Closing() {
   return (
-    <section className="px-5 py-24 sm:px-8 sm:py-28">
+    <section className="px-5 py-20 sm:px-8 sm:py-24">
       <Reveal className="mx-auto max-w-[1120px] text-center">
         <h2 className="mx-auto max-w-[18ch] font-display text-[32px] font-medium leading-tight tracking-tight sm:text-[44px]">
           Start the year knowing what's coming.
