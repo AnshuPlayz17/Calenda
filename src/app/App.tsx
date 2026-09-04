@@ -8,6 +8,8 @@ import { PreviewProvider, usePreview } from '@/lib/preview'
 import { AppShell } from './AppShell'
 import { Landing } from '@/routes/Landing'
 import { SignIn } from '@/routes/SignIn'
+import { SignUp } from '@/routes/SignUp'
+import { Welcome } from '@/routes/Welcome'
 import { AuthCallback } from '@/routes/AuthCallback'
 import { Dashboard } from '@/routes/Dashboard'
 import { NotFound } from '@/routes/NotFound'
@@ -77,6 +79,8 @@ export function App() {
                   in straight to their dashboard. */}
               <Route path="/" element={<Landing />} />
               <Route path="/sign-in" element={<SignIn />} />
+              <Route path="/sign-up" element={<SignUp />} />
+              <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route
                 element={

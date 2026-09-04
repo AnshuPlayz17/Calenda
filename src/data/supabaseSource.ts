@@ -11,9 +11,7 @@ import type {
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
-import type {
-  DataSource, EventFilters, ImportOptions, ImportWrite, ReviewAction,
-} from './source'
+import type { DataSource, EventFilters, ImportOptions, ImportWrite, ReviewAction, SearchHit } from './source'
 
 const EVENT_COLUMNS = '*, category:event_categories(*)'
 
@@ -246,6 +244,18 @@ export const supabaseSource: DataSource = {
 
 
   // ------------------------------------------------------ notifications --
+
+  async search(query: string, schoolYearId?: string) {
+    const q = query.trim()
+    if (q.length < 2) return []
+    const { data, error } = await supabase.rpc('search_everything', {
+      q,
+      school_year: schoolYearId ?? null,
+      max_results: 20,
+    })
+    if (error) fail('search', error)
+    return (data ?? []) as SearchHit[]
+  },
 
   async getNotificationPreferences() {
     const { data: auth } = await supabase.auth.getUser()

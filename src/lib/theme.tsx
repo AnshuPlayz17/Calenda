@@ -1,13 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = 'light' | 'dark' | 'vivid' | 'system'
 
 const STORAGE_KEY = 'calenda.theme'
 
 type ThemeContextValue = {
   theme: Theme
-  /** What is actually on screen once 'system' is resolved. */
+  /**
+   * What is actually on screen once 'system' is resolved. Vivid is a light
+   * theme, so anything keying off lightness treats it as one.
+   */
   resolved: 'light' | 'dark'
   setTheme: (t: Theme) => void
 }
@@ -17,7 +20,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 function readStored(): Theme {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
-    if (v === 'light' || v === 'dark') return v
+    if (v === 'light' || v === 'dark' || v === 'vivid') return v
   } catch {
     // Private browsing blocks storage; the OS preference is a fine fallback.
   }
@@ -58,7 +61,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
-      resolved: theme === 'system' ? (systemDark ? 'dark' : 'light') : theme,
+      resolved:
+        theme === 'system'
+          ? (systemDark ? 'dark' : 'light')
+          : theme === 'dark'
+            ? 'dark'
+            : 'light',
       setTheme,
     }),
     [theme, systemDark, setTheme],

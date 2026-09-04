@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Monitor, Moon, Palette, Sun } from 'lucide-react'
 import { useTheme } from '@/lib/theme'
 import type { Theme } from '@/lib/theme'
 import { cn } from '@/lib/cn'
@@ -6,12 +6,13 @@ import { cn } from '@/lib/cn'
 const options: Array<{ value: Theme; label: string; Icon: typeof Sun }> = [
   { value: 'light', label: 'Light', Icon: Sun },
   { value: 'dark', label: 'Dark', Icon: Moon },
-  { value: 'system', label: 'System', Icon: Monitor },
+  { value: 'vivid', label: 'Vivid', Icon: Palette },
+  { value: 'system', label: 'Match my computer', Icon: Monitor },
 ]
 
 /**
- * A three-way control, because "system" is a real choice and not the absence
- * of one. Rendered as a radiogroup so arrow keys move between options.
+ * Four options, because "match my computer" is a real choice and not the
+ * absence of one. Rendered as a radiogroup so arrow keys move between them.
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()

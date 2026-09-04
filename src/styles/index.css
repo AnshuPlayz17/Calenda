@@ -103,7 +103,7 @@
 
 /* Dark, via OS preference -- guarded so an explicit light choice still wins. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme='light']):not([data-theme='vivid']) {
     --bg:        var(--n-950);
     --surface:   #141c2c;
     --surface-2: #1b2434;
@@ -202,6 +202,67 @@
   --shadow-md: 0 2px 4px rgb(0 0 0 / 0.4), 0 8px 20px -8px rgb(0 0 0 / 0.6);
   --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.45), 0 20px 40px -16px rgb(0 0 0 / 0.7);
 }
+
+/* ---------------------------------------------------------------------------
+   Vivid -- the colourful option.
+   
+   Not a hue-rotate of the default. The ground is a warm off-white with a
+   violet cast, the brand is a saturated indigo-violet rather than the
+   institutional navy, and the category hues are pushed up in chroma so a full
+   calendar reads as colourful rather than as thirteen shades of grey-blue.
+   
+   One hue family carries it, with teal and amber doing the supporting work.
+   Deliberately not a spectrum: a calendar where every category shouts is
+   harder to read, not more cheerful.
+   --------------------------------------------------------------------------- */
+:root[data-theme='vivid'] {
+  --bg:          #f7f5fb;
+  --surface:     #ffffff;
+  --surface-2:   #f1eef9;
+  --surface-3:   #e6e1f4;
+  --overlay:     rgb(32 22 56 / 0.44);
+
+  --text:        #1c1630;
+  --text-muted:  #574d75;
+  --text-subtle: #7d739b;
+  --text-invert: #ffffff;
+
+  --border:        #e2dcf1;
+  --border-strong: #cdc4e5;
+
+  --brand:          #5a3fd6;
+  --brand-hover:    #6b52de;
+  --brand-active:   #4a32b8;
+  --brand-contrast: #ffffff;
+  --brand-subtle:   #efeafd;
+  --brand-border:   #cfc2f6;
+  --ring:           #7c62e8;
+
+  --success: #157f5e;  --success-subtle: #dff4ec;  --success-border: #93d6bf;
+  --warning: #97621a;  --warning-subtle: #fbeeda;  --warning-border: #e5bf85;
+  --danger:  #b8342f;  --danger-subtle:  #fce4e2;  --danger-border:  #eda9a4;
+  --info:    #5a3fd6;  --info-subtle:    #efeafd;  --info-border:    #cfc2f6;
+
+  --cat-academic:    #3f5fd6;
+  --cat-school:      #0f8a63;
+  --cat-pa-day:      #a8701a;
+  --cat-holiday:     #c85a34;
+  --cat-exam:        #c9312c;
+  --cat-assignment:  #8b3fd6;
+  --cat-sports:      #0d8a9b;
+  --cat-clubs:       #8a7a12;
+  --cat-trips:       #2079a8;
+  --cat-performance: #bd3079;
+  --cat-family:      #5a5f8f;
+  --cat-personal:    #16906b;
+  --cat-other:       #6d6a8a;
+
+  --shadow-xs: 0 1px 2px rgb(50 34 92 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(50 34 92 / 0.06), 0 2px 6px -2px rgb(50 34 92 / 0.10);
+  --shadow-md: 0 2px 4px rgb(50 34 92 / 0.06), 0 8px 20px -8px rgb(50 34 92 / 0.16);
+  --shadow-lg: 0 4px 8px rgb(50 34 92 / 0.07), 0 20px 40px -16px rgb(50 34 92 / 0.22);
+}
+
 
 /* Expose the semantic layer to Tailwind so utilities follow the theme.
    `inline` keeps the var reference live instead of resolving it at build. */

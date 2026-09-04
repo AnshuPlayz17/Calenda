@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import {
-  ArrowRight, CalendarDays, CheckCircle2, ClipboardList, GraduationCap,
-  NotebookPen, ShieldCheck, Sparkles, Users,
+  ArrowRight, CalendarDays, CheckCircle2, ClipboardList,
+  NotebookPen, ShieldCheck, Users,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
+import { PinnedStory } from '@/features/welcome/PinnedStory'
+import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 import { schoolEvents2026_27 } from '@/data/schoolCalendar'
@@ -243,42 +245,55 @@ function Problem() {
   )
 }
 
-const FEATURES = [
+
+/**
+ * The same pinned treatment as the welcome walkthrough, deliberately: the
+ * thing a visitor is deciding is whether this app does what they need, and
+ * showing the real screens one at a time answers that better than a grid of
+ * nine short paragraphs they will skim.
+ */
+const TOUR: Chapter[] = [
   {
+    id: 'tour-calendar',
     Icon: CalendarDays,
-    title: 'One calendar',
-    body: 'School events, your own plans, Google Calendar and every assignment deadline — month, week or agenda.',
+    eyebrow: 'The school calendar',
+    title: 'Every date, without typing one.',
+    body: 'The Important Dates PDF becomes real events — PA days, exams, breaks, '
+      + 'assemblies — with duplicates caught before they land.',
+    demo: 'calendar',
   },
   {
-    Icon: GraduationCap,
-    title: 'A workspace per class',
-    body: 'Notes, assignments, tasks and deadlines together, filed under the class they belong to.',
-  },
-  {
+    id: 'tour-classes',
     Icon: NotebookPen,
-    title: 'Notes that keep up',
-    body: 'Headings, checklists, code blocks. Saves as you write, so nothing is lost.',
+    eyebrow: 'Your classes',
+    title: 'Notes where the class is.',
+    body: 'A workspace per subject, so a chemistry note is in chemistry rather '
+      + 'than seventeenth in one long list.',
+    demo: 'classes',
   },
   {
+    id: 'tour-deadlines',
     Icon: ClipboardList,
-    title: 'Deadlines that find you',
-    body: 'Add an assignment once. It shows on the dashboard, the calendar and your reminders.',
+    eyebrow: 'Deadlines',
+    title: 'One date, two places, always agreed.',
+    body: 'An assignment shows on your calendar because it is due — not because '
+      + 'a copy of it was put there.',
+    demo: 'assignments',
   },
   {
-    Icon: Sparkles,
-    title: 'Suggest school events',
-    body: 'Know about a game or a club meeting? Put it forward for everyone, and follow it through review.',
-  },
-  {
+    id: 'tour-parents',
     Icon: Users,
-    title: 'Share with parents',
-    body: 'Item by item, never all at once. Connecting a parent shares nothing on its own.',
+    eyebrow: 'Parents',
+    title: 'Shared only where you say.',
+    body: 'Connecting a parent shows them nothing by itself. Every class and '
+      + 'event is shared one at a time, and can be unshared.',
+    demo: 'parents',
   },
 ]
 
 function Features() {
   return (
-    <section className="px-5 py-16 sm:px-8 sm:py-20">
+    <section className="px-5 pt-16 sm:px-8 sm:pt-20">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
           <p className="label-caps">What it does</p>
@@ -286,19 +301,9 @@ function Features() {
             Built for the way a school year actually works.
           </h2>
         </Reveal>
-
-        <div className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ Icon, title, body }, i) => (
-            <Reveal key={title} delay={(i % 3) * 0.08}>
-              <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-subtle text-brand">
-                <Icon className="h-[18px] w-[18px]" aria-hidden />
-              </span>
-              <h3 className="mt-4 text-[15.5px] font-semibold tracking-tight">{title}</h3>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-text-muted">{body}</p>
-            </Reveal>
-          ))}
-        </div>
       </div>
+
+      <PinnedStory chapters={TOUR} />
     </section>
   )
 }
