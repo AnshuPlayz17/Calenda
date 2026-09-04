@@ -33,14 +33,12 @@ export const authProviders: AuthProviderConfig[] = [
   {
     id: 'github',
     label: 'GitHub',
-    enabled: false,
-    note: 'Needs a GitHub OAuth app and its client secret in Supabase. Free.',
+    enabled: true,
   },
   {
     id: 'discord',
     label: 'Discord',
-    enabled: false,
-    note: 'Needs a Discord application and its client secret in Supabase. Free.',
+    enabled: true,
   },
   {
     id: 'facebook',
