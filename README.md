@@ -151,32 +151,69 @@ callback route and linking logic all ship — set `enabled: true` in
 ## Notifications
 
 Preferences, per-category reminder offsets, quiet hours and web-push
-subscription all work as soon as the migrations are applied. **Sending**
-needs two more things, and until they exist reminders queue but never go out:
+subscription all work as soon as the migrations are applied. **Sending** needs
+three more steps, and until they are done reminders queue but never go out.
 
-1. **Deploy the dispatcher**
+Web push is the default channel because it is the one that stays free: the
+whole dependency is a VAPID key pair you generate yourself. Email needs a
+sending account with monthly limits, so it is off unless you configure it.
+
+1. **Generate a VAPID pair** (once, and never again unless you rotate it)
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+   The private key is a credential. Keep it out of the repository, out of
+   chat, and out of anything you paste publicly.
+
+2. **Deploy the dispatcher and give it the private key**
 
    ```bash
    supabase functions deploy notify-dispatch
-   ```
-
-2. **Give it credentials**
-
-   ```bash
-   npx web-push generate-vapid-keys          # once
    supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...
-   supabase secrets set RESEND_API_KEY=...   # resend.com, free tier
+   supabase secrets set VAPID_SUBJECT=mailto:you@example.com
    ```
 
-   Put the **public** VAPID key in `VITE_VAPID_PUBLIC_KEY` as a repository
-   variable too -- the browser needs it to subscribe, and it is safe to
-   publish. The private key never leaves Supabase.
+   Add the **public** key as a repository *variable* named
+   `VITE_VAPID_PUBLIC_KEY` as well. The browser cannot subscribe to push
+   without it, and it is safe to publish -- it identifies the sender and
+   grants nothing. The private key never leaves Supabase.
 
-Then either add `SUPABASE_FUNCTION_URL` as a repository secret (the hourly
-`reminders.yml` workflow pokes it), or schedule it inside Postgres with
-`pg_cron`. Both are safe to run together: `claim_due_reminders()` marks rows
-sent as it claims them under `for update skip locked`, so two dispatchers
-cannot send the same reminder.
+   Optional, only if you want email as well: `supabase secrets set
+   RESEND_API_KEY=...`. Without it, email reminders are marked `skipped`
+   rather than failed.
+
+3. **Schedule it**
+
+   Fill in the two placeholders in `supabase/schedule-notifications.sql` and
+   run it in the SQL Editor. It uses `pg_cron` to call the function every
+   fifteen minutes.
+
+   In-database rather than a CI cron on purpose: a scheduled GitHub Actions
+   workflow is disabled automatically after 60 days of repository inactivity --
+   about the length of a summer holiday -- and its schedule is best-effort,
+   often running late. Running both at once is safe if you prefer belt and
+   braces: `claim_due_reminders()` marks rows sent as it claims them under
+   `for update skip locked`, so two dispatchers cannot send the same reminder.
+
+### Checking it works
+
+```sql
+select state, channel, count(*) from notification_queue group by state, channel;
+select * from notification_deliveries order by created_at desc limit 10;
+```
+
+`skipped` means the channel had no sender configured, which is not a failure.
+`failed` means it tried and could not; the `error` column says why.
+
+`supabase/tests/dispatch_readiness_test.sql` checks the pipeline end to end --
+that `schedule_reminders()` runs at all, queues on the configured channel, and
+adds nothing on a second run. It exists because two bugs once got past every
+other suite: plpgsql resolves types and function overloads inside embedded SQL
+only when the function is *called*, so a migration that broke
+`schedule_reminders()` applied perfectly cleanly and nothing noticed until
+something ran it.
 
 ### Why not SMS
 

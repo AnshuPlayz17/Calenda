@@ -41,6 +41,12 @@ jobs:
           # nothing on its own, because every table is behind RLS.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # The public half of the VAPID pair. Public by design: it identifies
+          # the sender to the browser's push service and grants nothing. The
+          # client cannot subscribe to push without it, so leaving it out made
+          # the notifications page report push as unconfigured no matter what
+          # was set on the server.
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
         run: npm run build
 
       # Hash routing means deep links never hit the server, but a copied
