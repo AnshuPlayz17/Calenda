@@ -45,10 +45,14 @@ supabase/migrations/0003_seed.sql   categories and the current school year
 Run them through the Supabase SQL editor or `supabase db push`.
 
 **Promoting the first admin** is a deliberate one-time SQL statement. There is
-no application code path that grants admin, so a bug cannot create one:
+no application code path that grants admin, so a bug cannot create one.
+
+Sign in through the app once first -- the profile row is created on first
+sign-in, so running this earlier matches nothing:
 
 ```sql
-update profiles set role = 'admin' where id = '<your-auth-user-id>';
+update profiles set role = 'admin'
+where id = (select id from auth.users where email = 'you@example.com');
 ```
 
 ## Configuration
