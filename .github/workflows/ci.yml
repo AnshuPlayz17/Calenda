@@ -1,13 +1,28 @@
 name: CI
 
+# Pull requests only. Previously this also ran on every branch push, which
+# meant each PR commit ran the identical workflow twice -- once as `push`,
+# once as `pull_request` -- doubling CI time and, when one runner stalled,
+# showing a red or hanging check beside a green one for the same commit.
+#
+# Pushes to main are covered by the deploy workflow, which typechecks and
+# tests before it publishes.
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
+  workflow_dispatch:
+
+# A newer commit makes an in-flight run obsolete, so cancel it rather than
+# paying for a result nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A stalled runner should fail rather than hang for six hours; the job
+    # normally finishes in about two minutes.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

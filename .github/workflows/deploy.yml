@@ -18,6 +18,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # This job stalled indefinitely on npm ci once. A timeout turns that into
+    # a clear failure that can be re-run, rather than a run that hangs.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +55,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
