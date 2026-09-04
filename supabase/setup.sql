@@ -8,6 +8,11 @@
 --   0002_rls.sql    row-level security -- the permission boundary
 --   0003_seed.sql   event categories and the current school year
 --
+-- The whole thing runs inside a single transaction, so it is ALL-OR-NOTHING.
+-- If anything fails -- a dropped connection, a platform incident, a typo from
+-- a partial paste -- nothing is applied and the database is left untouched.
+-- You can simply run it again. There is no half-built state to clean up.
+--
 -- Safe to run on a brand-new project. Verified against PostgreSQL 16.
 --
 -- Afterwards, sign in to Calenda once, then make yourself the admin:
@@ -15,6 +20,12 @@
 --   update profiles set role = 'admin'
 --   where id = (select id from auth.users where email = 'you@example.com');
 -- ============================================================================
+
+begin;
+
+-- Fail loudly on the first problem rather than pressing on with a broken
+-- schema. Combined with the transaction, this guarantees a clean rollback.
+set local statement_timeout = '120s';
 
 
 -- ===========================================================================
@@ -874,3 +885,9 @@ on conflict (slug) do nothing;
 insert into school_years (label, starts_on, ends_on, is_current) values
   ('2026–27', '2026-09-01', '2027-06-30', true)
 on conflict (label) do nothing;
+
+-- ============================================================================
+-- Everything above succeeded. Nothing is saved until this commits.
+-- ============================================================================
+
+commit;
