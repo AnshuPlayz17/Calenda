@@ -19,7 +19,7 @@ unofficial/personal-project marker.
 | Decision | Choice | Recorded |
 |---|---|---|
 | Authentication | Many providers, unrestricted — Google, Microsoft, GitHub, Discord, Facebook, email+password, magic link | §3 |
-| Google Calendar | **Full two-way sync** | §7 |
+| Google Calendar | Import only — see §7 for why two-way was dropped | §7 |
 | Notifications | Maximum free coverage: Email + Web Push; SMS adapter ready but dormant | §8 |
 | Brand colour | U of T Blue `#1E3765` (PMS 655) as UTS-affiliated primary | §9 |
 
@@ -181,37 +181,60 @@ categories need no migration.
 
 ---
 
-## 7. Google Calendar — full two-way sync
+## 7. Google Calendar — import only
 
-The highest-risk component in the project. The failure mode is an **echo loop**:
-Calenda writes to Google, reads it back, treats it as new, writes it again.
+**Decision changed during Phase 4.** The spec originally committed to full
+two-way sync. Building it revealed a constraint that makes the background half
+impossible for an unverified app, and once the requirement was narrowed to
+*"all we need is to import events from Google Calendar"*, the design got far
+simpler and safer.
 
-Four mechanisms prevent this, together:
+### 7.1 Why background sync is not available
 
-1. **Identity mapping.** `google_event_map` uniquely ties
-   `(google_calendar, google_event_id) ↔ event_id`. An incoming event with a
-   mapping is an update, never a create.
-2. **Origin stamping.** Events Calenda exports carry
-   `extendedProperties.private.calenda_event_id`. Reading our own write back is
-   recognised instantly, even if the map row were lost.
-3. **Incremental sync tokens.** Google's `syncToken` per calendar returns only
-   changes since last sync — no full re-scan, no re-import of unchanged events.
-4. **Change detection.** `etag` plus `updated` on both sides. Unchanged →
-   skipped. Changed on one side → propagated. **Changed on both sides → conflict
-   surfaced to the user, never auto-resolved.**
+Google Calendar scopes are classed **sensitive**. Until an app passes Google's
+verification it stays in **Testing** publishing status, and there **refresh
+tokens expire after 7 days**. A refresh token is exactly what lets an app act
+without the user present, so any background sync breaks weekly.
 
-Per-calendar `sync_direction` (`import_only | export_only | two_way`) means a
-read-only subscribed calendar is never written to.
+Verification is free but requires a homepage and privacy policy on a domain the
+applicant *owns*. This app is served from `github.io`, which is on the Public
+Suffix List and is not ours; Google rejects such domains. Clearing that means
+buying a domain, which is outside this project's no-cost constraint. The school
+crest in the branding is a further review risk.
 
-Google Calendar events **keep their origin's privacy** — imported events are
-`visibility='private'` to the importing user. Nothing from Google ever becomes
-community content automatically.
+### 7.2 What import-only buys
 
-**Build order within the phase: import → manual export → automatic two-way.**
-Each step is independently useful and each proves the layer beneath it. Two-way
-is switched on only once the map and conflict paths are tested.
+Removing the background requirement removes the need for a refresh token
+entirely, and with it three problems at once:
 
----
+- **No 7-day expiry**, because nothing long-lived is held
+- **No verification needed**, because Testing mode is sufficient
+- **Nothing to leak**, because no Google credential is ever stored
+
+The ~1-hour access token Supabase returns after sign-in is read from the
+session, used immediately, and never persisted by Calenda.
+
+### 7.3 The flow
+
+Connect → choose calendars → review → import. Google events pass through the
+same duplicate analysis as the school-calendar import (§8), so re-importing
+finds what is already there instead of doubling it.
+
+Two correctness points, both tested:
+
+- **Google's all-day end date is exclusive.** A one-day event on 12 October has
+  `end: 2026-10-13`. Taken verbatim, every imported all-day event is a day too
+  long.
+- **Imported events are private to the importer.** They are never published to
+  the community. Only an admin importing the school calendar creates community
+  events.
+
+### 7.4 If export is ever wanted
+
+Writing to Google needs a stored refresh token, which needs verification, which
+needs an owned domain. The identity-mapping design that made two-way sync safe
+is described in `DATA-MODEL.md` and the `google_event_map` table still exists,
+so the groundwork is in place — but it is deliberately unused.
 
 ## 8. Duplicate detection
 
@@ -384,10 +407,10 @@ requiring a rewrite.
 | Phase | Scope | Exit criteria |
 |---|---|---|
 | 0 | Discovery, PDF decode, spec | ✅ Complete |
-| 1 | Vite/React/Tailwind, design tokens, schema + RLS, auth, routing, Pages deploy | Sign in via 2+ providers; RLS tests pass |
-| 2 | Events, dashboard, calendar views, categories, school years, search | Full event CRUD, permissions enforced |
-| 3 | Suggestions, admin approval, PDF import + dedupe review | 49 PDF events imported, Winter Break merge handled |
-| 4 | Google OAuth, calendar selection, import → export → two-way | Round-trip creates no duplicates |
+| 1 | Vite/React/Tailwind, design tokens, schema + RLS, auth, routing, Pages deploy | ✅ Complete — live on GitHub Pages |
+| 2 | Events, dashboard, calendar views, categories, school years, search | ✅ Complete |
+| 3 | Suggestions, admin approval, PDF import + dedupe review | ✅ Complete — 49 events imported, Winter Break merged |
+| 4 | Google OAuth, calendar selection, read-only import | ✅ Complete — re-import finds duplicates, does not double |
 | 5 | Classes, workspaces, notebooks, assignments, tasks, files | Assignment auto-appears on calendar |
 | 6 | Parent links, sharing prompts, permissions | Parent sees only what was shared |
 | 7 | Notification prefs, email, web push, scheduling, SMS adapter | No duplicate reminder under forced double-fire |

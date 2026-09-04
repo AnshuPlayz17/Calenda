@@ -94,6 +94,38 @@ Only two values reach the browser, and both are safe there:
 Service-role keys, OAuth client secrets and provider API keys must never appear
 in this repository or the bundle. They belong in Supabase Edge Function secrets.
 
+### Supabase URL configuration
+
+**Authentication → URL Configuration** decides where Supabase sends people back
+to after any redirect-based sign-in. It defaults to `http://localhost:3000`,
+which is right while developing and wrong everywhere else -- an OAuth round trip
+ends on a dead `localhost` page rather than the app.
+
+| Field | Value |
+|---|---|
+| Site URL | `https://<user>.github.io/Calenda/` |
+| Redirect URLs | `https://<user>.github.io/Calenda/**` |
+
+The `**` matters: without it only the root is allowed, so a flow returning to
+`#/settings` is rejected. This governs magic links as well as OAuth.
+
+### Google Calendar
+
+Import is read-only and needs no app verification, because it never stores a
+Google credential -- see `docs/SPEC.md` §7.
+
+1. Google Cloud → new project → enable the **Google Calendar API** (under
+   APIs & Services, *not* the Auth Platform screen)
+2. **Data Access** → add `.../auth/calendar.readonly`
+3. **Audience** → External, Testing, and list every user under **Test users**
+4. **Clients** → Web application → authorised redirect URI is the Supabase
+   callback: `https://<project>.supabase.co/auth/v1/callback`
+5. Supabase → **Authentication → Sign In / Providers → Google** → paste the
+   client ID and secret
+
+Testing mode shows an "unverified app" warning and caps you at 100 test users.
+Both are acceptable here; see the spec for why verification is not pursued.
+
 ### Sign-in providers
 
 Google, Microsoft, GitHub, Discord and Facebook are enabled, alongside
