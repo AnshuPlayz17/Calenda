@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { dataSource } from '@/data'
 import type { EventFilters } from '@/data'
 import type { NewEventInput } from '@/lib/types'
-import type { ImportWrite, ReviewAction } from '@/data/source'
+import type { ImportOptions, ImportWrite, ReviewAction } from '@/data/source'
 
 const EVENTS = 'events'
 
@@ -103,12 +103,12 @@ export function useReviewEvent() {
   })
 }
 
-export function useImportEvents(schoolYearId: string | undefined) {
+export function useImportEvents(schoolYearId: string | undefined, options: ImportOptions) {
   const invalidate = useInvalidateReview()
   return useMutation({
     mutationFn: (writes: ImportWrite[]) => {
       if (!schoolYearId) throw new Error('Pick a school year first.')
-      return dataSource.importEvents(writes, schoolYearId)
+      return dataSource.importEvents(writes, schoolYearId, options)
     },
     onSuccess: invalidate,
   })

@@ -1,4 +1,4 @@
-import { Bell, GraduationCap, Settings } from 'lucide-react'
+import { Bell, GraduationCap } from 'lucide-react'
 import { Placeholder } from './Placeholder'
 
 export const ClassesPage = () => (
@@ -19,11 +19,3 @@ export const NotificationsPage = () => (
   />
 )
 
-export const SettingsPage = () => (
-  <Placeholder
-    title="Settings" icon={Settings} phase="Phase 1 — appearance available now"
-    lede="Your profile, calendars, reminders, parent sharing, privacy and appearance."
-    emptyTitle="More settings are on the way"
-    emptyBody="Theme is already available from the toggle in the sidebar. The rest arrives with each phase."
-  />
-)
