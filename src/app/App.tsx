@@ -10,9 +10,9 @@ import { SignIn } from '@/routes/SignIn'
 import { AuthCallback } from '@/routes/AuthCallback'
 import { Dashboard } from '@/routes/Dashboard'
 import { NotFound } from '@/routes/NotFound'
-import {
-  AdminPage, ClassesPage, NotificationsPage, SettingsPage, SuggestionsPage,
-} from '@/routes/sections'
+import { ClassesPage, NotificationsPage, SettingsPage } from '@/routes/sections'
+import { SuggestionsPage } from '@/routes/Suggestions'
+import { AdminPage } from '@/routes/Admin'
 import { CalendarPage } from '@/routes/Calendar'
 import { SchoolYearProvider } from '@/features/schoolYear/SchoolYearProvider'
 
@@ -48,8 +48,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
 /** Admin routes are gated here and, authoritatively, by RLS in the database. */
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { isAdmin, loading } = useAuth()
+  const preview = usePreview()
   if (loading) return <FullPageLoader />
-  if (!isAdmin) return <Navigate to="/" replace />
+  // Preview runs entirely on sample data with no real database behind it, so
+  // showing the admin screens there reveals nothing. RLS is still the
+  // authority for a real session.
+  if (!isAdmin && !preview.active) return <Navigate to="/" replace />
   return <>{children}</>
 }
 

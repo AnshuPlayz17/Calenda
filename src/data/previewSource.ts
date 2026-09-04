@@ -11,7 +11,9 @@ import type {
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
 import { SCHOOL_YEAR_2026_27, schoolEvents2026_27 } from './schoolCalendar'
-import { matchesFilters, type DataSource, type EventFilters } from './source'
+import {
+  matchesFilters, type DataSource, type EventFilters, type ImportWrite, type ReviewAction,
+} from './source'
 
 const YEAR_ID = 'preview-year-2026-27'
 const OWNER_ID = 'preview-owner'
@@ -161,5 +163,78 @@ export const previewSource: DataSource = {
   async deleteEvent(id) {
     const i = store.findIndex((e) => e.id === id)
     if (i !== -1) store.splice(i, 1)
+  },
+
+  async listMySuggestions(schoolYearId) {
+    return store
+      .filter((e) => e.school_year_id === schoolYearId)
+      .filter((e) => e.visibility === 'community' && e.owner_id === OWNER_ID)
+      .filter((e) => e.source !== 'pdf_import')
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
+  async listPendingReview(schoolYearId) {
+    return store
+      .filter((e) => e.school_year_id === schoolYearId && e.status === 'pending')
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+  },
+
+  async reviewEvent(id, action: ReviewAction, note?: string) {
+    const row = store.find((e) => e.id === id)
+    if (!row) throw new Error('That suggestion no longer exists.')
+    row.status = action === 'approve' ? 'approved' : 'rejected'
+    row.review_note = note ?? null
+    row.approved_at = action === 'approve' ? new Date().toISOString() : null
+    row.updated_at = new Date().toISOString()
+  },
+
+  async listAllForYear(schoolYearId) {
+    return store.filter((e) => e.school_year_id === schoolYearId)
+  },
+
+  async clearAll(schoolYearId) {
+    for (let i = store.length - 1; i >= 0; i--) {
+      if (store[i]!.school_year_id === schoolYearId) store.splice(i, 1)
+    }
+  },
+
+  async importEvents(writes: ImportWrite[], schoolYearId) {
+    const now = new Date().toISOString()
+    for (const w of writes) {
+      // A replace swaps the existing row out rather than leaving both behind.
+      if (w.replacesEventId) {
+        const i = store.findIndex((e) => e.id === w.replacesEventId)
+        if (i !== -1) store.splice(i, 1)
+      }
+      const category = bySlug.get(w.categorySlug) ?? null
+      store.push({
+        id: nextId(),
+        school_year_id: schoolYearId,
+        category_id: category?.id ?? null,
+        series_id: null,
+        owner_id: OWNER_ID,
+        title: w.title,
+        description: w.description,
+        location: null,
+        priority: 0,
+        is_all_day: true,
+        start_date: w.startDate,
+        end_date: w.endDate,
+        start_at: null,
+        end_at: null,
+        visibility: 'community',
+        status: 'approved',
+        shared_with_parents: false,
+        approved_by: OWNER_ID,
+        approved_at: now,
+        review_note: null,
+        source: 'pdf_import',
+        content_hash: contentHash(w.title, w.startDate),
+        created_at: now,
+        updated_at: now,
+        category,
+      })
+    }
+    return writes.length
   },
 }

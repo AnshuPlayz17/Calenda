@@ -17,9 +17,11 @@ type Props = {
   event: EventWithCategory | null
   /** Pre-fills the date when creating from a calendar cell. */
   defaultDate?: PlainDate
+  /** Opens the form already set to suggest a community event. */
+  defaultVisibility?: 'private' | 'community'
 }
 
-function blank(date: PlainDate): NewEventInput {
+function blank(date: PlainDate, visibility: 'private' | 'community' = 'private'): NewEventInput {
   return {
     title: '',
     description: '',
@@ -30,19 +32,20 @@ function blank(date: PlainDate): NewEventInput {
     endDate: date,
     startTime: '09:00',
     endTime: '10:00',
-    visibility: 'private',
+    visibility,
     priority: 0,
   }
 }
 
-export function EventDialog({ open, onClose, event, defaultDate }: Props) {
+export function EventDialog({ open, onClose, event, defaultDate, defaultVisibility }: Props) {
   const { current } = useSchoolYear()
   const { data: categories = [] } = useCategories()
   const create = useCreateEvent(current?.id)
   const update = useUpdateEvent()
   const remove = useDeleteEvent()
 
-  const [form, setForm] = useState<NewEventInput>(() => blank(defaultDate ?? todayPlain()))
+  const [form, setForm] = useState<NewEventInput>(() =>
+    blank(defaultDate ?? todayPlain(), defaultVisibility))
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -66,9 +69,9 @@ export function EventDialog({ open, onClose, event, defaultDate }: Props) {
             visibility: event.visibility,
             priority: event.priority,
           }
-        : blank(defaultDate ?? todayPlain()),
+        : blank(defaultDate ?? todayPlain(), defaultVisibility),
     )
-  }, [open, event, defaultDate])
+  }, [open, event, defaultDate, defaultVisibility])
 
   const set = <K extends keyof NewEventInput>(key: K, value: NewEventInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }))

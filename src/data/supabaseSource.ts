@@ -9,7 +9,7 @@ import type {
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
-import type { DataSource, EventFilters } from './source'
+import type { DataSource, EventFilters, ImportWrite, ReviewAction } from './source'
 
 const EVENT_COLUMNS = '*, category:event_categories(*)'
 
@@ -123,5 +123,111 @@ export const supabaseSource: DataSource = {
   async deleteEvent(id) {
     const { error } = await supabase.from('events').delete().eq('id', id)
     if (error) fail('delete that event', error)
+  },
+
+  async listMySuggestions(schoolYearId) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) return []
+
+    const { data, error } = await supabase
+      .from('events')
+      .select(EVENT_COLUMNS)
+      .eq('school_year_id', schoolYearId)
+      .eq('visibility', 'community')
+      .eq('owner_id', auth.user.id)
+      .order('created_at', { ascending: false })
+    if (error) fail('load your suggestions', error)
+    return (data ?? []) as unknown as EventWithCategory[]
+  },
+
+  async listPendingReview(schoolYearId) {
+    // RLS decides whether anything comes back; a non-admin simply gets rows
+    // they own, which is correct.
+    const { data, error } = await supabase
+      .from('events')
+      .select(EVENT_COLUMNS)
+      .eq('school_year_id', schoolYearId)
+      .eq('status', 'pending')
+      .order('start_date')
+    if (error) fail('load the review queue', error)
+    return (data ?? []) as unknown as EventWithCategory[]
+  },
+
+  async reviewEvent(id, action: ReviewAction, note?: string) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const { error } = await supabase
+      .from('events')
+      .update({
+        status: action === 'approve' ? 'approved' : 'rejected',
+        approved_by: action === 'approve' ? auth.user.id : null,
+        approved_at: action === 'approve' ? new Date().toISOString() : null,
+        review_note: note ?? null,
+      })
+      .eq('id', id)
+    if (error) fail('record that decision', error)
+
+    // Audit trail. A failure here must not silently vanish, but it also must
+    // not undo a decision that already succeeded.
+    const { error: auditError } = await supabase.from('event_reviews').insert({
+      event_id: id,
+      reviewer_id: auth.user.id,
+      action: action === 'approve' ? 'approved' : 'rejected',
+      note: note ?? null,
+    })
+    if (auditError) console.error('[calenda] review audit failed:', auditError)
+  },
+
+  async listAllForYear(schoolYearId) {
+    const { data, error } = await supabase
+      .from('events')
+      .select(EVENT_COLUMNS)
+      .eq('school_year_id', schoolYearId)
+    if (error) fail('load existing events', error)
+    return (data ?? []) as unknown as EventWithCategory[]
+  },
+
+  async importEvents(writes: ImportWrite[], schoolYearId) {
+    if (writes.length === 0) return 0
+
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const { data: cats, error: catError } = await supabase
+      .from('event_categories')
+      .select('id, slug')
+    if (catError) fail('load event categories', catError)
+    const bySlug = new Map((cats ?? []).map((c) => [c.slug as string, c.id as string]))
+
+    const replacing = writes.map((w) => w.replacesEventId).filter(Boolean) as string[]
+    if (replacing.length) {
+      const { error } = await supabase.from('events').delete().in('id', replacing)
+      if (error) fail('replace the existing events', error)
+    }
+
+    const now = new Date().toISOString()
+    const rows = writes.map((w) => ({
+      school_year_id: schoolYearId,
+      category_id: bySlug.get(w.categorySlug) ?? null,
+      owner_id: auth.user!.id,
+      title: w.title,
+      description: w.description,
+      is_all_day: true,
+      start_date: w.startDate,
+      end_date: w.endDate,
+      visibility: 'community' as const,
+      // An admin performing the import is the approval; asking them to then
+      // approve their own import would be theatre.
+      status: 'approved' as const,
+      approved_by: auth.user!.id,
+      approved_at: now,
+      source: 'pdf_import' as const,
+      content_hash: contentHash(w.title, w.startDate),
+    }))
+
+    const { error } = await supabase.from('events').insert(rows)
+    if (error) fail('import those events', error)
+    return rows.length
   },
 }

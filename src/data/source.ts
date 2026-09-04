@@ -22,6 +22,19 @@ export type EventFilters = {
   search?: string
 }
 
+export type ReviewAction = 'approve' | 'reject'
+
+/** A resolved import row, ready to be written. */
+export type ImportWrite = {
+  title: string
+  description: string | null
+  startDate: PlainDate
+  endDate: PlainDate
+  categorySlug: string
+  /** Set when replacing or merging into an event that already exists. */
+  replacesEventId?: string
+}
+
 export interface DataSource {
   readonly kind: 'supabase' | 'preview'
   listSchoolYears(): Promise<SchoolYear[]>
@@ -30,6 +43,23 @@ export interface DataSource {
   createEvent(input: NewEventInput, schoolYearId: string): Promise<CalendarEvent>
   updateEvent(id: string, input: NewEventInput): Promise<CalendarEvent>
   deleteEvent(id: string): Promise<void>
+
+  /** Community events this user submitted, in any status. */
+  listMySuggestions(schoolYearId: string): Promise<EventWithCategory[]>
+  /** Everything awaiting review. Admin only -- RLS enforces that. */
+  listPendingReview(schoolYearId: string): Promise<EventWithCategory[]>
+  reviewEvent(id: string, action: ReviewAction, note?: string): Promise<void>
+  /** Everything already in this school year, for duplicate comparison. */
+  listAllForYear(schoolYearId: string): Promise<EventWithCategory[]>
+  importEvents(writes: ImportWrite[], schoolYearId: string): Promise<number>
+
+  /**
+   * Empties the calendar. Present only on the preview source, so the first
+   * import -- including the Winter Break merge decision -- can be tried out.
+   * Deliberately absent from the Supabase source: there is no "delete
+   * everything" button in a real deployment.
+   */
+  clearAll?(schoolYearId: string): Promise<void>
 }
 
 /** Applies the filters that both implementations share, in one place. */

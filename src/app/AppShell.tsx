@@ -80,7 +80,7 @@ export function AppShell() {
 
         {/* Admin surfaces exist only for an admin. The RLS policies are the
             real guard; this simply avoids showing a door that will not open. */}
-        {isAdmin && (
+        {(isAdmin || preview.active) && (
           <>
             <hr className="my-2 border-border" />
             <NavLink
