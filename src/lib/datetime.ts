@@ -101,19 +101,60 @@ export function agendaLabel(date: PlainDate): string {
   }).format(new Date(y, m - 1, d))
 }
 
+/**
+ * The school's zone, and the default for every profile.
+ *
+ * Times are read and written in the profile's zone rather than the browser's,
+ * because that is the zone the reminder scheduler uses in SQL. A parent opening
+ * the app from another province should see the 3:30 p.m. their child's school
+ * means, and the same 3:30 the reminder will quote.
+ */
+export const SCHOOL_TIME_ZONE = 'America/Toronto'
+
 /** Renders a timed event's clock, e.g. `5:30 p.m.` */
-export function timeLabel(iso: string, timeZone?: string): string {
+export function timeLabel(iso: string, timeZone: string = SCHOOL_TIME_ZONE): string {
   return new Intl.DateTimeFormat('en-CA', {
     hour: 'numeric', minute: '2-digit', hour12: true, timeZone,
   }).format(new Date(iso))
 }
 
+/** How far `timeZone` is from UTC at a given instant, in milliseconds. */
+function offsetAt(utcMs: number, timeZone: string): number {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+      .formatToParts(new Date(utcMs))
+      .map((part) => [part.type, part.value]),
+  ) as Record<string, string>
+
+  // hourCycle h23 still renders midnight as '24' in some engines.
+  const asIfUtc = Date.UTC(
+    Number(p.year), Number(p.month) - 1, Number(p.day),
+    Number(p.hour) % 24, Number(p.minute), Number(p.second),
+  )
+  return asIfUtc - utcMs
+}
+
 /**
- * Combines a plain date and `HH:mm` into an instant in the user's zone.
- * Used only when an event is explicitly timed.
+ * Combines a plain date and `HH:mm` into an instant, reading the clock in
+ * `timeZone` rather than wherever the browser happens to be.
+ *
+ * Two passes: the offset depends on the instant, and the instant depends on
+ * the offset. Guessing with the offset at the UTC-interpreted time lands within
+ * a day of the answer, which is close enough that the second pass is exact
+ * everywhere except inside a DST gap.
  */
-export function toInstant(date: PlainDate, time: string): string {
+export function toInstant(
+  date: PlainDate,
+  time: string,
+  timeZone: string = SCHOOL_TIME_ZONE,
+): string {
   const { y, m, d } = parts(date)
   const [hh, mm] = time.split(':').map(Number)
-  return new Date(y, m - 1, d, hh ?? 0, mm ?? 0).toISOString()
+  const wall = Date.UTC(y, m - 1, d, hh ?? 0, mm ?? 0)
+  const firstPass = wall - offsetAt(wall, timeZone)
+  return new Date(wall - offsetAt(firstPass, timeZone)).toISOString()
 }

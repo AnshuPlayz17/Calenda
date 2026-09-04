@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
@@ -28,8 +28,18 @@ export function Dialog({
   footer?: ReactNode
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const returnFocusTo = useRef<HTMLElement | null>(null)
   const reduce = useReducedMotion()
+  const descriptionId = useId()
+
+  // Every call site passes `onClose={() => ...}`, so its identity changes on
+  // each parent render. Reading it through a ref keeps the open effect keyed
+  // to `open` alone -- otherwise an unrelated re-render (a query refetching on
+  // window focus is enough) tears down and re-runs it, yanking focus back to
+  // the first field from wherever the user had typed to.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
 
   useEffect(() => {
     if (!open) return
@@ -38,16 +48,19 @@ export function Dialog({
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
-    // Focus the first control, or the panel itself if there is none.
+    // The first control *in the body* -- the header's close button comes first
+    // in the DOM, and opening a form with focus on its dismiss button means an
+    // immediate Enter throws the form away.
     const raf = requestAnimationFrame(() => {
-      const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)
+      const first = bodyRef.current?.querySelector<HTMLElement>(FOCUSABLE)
+        ?? panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)
       ;(first ?? panelRef.current)?.focus()
     })
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
@@ -74,7 +87,7 @@ export function Dialog({
       document.body.style.overflow = previousOverflow
       returnFocusTo.current?.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   return createPortal(
     <AnimatePresence>
@@ -95,7 +108,7 @@ export function Dialog({
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            aria-describedby={description ? 'dialog-description' : undefined}
+            aria-describedby={description ? descriptionId : undefined}
             tabIndex={-1}
             initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -107,7 +120,7 @@ export function Dialog({
               <div>
                 <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
                 {description && (
-                  <p id="dialog-description" className="mt-0.5 text-[12.5px] text-text-muted">
+                  <p id={descriptionId} className="mt-0.5 text-[12.5px] text-text-muted">
                     {description}
                   </p>
                 )}
@@ -122,7 +135,7 @@ export function Dialog({
               </button>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+            <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
             {footer && (
               <footer className="flex items-center justify-end gap-2 border-t border-border px-5 py-3.5">

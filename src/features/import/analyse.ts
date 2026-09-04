@@ -129,37 +129,75 @@ export function analyseImport(
  * imported twice, which is the exact thing the merge was chosen to prevent.
  */
 export function buildWrites(rows: AnalysedRow[]): ImportWrite[] {
-  const mergedAway = new Set(
-    rows
-      .filter((r) => r.resolution === 'merge' && r.matchRowKey)
-      .map((r) => r.matchRowKey as string),
-  )
+  const byKey = new Map(rows.map((r) => [r.key, r]))
+
+  // Merges are grouped, not applied pairwise. Several rows can point at the
+  // same match -- the four consecutive June PD days all resolve back to the
+  // first -- and merging each one against its target separately would emit an
+  // overlapping event per row, which is the duplication this screen exists to
+  // prevent. Union-find collapses a group, however it is shaped, into one row.
+  const parent = new Map<string, string>()
+  const find = (key: string): string => {
+    const seen = parent.get(key)
+    if (seen === undefined || seen === key) return key
+    const root = find(seen)
+    parent.set(key, root)
+    return root
+  }
+  const union = (a: string, b: string) => {
+    parent.set(a, parent.get(a) ?? a)
+    parent.set(b, parent.get(b) ?? b)
+    const rootA = find(a)
+    const rootB = find(b)
+    if (rootA !== rootB) parent.set(rootA, rootB)
+  }
+
+  const merging = new Set<string>()
+  for (const row of rows) {
+    if (row.resolution !== 'merge' || !row.matchRowKey) continue
+    if (!byKey.has(row.matchRowKey)) continue
+    union(row.key, row.matchRowKey)
+    merging.add(row.key)
+    merging.add(row.matchRowKey)
+  }
 
   const writes: ImportWrite[] = []
+  const emitted = new Set<string>()
 
   for (const row of rows) {
-    if (mergedAway.has(row.key)) continue
-    if (row.resolution !== 'add_anyway' && row.resolution !== 'replace' && row.resolution !== 'merge') {
+    if (merging.has(row.key)) {
+      const root = find(row.key)
+      if (emitted.has(root)) continue
+      emitted.add(root)
+
+      const members = rows.filter((r) => merging.has(r.key) && find(r.key) === root)
+      // The earliest member names the combined event; the group spans the
+      // outer bounds of every member, so no half is silently dropped.
+      const lead = members.reduce((a, b) =>
+        b.candidate.startDate < a.candidate.startDate ? b : a)
+      let { startDate, endDate } = lead.candidate
+      for (const m of members) {
+        if (m.candidate.startDate < startDate) startDate = m.candidate.startDate
+        if (m.candidate.endDate > endDate) endDate = m.candidate.endDate
+      }
+
+      writes.push({
+        title: lead.candidate.title,
+        description: lead.candidate.description,
+        startDate,
+        endDate,
+        categorySlug: lead.candidate.category,
+      })
       continue
     }
 
-    let { startDate, endDate } = row.candidate
-
-    if (row.resolution === 'merge' && row.matchRowKey) {
-      const other = rows.find((r) => r.key === row.matchRowKey)
-      if (other) {
-        // Keep the outer bounds, so Dec 21-31 merged with Jan 1-3 becomes
-        // Dec 21 - Jan 3 rather than either half alone.
-        if (other.candidate.startDate < startDate) startDate = other.candidate.startDate
-        if (other.candidate.endDate > endDate) endDate = other.candidate.endDate
-      }
-    }
+    if (row.resolution !== 'add_anyway' && row.resolution !== 'replace') continue
 
     writes.push({
       title: row.candidate.title,
       description: row.candidate.description,
-      startDate,
-      endDate,
+      startDate: row.candidate.startDate,
+      endDate: row.candidate.endDate,
       categorySlug: row.candidate.category,
       ...(row.resolution === 'replace' && row.matchExisting
         ? { replacesEventId: row.matchExisting.id }
