@@ -18,7 +18,7 @@ export function AuthCallback() {
     return () => clearTimeout(t)
   }, [])
 
-  if (session) return <Navigate to="/" replace />
+  if (session) return <Navigate to="/dashboard" replace />
 
   return (
     <div className="grid min-h-dvh place-items-center px-6">

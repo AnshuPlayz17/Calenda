@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
 import { PreviewProvider, usePreview } from '@/lib/preview'
 import { AppShell } from './AppShell'
+import { Landing } from '@/routes/Landing'
 import { SignIn } from '@/routes/SignIn'
 import { AuthCallback } from '@/routes/AuthCallback'
 import { Dashboard } from '@/routes/Dashboard'
@@ -56,7 +57,7 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   // Preview runs entirely on sample data with no real database behind it, so
   // showing the admin screens there reveals nothing. RLS is still the
   // authority for a real session.
-  if (!isAdmin && !preview.active) return <Navigate to="/" replace />
+  if (!isAdmin && !preview.active) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
@@ -72,6 +73,9 @@ export function App() {
           <AuthProvider>
             <SchoolYearProvider>
             <Routes>
+              {/* Public. The landing page redirects anyone already signed
+                  in straight to their dashboard. */}
+              <Route path="/" element={<Landing />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route
@@ -81,7 +85,7 @@ export function App() {
                   </RequireAuth>
                 }
               >
-                <Route index element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="classes" element={<ClassesPage />} />
                 <Route path="classes/:classId" element={<ClassWorkspace />} />
