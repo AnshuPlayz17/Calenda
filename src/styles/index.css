@@ -247,44 +247,52 @@
 }
 
 /* ---------------------------------------------------------------- base --- */
+/*
+   These live in @layer base deliberately. Unlayered CSS wins over ANY layered
+   rule regardless of specificity, so an unlayered `h1 { color }` here would
+   silently beat every text-* utility Tailwind emits into @layer utilities --
+   a heading would ignore `text-white` with no error anywhere.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
 
-html {
-  -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
+  body {
+    margin: 0;
+    /* The host paints its own ground behind the app, so this must be explicit. */
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--text);
+    text-wrap: balance;
+    letter-spacing: -0.014em;
+    margin: 0;
+  }
+
+  /* Focus is never removed, only redirected to :focus-visible, so keyboard
+     users keep a visible ring that pointer users don't see. */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection { background: var(--brand-subtle); color: var(--text); }
 }
 
-body {
-  margin: 0;
-  /* The host paints its own ground behind the app, so this must be explicit. */
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11', 'ss01';
-}
-
-h1, h2, h3, h4 {
-  color: var(--text);
-  text-wrap: balance;
-  letter-spacing: -0.014em;
-  margin: 0;
-}
-
-/* Focus is never removed, only redirected to :focus-visible, so keyboard
-   users keep a visible ring that pointer users don't see. */
-:focus { outline: none; }
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
-::selection { background: var(--brand-subtle); color: var(--text); }
-
-/* Honoured once, at the token level, so no component can forget it. */
+/* Honoured once, at the token level, so no component can forget it.
+   Intentionally unlayered: this must override everything, always. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {
