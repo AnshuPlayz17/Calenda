@@ -8,7 +8,8 @@
  */
 import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
-  NewClassInput, NewEventInput, NotebookPage, SchoolClass, SchoolYear, Task,
+  NewClassInput, NewEventInput, NotebookPage, ParentLink, SchoolClass, SchoolYear,
+  Shareable, Task,
 } from '@/lib/types'
 import type { PlainDate } from '@/lib/events'
 
@@ -106,6 +107,18 @@ export interface DataSource {
   createTask(classId: string | null, title: string): Promise<Task>
   toggleTask(id: string, done: boolean): Promise<void>
   deleteTask(id: string): Promise<void>
+
+  // ---------------------------------------------------- parent sharing --
+
+  /** Links in both directions: people I parent, and people who parent me. */
+  listParentLinks(): Promise<ParentLink[]>
+  /** Returns a code to hand to a parent. */
+  createParentInvite(): Promise<string>
+  /** Redeems a code, linking the caller as a parent. Returns the student's name. */
+  redeemParentInvite(code: string): Promise<string>
+  revokeParentLink(id: string): Promise<void>
+  /** Turns parent visibility on or off for one resource. */
+  setSharedWithParents(kind: Shareable, id: string, shared: boolean): Promise<void>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first

@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from 'motion/react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { GoogleImport } from '@/features/google/GoogleImport'
+import { ParentsSection } from '@/features/parents/ParentsSection'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import { useAuth } from '@/lib/auth'
 import { agendaLabel } from '@/lib/datetime'
@@ -38,6 +39,15 @@ export function SettingsPage() {
 
       <motion.section {...rise(2)}>
         <Card>
+          <CardHeader title="Parents" />
+          <div className="px-5 pb-5">
+            <ParentsSection />
+          </div>
+        </Card>
+      </motion.section>
+
+      <motion.section {...rise(3)}>
+        <Card>
           <CardHeader title="Appearance" />
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-5">
             <p className="text-[13.5px] text-text-muted">
@@ -48,7 +58,7 @@ export function SettingsPage() {
         </Card>
       </motion.section>
 
-      <motion.section {...rise(3)}>
+      <motion.section {...rise(4)}>
         <Card>
           <CardHeader title="School year" />
           <div className="px-5 pb-5">
@@ -81,7 +91,7 @@ export function SettingsPage() {
         </Card>
       </motion.section>
 
-      <motion.section {...rise(4)}>
+      <motion.section {...rise(5)}>
         <Card>
           <CardHeader title="Account" />
           <dl className="grid gap-x-8 gap-y-3 px-5 pb-5 sm:grid-cols-2">

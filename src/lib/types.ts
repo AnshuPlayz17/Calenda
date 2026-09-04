@@ -175,3 +175,23 @@ export type Task = {
   created_at: string
   updated_at: string
 }
+
+// ------------------------------------------------------- parent sharing ----
+
+export type LinkStatus = 'pending' | 'accepted' | 'revoked'
+export type ProfileRole = 'student' | 'parent' | 'admin'
+
+export type ParentLink = {
+  id: string
+  parent_id: string
+  student_id: string
+  status: LinkStatus
+  accepted_at: string | null
+  created_at: string
+  /** The other person in the link, from their profile. */
+  other_name: string | null
+  other_role: ProfileRole
+}
+
+/** Anything that can carry a shared_with_parents flag. */
+export type Shareable = 'event' | 'class' | 'notebook_page' | 'assignment'

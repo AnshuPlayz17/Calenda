@@ -15,6 +15,7 @@ import {
   useDeleteTask, usePages, useSetAssignmentStatus, useTasks, useToggleTask,
 } from '@/features/classes/queries'
 import type { Assignment, NotebookPage } from '@/lib/types'
+import { ShareToggle } from '@/features/parents/ShareToggle'
 import { cn } from '@/lib/cn'
 
 type Tab = 'notes' | 'assignments' | 'tasks'
@@ -65,11 +66,19 @@ export function ClassWorkspace() {
             </span>
           )}
         </div>
-        {(klass.teacher || klass.room) && (
-          <p className="mt-1 text-[13px] text-text-muted">
-            {[klass.teacher, klass.room].filter(Boolean).join(' · ')}
-          </p>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {(klass.teacher || klass.room) && (
+            <p className="text-[13px] text-text-muted">
+              {[klass.teacher, klass.room].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          <ShareToggle
+            kind="class"
+            id={klass.id}
+            shared={klass.shared_with_parents}
+            label={`The class “${klass.name}”`}
+          />
+        </div>
       </motion.header>
 
       <div role="tablist" aria-label="Class sections" className="flex gap-1 border-b border-border">
@@ -173,7 +182,17 @@ function NotesTab({ classId }: { classId: string }) {
 
       <Card className="min-w-0 px-5 py-4 sm:px-7 sm:py-6">
         {selected
-          ? <NoteEditor key={selected.id} page={selected as NotebookPage} />
+          ? <>
+              <div className="mb-2 flex justify-end">
+                <ShareToggle
+                  kind="notebook_page"
+                  id={selected.id}
+                  shared={selected.shared_with_parents}
+                  label={`The page “${selected.title || 'Untitled'}”`}
+                />
+              </div>
+              <NoteEditor key={selected.id} page={selected as NotebookPage} />
+            </>
           : <EmptyState
               icon={NotebookPen}
               title="Your notebook is empty"
@@ -257,6 +276,13 @@ function AssignmentsTab({ classId }: { classId: string }) {
                     {a.priority === 'high' && ' · High priority'}
                   </span>
                 </button>
+
+                <ShareToggle
+                  kind="assignment"
+                  id={a.id}
+                  shared={a.shared_with_parents}
+                  label={`The assignment “${a.title}”`}
+                />
               </Card>
             </li>
           ))}

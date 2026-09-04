@@ -6,7 +6,7 @@
 import { supabase } from '@/lib/supabase'
 import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
-  NewEventInput, NotebookPage, SchoolClass, SchoolYear, Task,
+  NewEventInput, NotebookPage, ParentLink, SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -233,6 +233,89 @@ export const supabaseSource: DataSource = {
     const { error } = await supabase.from('events').insert(rows)
     if (error) fail('import those events', error)
     return rows.length
+  },
+
+
+  // ---------------------------------------------------- parent sharing --
+
+  async listParentLinks() {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) return []
+    const me = auth.user.id
+
+    const { data, error } = await supabase
+      .from('parent_links')
+      .select('*, parent:profiles!parent_links_parent_id_fkey(full_name, role),'
+            + ' student:profiles!parent_links_student_id_fkey(full_name, role)')
+      .neq('status', 'revoked')
+      .order('created_at', { ascending: false })
+    if (error) fail('load your connections', error)
+
+    type Joined = {
+      id: string; parent_id: string; student_id: string; status: ParentLink['status']
+      accepted_at: string | null; created_at: string
+      parent: { full_name: string | null; role: ParentLink['other_role'] } | null
+      student: { full_name: string | null; role: ParentLink['other_role'] } | null
+    }
+
+    return (data ?? []).map((row) => {
+      const r = row as unknown as Joined
+      // Show whoever ISN'T the viewer; a parent sees the student and vice versa.
+      const other = r.parent_id === me ? r.student : r.parent
+      return {
+        id: r.id,
+        parent_id: r.parent_id,
+        student_id: r.student_id,
+        status: r.status,
+        accepted_at: r.accepted_at,
+        created_at: r.created_at,
+        other_name: other?.full_name ?? null,
+        other_role: other?.role ?? 'student',
+      }
+    })
+  },
+
+  async createParentInvite() {
+    const { data, error } = await supabase.rpc('create_parent_invite')
+    if (error) fail('create an invite code', error)
+    return data as string
+  },
+
+  async redeemParentInvite(code) {
+    const { data, error } = await supabase.rpc('redeem_parent_invite', {
+      invite_code: code.trim().toUpperCase(),
+    })
+    if (error) {
+      // The function returns one deliberate message for every failure so a
+      // wrong code cannot be told apart from a used or expired one. Pass it
+      // through rather than replacing it with something vaguer.
+      throw new Error(error.message || 'That code is not valid. Ask for a new one.')
+    }
+    const rows = (data ?? []) as Array<{ out_student_name: string | null }>
+    return rows[0]?.out_student_name ?? 'your student'
+  },
+
+  async revokeParentLink(id) {
+    const { error } = await supabase
+      .from('parent_links')
+      .update({ status: 'revoked' })
+      .eq('id', id)
+    if (error) fail('remove that connection', error)
+  },
+
+  async setSharedWithParents(kind: Shareable, id, shared) {
+    const table = {
+      event: 'events',
+      class: 'classes',
+      notebook_page: 'notebook_pages',
+      assignment: 'assignments',
+    }[kind]
+
+    const { error } = await supabase
+      .from(table)
+      .update({ shared_with_parents: shared })
+      .eq('id', id)
+    if (error) fail(shared ? 'share that' : 'stop sharing that', error)
   },
 
   // ------------------------------------------------------------ classes --
