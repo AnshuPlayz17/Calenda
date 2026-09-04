@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
 import { useEvents } from '@/features/events/queries'
+import { useClasses, useRecentPages, useUpcomingAssignments } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import { useAuth } from '@/lib/auth'
 import { addDays, agendaLabel, todayPlain } from '@/lib/datetime'
@@ -53,6 +54,9 @@ export function Dashboard() {
   const { data: events = [], isLoading } = useEvents(
     current ? { schoolYearId: current.id, from: today, to: addDays(today, 60) } : null,
   )
+  const { data: assignments = [] } = useUpcomingAssignments(current?.id, 5)
+  const { data: classes = [] } = useClasses(current?.id)
+  const { data: recentNotes = [] } = useRecentPages(4)
 
   const { todayEvents, upcoming } = useMemo(() => {
     const onToday = events.filter((e) => e.start_date <= today && e.end_date >= today)
@@ -93,12 +97,18 @@ export function Dashboard() {
         <Button variant="secondary" size="sm" onClick={() => setDialogOpen(true)}>
           <CalendarPlus className="h-4 w-4" aria-hidden /> Add event
         </Button>
-        <Button variant="secondary" size="sm" disabled title="Arrives with class workspaces">
+        <Link
+          to="/classes"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
+        >
           <ClipboardList className="h-4 w-4" aria-hidden /> Add assignment
-        </Button>
-        <Button variant="secondary" size="sm" disabled title="Arrives with class notebooks">
+        </Link>
+        <Link
+          to="/classes"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
+        >
           <NotebookPen className="h-4 w-4" aria-hidden /> New note
-        </Button>
+        </Link>
         <Button variant="secondary" size="sm" onClick={() => setDialogOpen(true)}>
           <Lightbulb className="h-4 w-4" aria-hidden /> Suggest an event
         </Button>
@@ -160,34 +170,115 @@ export function Dashboard() {
 
         <motion.div {...rise(4)}>
           <Card>
-            <CardHeader title="Due soon" />
-            <EmptyState
-              icon={ClipboardList}
-              title="No assignments yet"
-              description="Deadlines you add to a class will collect here automatically."
+            <CardHeader
+              title="Due soon"
+              action={
+                <Link to="/classes"
+                      className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
+                  Classes <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </Link>
+              }
             />
+            {assignments.length === 0 ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="Nothing due"
+                description="Deadlines you add to a class collect here automatically."
+              />
+            ) : (
+              <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                {assignments.map((a) => (
+                  <li key={a.id}
+                      className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-medium text-text">
+                        {a.title}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[12px] text-text-muted">
+                        {a.className}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[11.5px] tabular text-text-subtle">
+                      {a.due_at
+                        ? new Date(a.due_at).toLocaleDateString('en-CA', {
+                            month: 'short', day: 'numeric',
+                          })
+                        : '—'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </motion.div>
 
         <motion.div {...rise(5)}>
           <Card>
             <CardHeader title="Classes" />
-            <EmptyState
-              icon={GraduationCap}
-              title="No classes yet"
-              description="Connect Google Calendar or add your first class to get started."
-            />
+            {classes.length === 0 ? (
+              <EmptyState
+                icon={GraduationCap}
+                title="No classes yet"
+                description="Add your first class to keep notes, assignments and deadlines together."
+                action={
+                  <Link to="/classes"
+                        className="text-[13px] text-brand no-underline hover:underline">
+                    Add a class
+                  </Link>
+                }
+              />
+            ) : (
+              <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                {classes.slice(0, 5).map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      to={`/classes/${c.id}`}
+                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-text">
+                        {c.name}
+                      </span>
+                      {c.course_code && (
+                        <span className="shrink-0 font-mono text-[11px] uppercase text-brand">
+                          {c.course_code}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </motion.div>
 
         <motion.div {...rise(6)}>
           <Card>
             <CardHeader title="Recent notes" />
-            <EmptyState
-              icon={NotebookPen}
-              title="Your notebook is empty"
-              description="Pages you write in a class notebook will show up here."
-            />
+            {recentNotes.length === 0 ? (
+              <EmptyState
+                icon={NotebookPen}
+                title="Your notebook is empty"
+                description="Pages you write in a class notebook show up here."
+              />
+            ) : (
+              <ul className="flex flex-col gap-1.5 px-5 pb-5">
+                {recentNotes.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      to={`/classes/${p.class_id}`}
+                      className="block rounded-lg border border-border px-3 py-2.5 no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+                    >
+                      <span className="block truncate text-[13.5px] font-medium text-text">
+                        {p.title || 'Untitled'}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[12px] text-text-muted">
+                        {p.className}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </motion.div>
       </div>

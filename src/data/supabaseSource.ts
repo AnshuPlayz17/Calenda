@@ -5,7 +5,8 @@
  */
 import { supabase } from '@/lib/supabase'
 import type {
-  CalendarEvent, EventCategory, EventWithCategory, NewEventInput, SchoolYear,
+  Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
+  NewEventInput, NotebookPage, SchoolClass, SchoolYear, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -233,4 +234,278 @@ export const supabaseSource: DataSource = {
     if (error) fail('import those events', error)
     return rows.length
   },
+
+  // ------------------------------------------------------------ classes --
+
+  async listClasses(schoolYearId, includeArchived = false) {
+    let q = supabase.from('classes').select('*').eq('school_year_id', schoolYearId)
+    if (!includeArchived) q = q.eq('is_archived', false)
+    const { data, error } = await q.order('name')
+    if (error) fail('load your classes', error)
+    return (data ?? []) as SchoolClass[]
+  },
+
+  async getClass(id) {
+    const { data, error } = await supabase.from('classes').select('*').eq('id', id).maybeSingle()
+    if (error) fail('load that class', error)
+    return (data as SchoolClass) ?? null
+  },
+
+  async createClass(input, schoolYearId) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const { data, error } = await supabase
+      .from('classes')
+      .insert({
+        owner_id: auth.user.id,
+        school_year_id: schoolYearId,
+        name: input.name.trim(),
+        course_code: input.courseCode?.trim().toUpperCase() || null,
+        teacher: input.teacher?.trim() || null,
+        room: input.room?.trim() || null,
+        color_token: input.colorToken ?? null,
+      })
+      .select('*')
+      .single()
+    if (error) fail('create that class', error)
+    return data as SchoolClass
+  },
+
+  async updateClass(id, input) {
+    const { data, error } = await supabase
+      .from('classes')
+      .update({
+        name: input.name.trim(),
+        course_code: input.courseCode?.trim().toUpperCase() || null,
+        teacher: input.teacher?.trim() || null,
+        room: input.room?.trim() || null,
+        color_token: input.colorToken ?? null,
+      })
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) fail('update that class', error)
+    return data as SchoolClass
+  },
+
+  async setClassArchived(id, archived) {
+    const { error } = await supabase
+      .from('classes')
+      .update({ is_archived: archived, archived_at: archived ? new Date().toISOString() : null })
+      .eq('id', id)
+    if (error) fail(archived ? 'archive that class' : 'restore that class', error)
+  },
+
+  async deleteClass(id) {
+    const { error } = await supabase.from('classes').delete().eq('id', id)
+    if (error) fail('delete that class', error)
+  },
+
+  // ----------------------------------------------------------- notebook --
+
+  async listPages(classId) {
+    const { data, error } = await supabase
+      .from('notebook_pages')
+      .select('*')
+      .eq('class_id', classId)
+      .eq('is_archived', false)
+      .order('position')
+    if (error) fail('load your notes', error)
+    return (data ?? []) as NotebookPage[]
+  },
+
+  async createPage(classId, parentId, title = 'Untitled') {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    // Fractional ordering: append after the last sibling without renumbering.
+    const { data: siblings } = await supabase
+      .from('notebook_pages')
+      .select('position')
+      .eq('class_id', classId)
+      .is('parent_page_id', parentId)
+      .order('position', { ascending: false })
+      .limit(1)
+    const position = ((siblings?.[0]?.position as number | undefined) ?? 0) + 1000
+
+    const { data, error } = await supabase
+      .from('notebook_pages')
+      .insert({
+        class_id: classId,
+        owner_id: auth.user.id,
+        parent_page_id: parentId,
+        title,
+        position,
+      })
+      .select('*')
+      .single()
+    if (error) fail('create that page', error)
+    return data as NotebookPage
+  },
+
+  async updatePage(id, patch) {
+    const row: Record<string, unknown> = {}
+    if (patch.title !== undefined) row.title = patch.title
+    if (patch.content !== undefined) row.content = patch.content
+    if (patch.contentText !== undefined) row.content_text = patch.contentText
+    if (Object.keys(row).length === 0) return
+
+    const { error } = await supabase.from('notebook_pages').update(row).eq('id', id)
+    if (error) fail('save that page', error)
+  },
+
+  async deletePage(id) {
+    const { error } = await supabase.from('notebook_pages').delete().eq('id', id)
+    if (error) fail('delete that page', error)
+  },
+
+  async recentPages(limit) {
+    const { data, error } = await supabase
+      .from('notebook_pages')
+      .select('*, classes(name)')
+      .eq('is_archived', false)
+      .order('updated_at', { ascending: false })
+      .limit(limit)
+    if (error) fail('load your recent notes', error)
+    return (data ?? []).map((row) => {
+      const { classes, ...page } = row as NotebookPage & { classes: { name: string } | null }
+      return { ...page, className: classes?.name ?? 'Class' }
+    })
+  },
+
+  // -------------------------------------------------------- assignments --
+
+  async listAssignments(classId) {
+    const { data, error } = await supabase
+      .from('assignments')
+      .select('*')
+      .eq('class_id', classId)
+      .order('due_at', { nullsFirst: false })
+    if (error) fail('load your assignments', error)
+    return (data ?? []) as Assignment[]
+  },
+
+  async listUpcomingAssignments(schoolYearId, limit) {
+    const { data, error } = await supabase
+      .from('assignments')
+      .select('*, classes!inner(name, school_year_id)')
+      .eq('classes.school_year_id', schoolYearId)
+      .neq('status', 'completed')
+      .order('due_at', { nullsFirst: false })
+      .limit(limit)
+    if (error) fail('load upcoming work', error)
+    return (data ?? []).map((row) => {
+      const { classes, ...a } = row as Assignment & { classes: { name: string } | null }
+      return { ...a, className: classes?.name ?? 'Class' }
+    })
+  },
+
+  async createAssignment(classId, input) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const { data, error } = await supabase
+      .from('assignments')
+      .insert({ class_id: classId, owner_id: auth.user.id, ...assignmentRow(input) })
+      .select('*')
+      .single()
+    if (error) fail('save that assignment', error)
+    return data as Assignment
+  },
+
+  async updateAssignment(id, input) {
+    const { data, error } = await supabase
+      .from('assignments')
+      .update(assignmentRow(input))
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) fail('update that assignment', error)
+    return data as Assignment
+  },
+
+  async setAssignmentStatus(id, status) {
+    const { error } = await supabase
+      .from('assignments')
+      .update({
+        status,
+        completed_at: status === 'completed' ? new Date().toISOString() : null,
+      })
+      .eq('id', id)
+    if (error) fail('update that assignment', error)
+  },
+
+  async deleteAssignment(id) {
+    const { error } = await supabase.from('assignments').delete().eq('id', id)
+    if (error) fail('delete that assignment', error)
+  },
+
+  // -------------------------------------------------------------- tasks --
+
+  async listTasks(classId) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('class_id', classId)
+      .order('created_at')
+    if (error) fail('load your tasks', error)
+    return (data ?? []) as Task[]
+  },
+
+  async createTask(classId, title) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({ owner_id: auth.user.id, class_id: classId, title: title.trim() })
+      .select('*')
+      .single()
+    if (error) fail('add that task', error)
+    return data as Task
+  },
+
+  async toggleTask(id, done) {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: done ? 'completed' : 'not_started',
+        completed_at: done ? new Date().toISOString() : null,
+      })
+      .eq('id', id)
+    if (error) fail('update that task', error)
+  },
+
+  async deleteTask(id) {
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+    if (error) fail('delete that task', error)
+  },
+}
+
+/** Shared between create and update so the two cannot drift apart. */
+function assignmentRow(input: NewAssignmentInput) {
+  return {
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    due_at: dueInstant(input),
+    due_all_day: input.dueAllDay,
+    priority: input.priority,
+    status: input.status,
+    estimated_minutes: input.estimatedMinutes ?? null,
+    completed_at: input.status === 'completed' ? new Date().toISOString() : null,
+  }
+}
+
+/**
+ * An all-day deadline means end of that day, not midnight at its start --
+ * "due Friday" is not "due Thursday night".
+ */
+function dueInstant(input: NewAssignmentInput): string | null {
+  if (!input.dueDate) return null
+  const [y, m, d] = input.dueDate.split('-').map(Number)
+  if (!y || !m || !d) return null
+  if (input.dueAllDay) return new Date(y, m - 1, d, 23, 59, 0).toISOString()
+  const [hh, mm] = (input.dueTime ?? '23:59').split(':').map(Number)
+  return new Date(y, m - 1, d, hh ?? 23, mm ?? 59).toISOString()
 }

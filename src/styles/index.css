@@ -335,3 +335,96 @@
   background: var(--surface-2);
   border-radius: var(--radius-sm);
 }
+
+/* ------------------------------------------------------- notebook prose --- */
+/*
+   Editor content styling. Scoped to .calenda-prose so it cannot leak into the
+   rest of the app, and written against tokens so both themes are covered.
+ */
+.calenda-prose {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 68ch;
+}
+.calenda-prose > * + * { margin-top: 0.75em; }
+.calenda-prose h2 {
+  font-family: var(--font-display);
+  font-size: 1.45em;
+  font-weight: 500;
+  margin-top: 1.6em;
+  letter-spacing: -0.012em;
+}
+.calenda-prose h3 {
+  font-size: 1.12em;
+  font-weight: 600;
+  margin-top: 1.4em;
+}
+.calenda-prose p { margin: 0; }
+.calenda-prose ul, .calenda-prose ol { padding-left: 1.35em; }
+.calenda-prose ul { list-style: disc; }
+.calenda-prose ol { list-style: decimal; }
+.calenda-prose li + li { margin-top: 0.25em; }
+.calenda-prose li p { margin: 0; }
+.calenda-prose blockquote {
+  border-left: 3px solid var(--brand-border);
+  padding-left: 1em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.calenda-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.87em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.calenda-prose pre {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85em 1em;
+  overflow-x: auto;
+}
+.calenda-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.calenda-prose a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.calenda-prose hr { border: 0; border-top: 1px solid var(--border); margin: 1.6em 0; }
+
+/* Checklists. The list marker is replaced by the real checkbox. */
+.calenda-prose ul[data-type='taskList'] { list-style: none; padding-left: 0; }
+.calenda-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+.calenda-prose ul[data-type='taskList'] li > label { margin-top: 0.28em; }
+.calenda-prose ul[data-type='taskList'] input[type='checkbox'] {
+  accent-color: var(--brand);
+  width: 1em;
+  height: 1em;
+}
+.calenda-prose ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--text-subtle);
+  text-decoration: line-through;
+}
+
+/* TipTap's placeholder only renders on the first empty node. */
+.calenda-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-subtle);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

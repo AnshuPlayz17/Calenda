@@ -86,3 +86,92 @@ export type NewEventInput = {
   visibility: EventVisibility
   priority: number
 }
+
+// ------------------------------------------------------------- classes ----
+
+export type SchoolClass = {
+  id: string
+  owner_id: string
+  school_year_id: string
+  name: string
+  /** e.g. ICS3U -- the primary matcher against Google Calendar titles. */
+  course_code: string | null
+  teacher: string | null
+  room: string | null
+  color_token: string | null
+  is_archived: boolean
+  archived_at: string | null
+  shared_with_parents: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type NewClassInput = {
+  name: string
+  courseCode?: string | null
+  teacher?: string | null
+  room?: string | null
+  colorToken?: string | null
+}
+
+export type NotebookPage = {
+  id: string
+  class_id: string
+  owner_id: string
+  parent_page_id: string | null
+  title: string
+  icon: string | null
+  /** TipTap document. Opaque here; the editor owns its shape. */
+  content: unknown
+  content_text: string
+  position: number
+  is_archived: boolean
+  shared_with_parents: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type Assignment = {
+  id: string
+  class_id: string
+  owner_id: string
+  title: string
+  description: string | null
+  due_at: string | null
+  due_all_day: boolean
+  priority: WorkPriority
+  status: WorkStatus
+  estimated_minutes: number | null
+  /** The calendar event this assignment generated, so it appears once. */
+  event_id: string | null
+  completed_at: string | null
+  shared_with_parents: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type NewAssignmentInput = {
+  title: string
+  description?: string | null
+  /** Local date; combined with dueTime unless dueAllDay. */
+  dueDate: string | null
+  dueTime?: string | null
+  dueAllDay: boolean
+  priority: WorkPriority
+  status: WorkStatus
+  estimatedMinutes?: number | null
+}
+
+export type Task = {
+  id: string
+  owner_id: string
+  class_id: string | null
+  title: string
+  notes: string | null
+  due_at: string | null
+  priority: WorkPriority
+  status: WorkStatus
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}

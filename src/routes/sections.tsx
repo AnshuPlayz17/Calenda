@@ -1,14 +1,6 @@
-import { Bell, GraduationCap } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { Placeholder } from './Placeholder'
 
-export const ClassesPage = () => (
-  <Placeholder
-    title="Classes" icon={GraduationCap} phase="Phase 5"
-    lede="A workspace for each class — notes, assignments, tasks, files and deadlines."
-    emptyTitle="No classes yet"
-    emptyBody="Connect Google Calendar to detect your classes by course code, or add one by hand."
-  />
-)
 
 export const NotificationsPage = () => (
   <Placeholder
