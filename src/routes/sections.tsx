@@ -1,14 +1,5 @@
-import { Bell, CalendarDays, GraduationCap, Lightbulb, Settings, ShieldCheck } from 'lucide-react'
+import { Bell, GraduationCap, Lightbulb, Settings, ShieldCheck } from 'lucide-react'
 import { Placeholder } from './Placeholder'
-
-export const CalendarPage = () => (
-  <Placeholder
-    title="Calendar" icon={CalendarDays} phase="Phase 2"
-    lede="Month, week and agenda views across your school, personal and Google calendars."
-    emptyTitle="No events yet"
-    emptyBody="Community events, your own events and anything imported will appear together here."
-  />
-)
 
 export const ClassesPage = () => (
   <Placeholder

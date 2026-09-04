@@ -8,6 +8,8 @@ import {
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/lib/auth'
+import { PreviewBanner } from '@/components/PreviewBanner'
+import { usePreview } from '@/lib/preview'
 import { cn } from '@/lib/cn'
 
 const nav = [
@@ -21,6 +23,7 @@ const nav = [
 
 export function AppShell() {
   const { profile, isAdmin, signOut } = useAuth()
+  const preview = usePreview()
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const reduce = useReducedMotion()
@@ -103,14 +106,14 @@ export function AppShell() {
         <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
           <div className="min-w-0">
             <p className="truncate text-[13px] font-medium text-text">
-              {profile?.full_name ?? 'Your account'}
+              {preview.active ? 'Preview' : profile?.full_name ?? 'Your account'}
             </p>
-            <p className="label-caps">{profile?.role ?? 'student'}</p>
+            <p className="label-caps">{preview.active ? 'sample data' : profile?.role ?? 'student'}</p>
           </div>
           <button
-            onClick={() => void signOut()}
-            aria-label="Sign out"
-            title="Sign out"
+            onClick={() => { preview.exit(); void signOut() }}
+            aria-label={preview.active ? 'Leave preview' : 'Sign out'}
+            title={preview.active ? 'Leave preview' : 'Sign out'}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
           >
             <LogOut className="h-4 w-4" aria-hidden />
@@ -122,6 +125,11 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh bg-bg">
+      {/* Offset by the sidebar width, which is fixed-positioned and would
+          otherwise cover the first 232px of the banner. */}
+      <div className="lg:pl-[232px]">
+        <PreviewBanner />
+      </div>
       {/* Desktop: a fixed rail. Mobile gets a purpose-built drawer instead of
           the same rail squeezed narrower. */}
       <aside className="fixed inset-y-0 left-0 hidden w-[232px] flex-col border-r border-border bg-surface px-3 py-4 lg:flex">

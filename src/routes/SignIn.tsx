@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { enabledProviders } from '@/lib/providers'
 import { useAuth } from '@/lib/auth'
 import { isConfigured } from '@/lib/env'
+import { usePreview } from '@/lib/preview'
 import { ProviderIcon } from '@/components/ProviderIcon'
 
 type Mode = 'providers' | 'password' | 'magic'
@@ -25,8 +26,9 @@ export function SignIn() {
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const reduce = useReducedMotion()
+  const preview = usePreview()
 
-  if (session) return <Navigate to="/" replace />
+  if (session || preview.active) return <Navigate to="/" replace />
 
   async function withProvider(p: Provider) {
     setBusy(p); setError(null)
@@ -112,11 +114,15 @@ export function SignIn() {
           </p>
 
           {!isConfigured && (
-            <div className="mt-5 rounded-lg border border-warning-border bg-warning-subtle px-4 py-3 text-[13px]"
-                 style={{ color: 'var(--warning)' }}>
-              <strong className="font-semibold">Not connected yet.</strong> Set
-              {' '}<code className="font-mono text-[12px]">VITE_SUPABASE_URL</code> and
-              {' '}<code className="font-mono text-[12px]">VITE_SUPABASE_ANON_KEY</code> to sign in.
+            <div className="mt-5 rounded-xl border border-border bg-surface p-4">
+              <p className="text-[13.5px] font-medium text-text">Not connected yet</p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-text-muted">
+                Sign-in needs a Supabase project. You can still look around — the preview
+                is loaded with the real 2026–27 school calendar.
+              </p>
+              <Button size="sm" className="mt-3" onClick={preview.enter}>
+                Explore the preview
+              </Button>
             </div>
           )}
 

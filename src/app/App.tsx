@@ -4,14 +4,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { ThemeProvider } from '@/lib/theme'
+import { PreviewProvider, usePreview } from '@/lib/preview'
 import { AppShell } from './AppShell'
 import { SignIn } from '@/routes/SignIn'
 import { AuthCallback } from '@/routes/AuthCallback'
 import { Dashboard } from '@/routes/Dashboard'
 import { NotFound } from '@/routes/NotFound'
 import {
-  AdminPage, CalendarPage, ClassesPage, NotificationsPage, SettingsPage, SuggestionsPage,
+  AdminPage, ClassesPage, NotificationsPage, SettingsPage, SuggestionsPage,
 } from '@/routes/sections'
+import { CalendarPage } from '@/routes/Calendar'
+import { SchoolYearProvider } from '@/features/schoolYear/SchoolYearProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,9 +34,14 @@ function FullPageLoader() {
 /** Waits for the first session check so a signed-in user never sees sign-in. */
 function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
+  const preview = usePreview()
   const location = useLocation()
   if (loading) return <FullPageLoader />
-  if (!session) return <Navigate to="/sign-in" replace state={{ from: location }} />
+  // Preview is only ever available when Supabase is unconfigured, so this can
+  // never act as a bypass in a real deployment.
+  if (!session && !preview.active) {
+    return <Navigate to="/sign-in" replace state={{ from: location }} />
+  }
   return <>{children}</>
 }
 
@@ -48,12 +56,14 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 export function App() {
   return (
     <ThemeProvider>
+      <PreviewProvider>
       <QueryClientProvider client={queryClient}>
         {/* Hash routing: GitHub Pages has no server to rewrite deep links, and
             the PKCE flow returns its code as a query param, so the two do not
             collide. */}
         <HashRouter>
           <AuthProvider>
+            <SchoolYearProvider>
             <Routes>
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
@@ -81,9 +91,11 @@ export function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
+            </SchoolYearProvider>
           </AuthProvider>
         </HashRouter>
       </QueryClientProvider>
+      </PreviewProvider>
     </ThemeProvider>
   )
 }
