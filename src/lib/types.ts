@@ -208,6 +208,11 @@ export type NotificationPreferences = {
   digest_weekly: boolean
   quiet_start: string | null
   quiet_end: string | null
+  /**
+   * ISO weekdays the quiet window applies to, 1 = Monday .. 7 = Sunday.
+   * Empty means every day, so a window set before days existed keeps working.
+   */
+  quiet_days: number[]
 }
 
 export type CategoryPreference = {

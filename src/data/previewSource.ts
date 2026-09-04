@@ -114,6 +114,7 @@ const previewPrefs: NotificationPreferences = {
   digest_weekly: false,
   quiet_start: null,
   quiet_end: null,
+  quiet_days: [],
 }
 
 // One row per seeded category, matching ensure_notification_defaults().
