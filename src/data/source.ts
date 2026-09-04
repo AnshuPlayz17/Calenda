@@ -31,6 +31,15 @@ export type EventFilters = {
 
 export type ReviewAction = 'approve' | 'reject'
 
+export type SearchHit = {
+  kind: 'event' | 'note' | 'assignment' | 'class'
+  id: string
+  title: string
+  subtitle: string | null
+  occurs_on: PlainDate | null
+  class_id: string | null
+}
+
 export type ImportOptions = {
   /**
    * Google events keep their origin's privacy: they belong to the person who
@@ -136,6 +145,13 @@ export interface DataSource {
     categoryId: string,
     patch: { enabled?: boolean; offsets?: number[] },
   ): Promise<void>
+  /**
+   * One search across events, notes, assignments and classes. Row-level
+   * security decides what comes back, so this returns exactly what the caller
+   * could already read.
+   */
+  search(query: string, schoolYearId?: string): Promise<SearchHit[]>
+
   /** Reminders already queued, so a person can see what is coming. */
   listQueuedReminders(limit: number): Promise<QueuedReminder[]>
   savePushSubscription(sub: PushSubscriptionJSON): Promise<void>

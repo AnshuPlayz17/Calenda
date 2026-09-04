@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
-  Settings, ShieldCheck, Menu, X, LogOut,
+  Settings, ShieldCheck, Menu, X, LogOut, Search,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth'
 import { PreviewBanner } from '@/components/PreviewBanner'
 import { usePreview } from '@/lib/preview'
 import { YearSwitcher } from '@/features/schoolYear/YearSwitcher'
+import { SearchPalette } from '@/features/search/SearchPalette'
 import { cn } from '@/lib/cn'
 
 const nav = [
@@ -26,11 +27,34 @@ export function AppShell() {
   const { profile, isAdmin, signOut } = useAuth()
   const preview = usePreview()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const location = useLocation()
   const reduce = useReducedMotion()
 
   // Navigating should always dismiss the mobile drawer.
   useEffect(() => setMobileOpen(false), [location.pathname])
+
+  // Cmd/Ctrl+K opens search, and "/" does too as long as you are not already
+  // typing into something -- both are what people try first.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const typing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      } else if (e.key === '/' && !typing) {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Escape closes the drawer, matching every other dismissible surface.
   useEffect(() => {
@@ -45,6 +69,17 @@ export function AppShell() {
       <div className="px-3 pb-5 pt-1">
         <Brand size="sm" />
       </div>
+
+      <button
+        onClick={() => setSearchOpen(true)}
+        className="mx-0 mb-3 flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13.5px] text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text-muted"
+      >
+        <Search className="h-[15px] w-[15px] shrink-0" aria-hidden />
+        <span className="flex-1 text-left">Search</span>
+        <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-[10px] sm:block">
+          /
+        </kbd>
+      </button>
 
       <nav aria-label="Main" className="flex flex-col gap-0.5">
         {nav.map(({ to, label, Icon, end }) => (
@@ -190,6 +225,8 @@ export function AppShell() {
           <Outlet />
         </div>
       </main>
+
+      <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   )
 }

@@ -15,7 +15,7 @@ import { toInstant } from '@/lib/datetime'
 import { SCHOOL_YEAR_2026_27, schoolEvents2026_27 } from './schoolCalendar'
 import {
   matchesFilters, type DataSource, type EventFilters, type ImportOptions,
-  type ImportWrite, type ReviewAction,
+  type ImportWrite, type ReviewAction, type SearchHit,
 } from './source'
 
 const YEAR_ID = 'preview-year-2026-27'
@@ -262,6 +262,71 @@ export const previewSource: DataSource = {
 
 
   // ------------------------------------------------------ notifications --
+
+
+  async search(query: string) {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+
+    const hits: SearchHit[] = []
+    const has = (text: string | null | undefined) =>
+      (text ?? '').toLowerCase().includes(q)
+
+    for (const e of store) {
+      if (e.status !== 'approved') continue
+      if (has(e.title) || has(e.description) || has(e.location)) {
+        hits.push({
+          kind: 'event',
+          id: e.id,
+          title: e.title,
+          subtitle: e.description ?? e.location ?? null,
+          occurs_on: e.start_date,
+          class_id: null,
+        })
+      }
+    }
+
+    for (const c of classes) {
+      if (has(c.name) || has(c.course_code)) {
+        hits.push({
+          kind: 'class',
+          id: c.id,
+          title: c.name,
+          subtitle: c.course_code ?? c.teacher ?? null,
+          occurs_on: null,
+          class_id: c.id,
+        })
+      }
+    }
+
+    for (const a of assignments) {
+      if (has(a.title)) {
+        hits.push({
+          kind: 'assignment',
+          id: a.id,
+          title: a.title,
+          subtitle: classes.find((c) => c.id === a.class_id)?.name ?? null,
+          occurs_on: null,
+          class_id: a.class_id,
+        })
+      }
+    }
+
+    for (const n of pages) {
+      if (has(n.title) || has(n.content_text)) {
+        hits.push({
+          kind: 'note',
+          id: n.id,
+          title: n.title,
+          subtitle: (n.content_text ?? '').slice(0, 120) || null,
+          occurs_on: null,
+          class_id: n.class_id,
+        })
+      }
+    }
+
+    return hits.slice(0, 20)
+  },
 
   async getNotificationPreferences() {
     return { prefs: previewPrefs, categories: previewCategoryPrefs }
