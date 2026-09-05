@@ -1271,6 +1271,14 @@ comment on column notification_preferences.quiet_days is
   'ISO weekdays (1=Mon .. 7=Sun) the quiet window applies to. Empty = every day.';
 
 
+-- The four-argument version has to go, not just be superseded. Adding a fifth
+-- parameter with a default does NOT leave the old call resolving to the old
+-- function -- it makes a four-argument call ambiguous between the two, and
+-- Postgres refuses it with "function is not unique". Anything still calling
+-- with four arguments breaks at runtime rather than falling back.
+drop function if exists apply_quiet_hours(timestamptz, time, time, text);
+
+
 -- The scheduler has to know which local day it landed on, so the day test uses
 -- the local date rather than the UTC one -- a 23:30 reminder on a Friday in
 -- Toronto is already Saturday in UTC, and would otherwise be tested against
@@ -1346,7 +1354,7 @@ begin
   with candidates as (
     select
       p.profile_id,
-      'event'::notify_subject as subject_type,
+      'event'::text           as subject_type,
       e.id                    as subject_id,
       case
         when e.is_all_day
@@ -1556,6 +1564,46 @@ comment on function search_everything is
 
 grant execute on function search_everything(text, uuid, integer) to authenticated;
 
+-- ===========================================================================
+-- 20260904000800_push_by_default.sql
+-- ===========================================================================
+
+-- ---------------------------------------------------------------------------
+-- Web push is the channel that actually works.
+--
+-- notification_preferences.channels defaulted to '{email}', which was decided
+-- before it was clear which channel would be configured first. Email needs a
+-- third-party sending account; web push needs a VAPID key pair, which is
+-- generated locally and costs nothing.
+--
+-- With email unconfigured, the default meant every queued reminder was an
+-- email reminder, and the dispatcher marked each one failed rather than
+-- sending anything. Reminders looked broken because the default pointed at
+-- the one channel that had no sender behind it.
+-- ---------------------------------------------------------------------------
+
+alter table notification_preferences
+  alter column channels set default '{web_push}';
+
+-- Move accounts that never chose for themselves. An account that has
+-- deliberately picked email is left alone: exactly '{email}' is the old
+-- default, anything else is a choice someone made.
+update notification_preferences
+   set channels = '{web_push}'
+ where channels = '{email}';
+
+-- Pending email reminders can never send -- there has never been a sender --
+-- so they would sit in the queue failing forever. Nothing was ever delivered
+-- through them, so nothing is lost. Rescheduling recreates them on the
+-- channel the account now uses.
+delete from notification_queue
+ where channel = 'email'
+   and state = 'pending';
+
+comment on column notification_preferences.channels is
+  'Delivery channels. Defaults to web_push: it needs only a VAPID key pair, '
+  'which is free and self-generated. Email requires a sending account.';
+
 -- ============================================================================
 -- Mark these migrations as applied, so the GitHub integration skips them.
 -- ============================================================================
@@ -1567,7 +1615,8 @@ insert into supabase_migrations.schema_migrations (version, name) values
   ('20260904000400', 'parent_invites'),
   ('20260904000500', 'notification_scheduling'),
   ('20260904000600', 'quiet_hour_days'),
-  ('20260904000700', 'search')
+  ('20260904000700', 'search'),
+  ('20260904000800', 'push_by_default')
 on conflict (version) do nothing;
 
 -- ============================================================================

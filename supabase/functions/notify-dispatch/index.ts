@@ -104,6 +104,13 @@ async function sendPush(profileId: string, title: string, body: string, tag: str
   }
 }
 
+/** Parks a reminder that cannot be delivered, without counting it a failure. */
+async function skip(queueId: string, why: string) {
+  await supabase.from('notification_queue')
+    .update({ state: 'skipped', error: why })
+    .eq('id', queueId)
+}
+
 Deno.serve(async () => {
   // Top up the queue first, so a reminder created since the last run is not
   // missed. Both steps are idempotent.
@@ -116,6 +123,7 @@ Deno.serve(async () => {
 
   let sent = 0
   let failed = 0
+  let skipped = 0
 
   for (const r of (due ?? []) as Reminder[]) {
     try {
@@ -125,6 +133,20 @@ Deno.serve(async () => {
 
       const title = subject.title
       const body = `In ${humanOffset(r.offset_minutes)}: ${title}`
+
+      // A channel with no sender behind it is skipped, not failed. Marking it
+      // failed would fill the queue with rows that can never succeed and make
+      // a missing API key look like a broken reminder.
+      if (r.channel === 'email' && !RESEND_KEY) {
+        await skip(r.id, 'email sending is not configured')
+        skipped++
+        continue
+      }
+      if (r.channel === 'web_push' && !(VAPID_PUBLIC && VAPID_PRIVATE)) {
+        await skip(r.id, 'web push is not configured')
+        skipped++
+        continue
+      }
 
       if (r.channel === 'email') {
         const { data: user } = await supabase.auth.admin.getUserById(r.profile_id)
@@ -136,7 +158,11 @@ Deno.serve(async () => {
         // stacks on the lock screen.
         await sendPush(r.profile_id, 'Calenda', body, `${r.subject_type}:${r.subject_id}`)
       } else {
-        continue // sms is not configured; see docs/SPEC.md §10
+        // SMS has no free sender. Skipped rather than failed, for the same
+        // reason as above.
+        await skip(r.id, 'sms is not configured')
+        skipped++
+        continue
       }
 
       await supabase.from('notification_deliveries').insert({
@@ -154,7 +180,7 @@ Deno.serve(async () => {
     }
   }
 
-  return new Response(JSON.stringify({ sent, failed }), {
+  return new Response(JSON.stringify({ sent, failed, skipped }), {
     headers: { 'Content-Type': 'application/json' },
   })
 })

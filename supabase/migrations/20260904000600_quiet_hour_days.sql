@@ -25,6 +25,14 @@ comment on column notification_preferences.quiet_days is
   'ISO weekdays (1=Mon .. 7=Sun) the quiet window applies to. Empty = every day.';
 
 
+-- The four-argument version has to go, not just be superseded. Adding a fifth
+-- parameter with a default does NOT leave the old call resolving to the old
+-- function -- it makes a four-argument call ambiguous between the two, and
+-- Postgres refuses it with "function is not unique". Anything still calling
+-- with four arguments breaks at runtime rather than falling back.
+drop function if exists apply_quiet_hours(timestamptz, time, time, text);
+
+
 -- The scheduler has to know which local day it landed on, so the day test uses
 -- the local date rather than the UTC one -- a 23:30 reminder on a Friday in
 -- Toronto is already Saturday in UTC, and would otherwise be tested against
@@ -100,7 +108,7 @@ begin
   with candidates as (
     select
       p.profile_id,
-      'event'::notify_subject as subject_type,
+      'event'::text           as subject_type,
       e.id                    as subject_id,
       case
         when e.is_all_day
