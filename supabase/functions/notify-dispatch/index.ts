@@ -15,6 +15,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
+import { leadIn } from './leadIn.ts'
 
 type Reminder = {
   id: string
@@ -37,13 +38,6 @@ const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:noreply@calenda.a
 
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
-}
-
-function humanOffset(minutes: number): string {
-  if (minutes >= 10080) return `${Math.round(minutes / 10080)} week(s)`
-  if (minutes >= 1440) return `${Math.round(minutes / 1440)} day(s)`
-  if (minutes >= 60) return `${Math.round(minutes / 60)} hour(s)`
-  return `${minutes} minutes`
 }
 
 /** Looks up what a reminder is actually about. */
@@ -132,7 +126,7 @@ Deno.serve(async () => {
       if (!subject) continue
 
       const title = subject.title
-      const body = `In ${humanOffset(r.offset_minutes)}: ${title}`
+      const body = `${leadIn(subject.when, r.offset_minutes)}: ${title}`
 
       // A channel with no sender behind it is skipped, not failed. Marking it
       // failed would fill the queue with rows that can never succeed and make
