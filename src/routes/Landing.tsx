@@ -9,6 +9,7 @@ import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { WindowFrame } from '@/components/ui/WindowFrame'
+import { ImportScene } from '@/features/landing/ImportScene'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
@@ -39,6 +40,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <Header />
       <Hero />
       <Problem />
+      <ImportScene />
       <Features />
       <Privacy />
       <Closing />
