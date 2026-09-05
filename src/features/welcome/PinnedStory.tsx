@@ -78,7 +78,7 @@ export function PinnedStory({
       <div className="relative z-10 bg-bg">
         {heading && (
           <div className="mx-auto max-w-[1120px] px-6 pb-2 pt-4">
-            {eyebrow && <p className="label-caps">{eyebrow}</p>}
+            {eyebrow && <p className="label-caps [@media(max-height:759px)_and_(max-width:1023px)]:sr-only">{eyebrow}</p>}
             <h2 className="mt-3 max-w-[24ch] font-display text-[26px] font-medium leading-tight tracking-tight sm:text-[32px]">
               {heading}
             </h2>
@@ -119,17 +119,17 @@ export function PinnedStory({
           of this frame and would otherwise cut the heading in half. */}
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-8 pt-16">
         {heading && (
-          <div className="mx-auto w-full max-w-[1120px] px-6 pb-6 lg:pb-8">
-            {eyebrow && <p className="label-caps">{eyebrow}</p>}
-            {/* On a viewport this short the frame cannot hold the heading and
-                a chapter at once, and something would be clipped. The eyebrow
-                above still labels the section. */}
-            <h2 className="mt-2.5 max-w-[24ch] font-display text-[20px] font-medium leading-tight tracking-tight text-text [@media(max-height:699px)]:hidden sm:text-[24px] lg:text-[30px]">
+          <div className="mx-auto w-full max-w-[1120px] px-6 pb-3 lg:pb-8">
+            {eyebrow && <p className="label-caps [@media(max-height:759px)_and_(max-width:1023px)]:sr-only">{eyebrow}</p>}
+            {/* Taken out of the layout on a viewport too short to hold both a
+                heading and a chapter -- but sr-only, not hidden, so the
+                section keeps its heading in the outline. */}
+            <h2 className="mt-2.5 max-w-[24ch] font-display text-[20px] font-medium leading-tight tracking-tight text-text [@media(max-height:759px)_and_(max-width:1023px)]:sr-only sm:text-[24px] lg:text-[30px]">
               {heading}
             </h2>
           </div>
         )}
-        <div className="mx-auto grid w-full max-w-[1120px] items-center gap-6 px-6 lg:gap-10 lg:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-[1120px] items-center gap-4 px-6 lg:gap-10 lg:grid-cols-2">
           {/* Text column. Only the active chapter is readable, so screen
               readers are never handed four competing headings. */}
           <div>
@@ -156,7 +156,7 @@ export function PinnedStory({
 
             {/* Persistent, unlike the chapters above it: what is in this
                 section, how far through you are, and a way out of the pin. */}
-            <nav aria-label="Sections" className="mt-6 flex flex-wrap gap-x-1 gap-y-1 lg:mt-9">
+            <nav aria-label="Sections" className="mt-4 flex flex-wrap gap-x-1 gap-y-1 lg:mt-9">
               {chapters.map((c, i) => (
                 <button
                   key={c.id}
@@ -180,7 +180,7 @@ export function PinnedStory({
           </div>
 
           {/* Visual column, in the same frame throughout. */}
-          <div className="relative h-[clamp(200px,30svh,400px)]">
+          <div className="relative h-[clamp(272px,34svh,320px)]">
             {chapters.map((c, i) => (
               <motion.div
                 key={c.id}

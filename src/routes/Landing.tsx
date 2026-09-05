@@ -13,8 +13,8 @@ import { PinnedStory } from '@/features/welcome/PinnedStory'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
-import { agendaLabel, todayPlain } from '@/lib/datetime'
+import { sampleUpcoming } from '@/data/sampleEvents'
+import { agendaLabel } from '@/lib/datetime'
 
 /**
  * The same page serves two jobs, and the difference is one redirect.
@@ -208,8 +208,8 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="mt-3 text-center text-[12.5px] text-text-subtle"
           >
-            Real dates, not invented ones — all {schoolEvents2026_27.length} from
-            the school's calendar, already imported.
+            A sample of what a term looks like once your classes are in. The
+            school's own dates arrive already imported.
           </motion.p>
         </motion.div>
       </div>
@@ -218,21 +218,19 @@ function Hero() {
 }
 
 /**
- * The real 2026-27 calendar, in the same window frame the tour uses.
+ * A picture of the app, made of invented events.
  *
- * The dates are real -- showing invented sample data on a landing page for a
- * school app would be the wrong first impression -- but the container is a
- * picture of the app, exactly like every other screenshot on the page.
+ * This showed the real 2026-27 school calendar until it was pointed out that
+ * the first thing on the page should look like a screenshot of the product.
+ * Real dates read as a feed you were already subscribed to; a mockup reads as
+ * what your own term would look like once you had one.
  */
 function UpcomingPreview() {
   const reduce = useReducedMotion()
-  const today = todayPlain()
-  const next = schoolEvents2026_27
-    .filter((e) => e.endDate >= today)
-    .slice(0, 5)
+  const next = sampleUpcoming()
 
   return (
-    <WindowFrame title="Coming up" aside="2026–27">
+    <WindowFrame title="Coming up" aside="Sample">
       <ul className="flex flex-col">
         {next.map((e, i) => (
           <motion.li
