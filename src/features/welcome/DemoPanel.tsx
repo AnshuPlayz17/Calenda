@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { Bell, Check, Clock, Eye, EyeOff } from 'lucide-react'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
+import { sampleImported } from '@/data/sampleEvents'
 import { agendaLabel } from '@/lib/datetime'
 import { cn } from '@/lib/cn'
 import { WindowFrame } from '@/components/ui/WindowFrame'
@@ -33,21 +33,19 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   )
 }
 
-/** The first handful of real school dates, in order. */
-const REAL = schoolEvents2026_27.slice(0, 5)
-
 function CalendarDemo() {
   const reduce = useReducedMotion()
+  const events = sampleImported().slice(0, 4)
   return (
     <Frame title="Calendar">
       <ul className="flex flex-col gap-1.5">
-        {REAL.map((e, i) => (
+        {events.map((e, i) => (
           <motion.li
             key={e.title + e.startDate}
             initial={reduce ? false : { opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.35, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2"
+            className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-1.5"
           >
             <span aria-hidden className="h-6 w-[3px] shrink-0 rounded-full bg-brand" />
             <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-text">
@@ -59,8 +57,11 @@ function CalendarDemo() {
           </motion.li>
         ))}
       </ul>
+      {/* No count: the real number depends on the year's PDF, and inventing
+          one to sit under invented events would be a number nobody could
+          check. "Every date" is the claim, and it is true. */}
       <p className="mt-3 text-center text-[11.5px] text-text-subtle">
-        …and {schoolEvents2026_27.length - REAL.length} more, already imported
+        …and the rest, already imported
       </p>
     </Frame>
   )
