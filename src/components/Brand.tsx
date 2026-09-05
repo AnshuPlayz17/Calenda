@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 /**
@@ -13,18 +14,26 @@ export function Brand({
   size = 'md',
   showSchool = true,
   className,
+  to,
 }: {
   size?: 'sm' | 'md' | 'lg'
   showSchool?: boolean
   className?: string
+  /**
+   * Where clicking the lockup goes. A logo in the corner is the one thing
+   * everybody tries to click to get home, so every place it appears says
+   * where home is from there: the dashboard once you are signed in, the
+   * landing page before that.
+   */
+  to?: string
 }) {
   const [logoMissing, setLogoMissing] = useState(false)
 
   const mark = { sm: 'h-6 w-6', md: 'h-8 w-8', lg: 'h-11 w-11' }[size]
   const word = { sm: 'text-lg', md: 'text-2xl', lg: 'text-3xl' }[size]
 
-  return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
+  const inner = (
+    <>
       {showSchool &&
         (logoMissing ? (
           <CalendaMark className={mark} />
@@ -49,8 +58,26 @@ export function Brand({
       >
         Calenda
       </span>
-    </span>
+    </>
   )
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        aria-label="Calenda home"
+        className={cn(
+          'inline-flex items-center gap-2.5 rounded-lg no-underline transition-opacity duration-150',
+          'hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand',
+          className,
+        )}
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return <span className={cn('inline-flex items-center gap-2.5', className)}>{inner}</span>
 }
 
 /** Calenda's own mark. Deliberately not a facsimile of the school crest. */

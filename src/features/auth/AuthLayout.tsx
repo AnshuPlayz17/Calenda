@@ -33,7 +33,7 @@ export function AuthLayout({
         style={{ background: 'var(--blue-900)' }}
       >
         <div className="relative z-10">
-          <Brand size="md" showSchool={false} className="[&_span]:text-white" />
+          <Brand size="md" showSchool={false} to="/" className="[&_span]:text-white" />
         </div>
 
         <div className="relative z-10 max-w-[30ch]">
@@ -75,7 +75,7 @@ export function AuthLayout({
           className="mx-auto w-full max-w-[380px]"
         >
           <div className="lg:hidden">
-            <Brand size="md" />
+            <Brand size="md" to="/" />
           </div>
 
           <h2 className="mt-7 text-[22px] font-semibold tracking-tight text-text lg:mt-0">

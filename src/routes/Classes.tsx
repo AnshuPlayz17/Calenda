@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
-import { Archive, GraduationCap, Plus, RotateCcw } from 'lucide-react'
+import { Archive, GraduationCap, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -23,6 +23,7 @@ export function ClassesPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<SchoolClass | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const visible = showArchived ? classes : classes.filter((c) => !c.is_archived)
 
@@ -68,7 +69,7 @@ export function ClassesPage() {
             description="Add your first class to start keeping notes, assignments and deadlines in one place."
             action={
               <Button size="sm" variant="secondary"
-                      onClick={() => { setEditing(null); setDialogOpen(true) }}>
+                      onClick={() => { setEditing(null); setDeleting(false); setDialogOpen(true) }}>
                 Add a class
               </Button>
             }
@@ -106,7 +107,7 @@ export function ClassesPage() {
 
                 <div className="flex justify-end gap-1 border-t border-border px-3 py-2">
                   <Button variant="ghost" size="sm"
-                          onClick={() => { setEditing(c); setDialogOpen(true) }}>
+                          onClick={() => { setEditing(c); setDeleting(false); setDialogOpen(true) }}>
                     Edit
                   </Button>
                   <Button
@@ -120,6 +121,15 @@ export function ClassesPage() {
                       ? <><RotateCcw className="h-3.5 w-3.5" aria-hidden /> Restore</>
                       : <><Archive className="h-3.5 w-3.5" aria-hidden /> Archive</>}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-danger hover:text-danger"
+                    onClick={() => { setEditing(c); setDeleting(true); setDialogOpen(true) }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    Delete
+                  </Button>
                 </div>
               </Card>
             </motion.div>
@@ -127,7 +137,12 @@ export function ClassesPage() {
         </div>
       )}
 
-      <ClassDialog open={dialogOpen} onClose={() => setDialogOpen(false)} existing={editing} />
+      <ClassDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        existing={editing}
+        startInDelete={deleting}
+      />
     </div>
   )
 }

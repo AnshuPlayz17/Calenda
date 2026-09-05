@@ -55,7 +55,7 @@ function Header() {
       }
     >
       <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:px-8">
-        <Brand size="sm" />
+        <Brand size="sm" to="/" />
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link
