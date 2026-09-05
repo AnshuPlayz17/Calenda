@@ -34,7 +34,11 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
         </span>
         <span className="ml-1 text-[12px] font-medium text-text-muted">{title}</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden p-4">{children}</div>
+      {/* Centred rather than hugging the top: the frame is a fixed height
+          for every chapter, and the shorter demos looked abandoned in it. */}
+      <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden p-4">
+        {children}
+      </div>
     </div>
   )
 }

@@ -116,8 +116,10 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
             className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]"
           >
-            Everything you need
-            <br />
+            {/* The break sets the shape on wide screens; on a phone there is
+                no room for it and the second line runs into the edge. */}
+            Everything you need{' '}
+            <br className="hidden sm:inline" />
             for school, in one place.
           </motion.h1>
 
@@ -139,17 +141,50 @@ function Hero() {
             className="mt-8 flex flex-wrap items-center gap-3"
           >
             <Link
-              to="/sign-in"
+              to="/sign-up"
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
             >
-              Get started <ArrowRight className="h-4 w-4" aria-hidden />
+              Create an account <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
-            <span className="text-[13px] text-text-subtle">Free. No app to install.</span>
+            <Link
+              to="/sign-in"
+              className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-[14.5px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
+            >
+              Sign in
+            </Link>
           </motion.div>
+
+          {/* Concrete and checkable, rather than adjectives. */}
+          <motion.ul
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-7 flex flex-wrap gap-x-6 gap-y-2"
+          >
+            {[
+              'Free, with nothing to install',
+              'Works on your phone and laptop',
+              'Your notes stay private',
+            ].map((line) => (
+              <li key={line} className="flex items-center gap-1.5 text-[13px] text-text-muted">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
+                {line}
+              </li>
+            ))}
+          </motion.ul>
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
           <UpcomingPreview />
+          <motion.p
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mt-3 text-center text-[12.5px] text-text-subtle"
+          >
+            Not a mockup — the real {schoolEvents2026_27.length} dates from the school's
+            calendar, already imported.
+          </motion.p>
         </motion.div>
       </div>
     </section>
@@ -353,17 +388,53 @@ function Privacy() {
 function Closing() {
   return (
     <section className="px-5 py-20 sm:px-8 sm:py-24">
-      <Reveal className="mx-auto max-w-[1120px] text-center">
-        <h2 className="mx-auto max-w-[18ch] font-display text-[32px] font-medium leading-tight tracking-tight sm:text-[44px]">
-          Start the year knowing what's coming.
-        </h2>
-        <div className="mt-8 flex justify-center">
-          <Link
-            to="/sign-in"
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-6 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
-          >
-            Open Calenda <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+      <Reveal className="mx-auto max-w-[1120px]">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="grid gap-8 p-8 sm:p-12 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+            <div>
+              <h2 className="max-w-[18ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
+                Start the year knowing what's coming.
+              </h2>
+              <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
+                Sign up and the school calendar is already there. Add your classes and
+                everything else follows from them.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/sign-up"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-6 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
+                >
+                  Create an account <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+                <Link
+                  to="/sign-in"
+                  className="text-[14px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+                >
+                  or sign in
+                </Link>
+              </div>
+            </div>
+
+            {/* What actually happens, in order, so the first minute holds no
+                surprises. */}
+            <ol className="flex flex-col gap-3">
+              {[
+                'Sign in with Google, GitHub or Discord',
+                'The school calendar is already imported',
+                'Add your classes, and deadlines follow',
+              ].map((step, i) => (
+                <li
+                  key={step}
+                  className="flex items-start gap-3 rounded-xl border border-border px-4 py-3"
+                >
+                  <span className="tabular grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-[12px] font-medium text-brand">
+                    {i + 1}
+                  </span>
+                  <span className="text-[13.5px] leading-snug text-text">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </Reveal>
     </section>
