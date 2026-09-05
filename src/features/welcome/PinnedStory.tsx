@@ -29,7 +29,17 @@ export type Chapter = {
  * stationary viewport is exactly what someone with vestibular sensitivity is
  * asking not to have.
  */
-export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
+export function PinnedStory({
+  chapters,
+  eyebrow,
+  heading,
+}: {
+  chapters: Chapter[]
+  /** Section label, rendered inside the frame so it never gets a screen of
+      its own. See the note on the sticky container below. */
+  eyebrow?: string
+  heading?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
   const [active, setActive] = useState(0)
@@ -66,6 +76,14 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
   if (reduce) {
     return (
       <div className="relative z-10 bg-bg">
+        {heading && (
+          <div className="mx-auto max-w-[1120px] px-6 pb-2 pt-4">
+            {eyebrow && <p className="label-caps">{eyebrow}</p>}
+            <h2 className="mt-3 max-w-[24ch] font-display text-[26px] font-medium leading-tight tracking-tight sm:text-[32px]">
+              {heading}
+            </h2>
+          </div>
+        )}
         {chapters.map((c) => (
           <section
             key={c.id}
@@ -91,12 +109,31 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
       className="relative z-10 bg-bg"
       style={{ height: `${chapters.length * 100}svh` }}
     >
-      <div className="sticky top-0 flex h-svh items-center overflow-hidden">
-        <div className="mx-auto grid w-full max-w-[1120px] items-center gap-10 px-6 lg:grid-cols-2">
+      {/* The section heading lives in here, not above the section.
+          Outside it, the heading occupied a screen of its own: the frame
+          below it is a full viewport tall and centres its content, so the
+          first thing anyone saw was a title with half a screen of nothing
+          under it. Inside, it is the top line of the frame and the chapters
+          change beneath it. */}
+      {/* py-16 clears the page's own sticky header, which sits over the top
+          of this frame and would otherwise cut the heading in half. */}
+      <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-8 pt-16">
+        {heading && (
+          <div className="mx-auto w-full max-w-[1120px] px-6 pb-6 lg:pb-8">
+            {eyebrow && <p className="label-caps">{eyebrow}</p>}
+            {/* On a viewport this short the frame cannot hold the heading and
+                a chapter at once, and something would be clipped. The eyebrow
+                above still labels the section. */}
+            <h2 className="mt-2.5 max-w-[24ch] font-display text-[20px] font-medium leading-tight tracking-tight text-text [@media(max-height:699px)]:hidden sm:text-[24px] lg:text-[30px]">
+              {heading}
+            </h2>
+          </div>
+        )}
+        <div className="mx-auto grid w-full max-w-[1120px] items-center gap-6 px-6 lg:gap-10 lg:grid-cols-2">
           {/* Text column. Only the active chapter is readable, so screen
               readers are never handed four competing headings. */}
           <div>
-            <div className="relative min-h-[280px]">
+            <div className="relative min-h-[180px] sm:min-h-[260px] lg:min-h-[280px]">
               {chapters.map((c, i) => (
                 <motion.div
                   key={c.id}
@@ -119,7 +156,7 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
 
             {/* Persistent, unlike the chapters above it: what is in this
                 section, how far through you are, and a way out of the pin. */}
-            <nav aria-label="Sections" className="mt-9 flex flex-wrap gap-x-1 gap-y-1">
+            <nav aria-label="Sections" className="mt-6 flex flex-wrap gap-x-1 gap-y-1 lg:mt-9">
               {chapters.map((c, i) => (
                 <button
                   key={c.id}
@@ -143,7 +180,7 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
           </div>
 
           {/* Visual column, in the same frame throughout. */}
-          <div className="relative h-[340px] sm:h-[400px]">
+          <div className="relative h-[clamp(200px,30svh,400px)]">
             {chapters.map((c, i) => (
               <motion.div
                 key={c.id}

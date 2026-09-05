@@ -8,6 +8,7 @@ import {
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
+import { WindowFrame } from '@/components/ui/WindowFrame'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
@@ -207,8 +208,8 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="mt-3 text-center text-[12.5px] text-text-subtle"
           >
-            Not a mockup — the real {schoolEvents2026_27.length} dates from the school's
-            calendar, already imported.
+            Real dates, not invented ones — all {schoolEvents2026_27.length} from
+            the school's calendar, already imported.
           </motion.p>
         </motion.div>
       </div>
@@ -217,8 +218,11 @@ function Hero() {
 }
 
 /**
- * The real 2026-27 calendar, not a mockup. Showing invented sample data on a
- * landing page for a school app would be the wrong first impression.
+ * The real 2026-27 calendar, in the same window frame the tour uses.
+ *
+ * The dates are real -- showing invented sample data on a landing page for a
+ * school app would be the wrong first impression -- but the container is a
+ * picture of the app, exactly like every other screenshot on the page.
  */
 function UpcomingPreview() {
   const reduce = useReducedMotion()
@@ -228,11 +232,7 @@ function UpcomingPreview() {
     .slice(0, 5)
 
   return (
-    <div className="surface-card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="label-caps">Coming up</span>
-        <span className="label-caps">2026–27</span>
-      </div>
+    <WindowFrame title="Coming up" aside="2026–27">
       <ul className="flex flex-col">
         {next.map((e, i) => (
           <motion.li
@@ -263,7 +263,7 @@ function UpcomingPreview() {
           </motion.li>
         ))}
       </ul>
-    </div>
+    </WindowFrame>
   )
 }
 
@@ -353,17 +353,12 @@ const TOUR: Chapter[] = [
 
 function Features() {
   return (
-    <section className="px-5 pt-16 sm:px-8 sm:pt-20">
-      <div className="mx-auto max-w-[1120px]">
-        <Reveal>
-          <p className="label-caps">What it does</p>
-          <h2 className="mt-3 max-w-[24ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
-            Built for the way a school year actually works.
-          </h2>
-        </Reveal>
-      </div>
-
-      <PinnedStory chapters={TOUR} />
+    <section>
+      <PinnedStory
+        chapters={TOUR}
+        eyebrow="What it does"
+        heading="Built for the way a school year actually works."
+      />
     </section>
   )
 }

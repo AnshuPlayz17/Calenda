@@ -3,6 +3,7 @@ import { Bell, Check, Clock, Eye, EyeOff } from 'lucide-react'
 import { schoolEvents2026_27 } from '@/data/schoolCalendar'
 import { agendaLabel } from '@/lib/datetime'
 import { cn } from '@/lib/cn'
+import { WindowFrame } from '@/components/ui/WindowFrame'
 
 export type DemoKind = 'calendar' | 'classes' | 'assignments' | 'reminders' | 'parents'
 
@@ -13,33 +14,22 @@ export type DemoKind = 'calendar' | 'classes' | 'assignments' | 'reminders' | 'p
  */
 export function DemoPanel({ kind }: { kind: DemoKind }) {
   return (
-    <div className="h-full overflow-hidden rounded-2xl border border-border bg-surface shadow-md">
+    <>
       {kind === 'calendar' && <CalendarDemo />}
       {kind === 'classes' && <ClassesDemo />}
       {kind === 'assignments' && <AssignmentsDemo />}
       {kind === 'reminders' && <RemindersDemo />}
       {kind === 'parents' && <ParentsDemo />}
-    </div>
+    </>
   )
 }
 
+/** The tour's frames all fill their chapter slot; the hero card does not. */
 function Frame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="flex gap-1.5" aria-hidden>
-          <i className="h-2 w-2 rounded-full bg-surface-3" />
-          <i className="h-2 w-2 rounded-full bg-surface-3" />
-          <i className="h-2 w-2 rounded-full bg-surface-3" />
-        </span>
-        <span className="ml-1 text-[12px] font-medium text-text-muted">{title}</span>
-      </div>
-      {/* Centred rather than hugging the top: the frame is a fixed height
-          for every chapter, and the shorter demos looked abandoned in it. */}
-      <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden p-4">
-        {children}
-      </div>
-    </div>
+    <WindowFrame title={title} fill>
+      {children}
+    </WindowFrame>
   )
 }
 
