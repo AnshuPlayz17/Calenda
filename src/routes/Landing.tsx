@@ -15,12 +15,23 @@ import { usePreview } from '@/lib/preview'
 import { schoolEvents2026_27 } from '@/data/schoolCalendar'
 import { agendaLabel, todayPlain } from '@/lib/datetime'
 
-export function Landing() {
+/**
+ * The same page serves two jobs, and the difference is one redirect.
+ *
+ * At `/` it is the front door, so someone already signed in is sent to their
+ * dashboard rather than being shown a pitch for something they already have.
+ * At `/about` it is a page they asked for from inside the app -- so it stays
+ * put, and its calls to action point back to the dashboard instead of to a
+ * sign-up form. Two routes rather than one route with a flag in history state,
+ * because /about survives a refresh and can be sent to someone else.
+ */
+export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolean }) {
   const { session, loading } = useAuth()
   const preview = usePreview()
 
-  // Someone already signed in has no use for a pitch.
-  if (!loading && (session || preview.active)) return <Navigate to="/dashboard" replace />
+  if (redirectSignedIn && !loading && (session || preview.active)) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   return (
     <div className="min-h-dvh bg-bg">
@@ -35,8 +46,16 @@ export function Landing() {
   )
 }
 
+/** Signed in, or exploring the preview -- either way, not a prospect. */
+function useSignedIn() {
+  const { session } = useAuth()
+  const preview = usePreview()
+  return Boolean(session || preview.active)
+}
+
 function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const signedIn = useSignedIn()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -59,10 +78,10 @@ function Header() {
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link
-            to="/sign-in"
+            to={signedIn ? '/dashboard' : '/sign-in'}
             className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
           >
-            Sign in
+            {signedIn ? 'Back to dashboard' : 'Sign in'}
           </Link>
         </div>
       </div>
@@ -72,6 +91,7 @@ function Header() {
 
 function Hero() {
   const reduce = useReducedMotion()
+  const signedIn = useSignedIn()
   const { scrollY } = useScroll()
   // A small parallax on the card stack. Disabled entirely for reduced motion.
   const cardY = useTransform(scrollY, [0, 600], [0, reduce ? 0 : -40])
@@ -140,18 +160,23 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
+            {/* Someone reading this from inside the app has already done both
+                of these; the only useful button is the way back. */}
             <Link
-              to="/sign-up"
+              to={signedIn ? '/dashboard' : '/sign-up'}
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
             >
-              Create an account <ArrowRight className="h-4 w-4" aria-hidden />
+              {signedIn ? 'Back to dashboard' : 'Create an account'}
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
-            <Link
-              to="/sign-in"
-              className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-[14.5px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
-            >
-              Sign in
-            </Link>
+            {!signedIn && (
+              <Link
+                to="/sign-in"
+                className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-[14.5px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
+              >
+                Sign in
+              </Link>
+            )}
           </motion.div>
 
           {/* Concrete and checkable, rather than adjectives. */}
@@ -386,6 +411,8 @@ function Privacy() {
 }
 
 function Closing() {
+  const signedIn = useSignedIn()
+
   return (
     <section className="px-5 py-20 sm:px-8 sm:py-24">
       <Reveal className="mx-auto max-w-[1120px]">
@@ -396,22 +423,26 @@ function Closing() {
                 Start the year knowing what's coming.
               </h2>
               <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
-                Sign up and the school calendar is already there. Add your classes and
-                everything else follows from them.
+                {signedIn
+                  ? 'All three are already done on your account. This page is here so you can show someone what Calenda is.'
+                  : 'Sign up and the school calendar is already there. Add your classes and everything else follows from them.'}
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Link
-                  to="/sign-up"
+                  to={signedIn ? '/dashboard' : '/sign-up'}
                   className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-6 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
                 >
-                  Create an account <ArrowRight className="h-4 w-4" aria-hidden />
+                  {signedIn ? 'Back to dashboard' : 'Create an account'}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link
-                  to="/sign-in"
-                  className="text-[14px] text-text-muted underline-offset-2 hover:text-text hover:underline"
-                >
-                  or sign in
-                </Link>
+                {!signedIn && (
+                  <Link
+                    to="/sign-in"
+                    className="text-[14px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+                  >
+                    or sign in
+                  </Link>
+                )}
               </div>
             </div>
 

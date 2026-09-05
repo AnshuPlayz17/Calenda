@@ -78,6 +78,9 @@ export function App() {
               {/* Public. The landing page redirects anyone already signed
                   in straight to their dashboard. */}
               <Route path="/" element={<Landing />} />
+              {/* The same page, but it does not bounce a signed-in reader to
+                  the dashboard -- this is the one the app links to. */}
+              <Route path="/about" element={<Landing redirectSignedIn={false} />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
               <Route path="/welcome" element={<Welcome />} />

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
-  Settings, ShieldCheck, Menu, X, LogOut, Search,
+  Settings, ShieldCheck, Menu, X, LogOut, Search, Info,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -138,6 +138,17 @@ export function AppShell() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-3 px-1 pt-4">
+        {/* The logo goes to the dashboard, which is what a logo should do, so
+            the tour needs its own door. /about rather than / because / sends a
+            signed-in reader straight back here. */}
+        <Link
+          to="/about"
+          className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] text-text-subtle no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+        >
+          <Info className="h-4 w-4 shrink-0" aria-hidden />
+          About Calenda
+        </Link>
+
         <YearSwitcher />
         <ThemeToggle />
         <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
