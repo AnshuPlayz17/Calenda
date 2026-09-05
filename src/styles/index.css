@@ -83,8 +83,11 @@
   --cat-other:       #6e7a8f;
 
   /* --- type -------------------------------------------------------------- */
-  --font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+  /* The "Variable" suffixes are the family names Fontsource registers for the
+     variable builds; the static names stay as the next fallback so a stale
+     cached stylesheet still resolves. */
+  --font-sans:    'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Newsreader Variable', 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* --- elevation. Dark mode replaces these with lightness, not shadow. --- */
