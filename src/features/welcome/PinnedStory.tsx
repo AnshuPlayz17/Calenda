@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { motion, useReducedMotion, useScroll, useTransform, useMotionValueEvent } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useMotionValueEvent } from 'motion/react'
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
 import { DemoPanel } from './DemoPanel'
@@ -46,7 +46,22 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
     setActive((current) => (current === next ? current : next))
   })
 
-  const progress = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
+  /**
+   * Jump straight to a chapter. A pinned section takes four screens of scroll
+   * to get through, and without this the only way past chapter two is to keep
+   * scrolling and hope. Chapter i is active across progress [i/n, (i+1)/n), so
+   * aim for the middle of its band.
+   */
+  const goTo = (i: number) => {
+    const el = ref.current
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY
+    const track = el.offsetHeight - window.innerHeight
+    window.scrollTo({
+      top: top + (track * (i + 0.5)) / chapters.length,
+      behavior: 'smooth',
+    })
+  }
 
   if (reduce) {
     return (
@@ -56,7 +71,13 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
             key={c.id}
             className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 py-16 lg:grid-cols-2"
           >
-            <ChapterText chapter={c} />
+            {/* Wrapped: ChapterText is a fragment, and its three elements
+                would otherwise become three separate grid cells. */}
+            <div>
+              <ChapterText chapter={c} showEyebrow />
+            </div>
+            {/* Height comes from the content here, unlike the pinned layout:
+                nothing has to line up between chapters when they are stacked. */}
             <DemoPanel kind={c.demo} />
           </section>
         ))}
@@ -72,27 +93,53 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
     >
       <div className="sticky top-0 flex h-svh items-center overflow-hidden">
         <div className="mx-auto grid w-full max-w-[1120px] items-center gap-10 px-6 lg:grid-cols-2">
-          {/* Text column. Only the active chapter is mounted, so screen
-              readers are never handed five competing headings. */}
-          <div className="relative min-h-[280px]">
-            {chapters.map((c, i) => (
-              <motion.div
-                key={c.id}
-                initial={false}
-                animate={{
-                  opacity: i === active ? 1 : 0,
-                  y: i === active ? 0 : i < active ? -18 : 18,
-                }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                aria-hidden={i !== active}
-                className={cn(
-                  'absolute inset-0 flex flex-col justify-center',
-                  i !== active && 'pointer-events-none',
-                )}
-              >
-                <ChapterText chapter={c} />
-              </motion.div>
-            ))}
+          {/* Text column. Only the active chapter is readable, so screen
+              readers are never handed four competing headings. */}
+          <div>
+            <div className="relative min-h-[280px]">
+              {chapters.map((c, i) => (
+                <motion.div
+                  key={c.id}
+                  initial={false}
+                  animate={{
+                    opacity: i === active ? 1 : 0,
+                    y: i === active ? 0 : i < active ? -18 : 18,
+                  }}
+                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                  aria-hidden={i !== active}
+                  className={cn(
+                    'absolute inset-0 flex flex-col justify-center',
+                    i !== active && 'pointer-events-none',
+                  )}
+                >
+                  <ChapterText chapter={c} />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Persistent, unlike the chapters above it: what is in this
+                section, how far through you are, and a way out of the pin. */}
+            <nav aria-label="Sections" className="mt-9 flex flex-wrap gap-x-1 gap-y-1">
+              {chapters.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  aria-current={i === active ? 'step' : undefined}
+                  className={cn(
+                    'flex items-center gap-2 border-b-2 px-2 pb-2 pt-1 text-[12.5px] transition-colors duration-200',
+                    i === active
+                      ? 'border-brand text-text'
+                      : 'border-transparent text-text-subtle hover:border-border-strong hover:text-text-muted',
+                  )}
+                >
+                  <span className={cn('tabular text-[11px]', i === active && 'text-brand')}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  {c.eyebrow}
+                </button>
+              ))}
+            </nav>
           </div>
 
           {/* Visual column, in the same frame throughout. */}
@@ -114,26 +161,27 @@ export function PinnedStory({ chapters }: { chapters: Chapter[] }) {
             ))}
           </div>
         </div>
-
-        {/* Where you are in the story. Five dots would be decoration; a filling
-            line says how much is left. */}
-        <div className="absolute bottom-8 left-1/2 h-[3px] w-[132px] -translate-x-1/2 overflow-hidden rounded-full bg-surface-3">
-          <motion.div className="h-full rounded-full bg-brand" style={{ width: progress }} />
-        </div>
       </div>
     </div>
   )
 }
 
-function ChapterText({ chapter }: { chapter: Chapter }) {
+/**
+ * `showEyebrow` is off in the pinned layout: the rail underneath already names
+ * every chapter and marks this one, so the pill would repeat the word directly
+ * above it. The stacked reduced-motion layout has no rail, so it keeps the pill.
+ */
+function ChapterText({ chapter, showEyebrow = false }: { chapter: Chapter; showEyebrow?: boolean }) {
   const { Icon, eyebrow, title, body } = chapter
   return (
     <>
-      <span className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-border bg-brand-subtle px-3 py-1 text-[12px] font-medium text-brand">
-        <Icon className="h-3.5 w-3.5" aria-hidden />
-        {eyebrow}
-      </span>
-      <h2 className="mt-5 max-w-[16ch] font-display text-[32px] font-medium leading-[1.1] tracking-tight text-text sm:text-[42px]">
+      {showEyebrow && (
+        <span className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-brand-border bg-brand-subtle px-3 py-1 text-[12px] font-medium text-brand">
+          <Icon className="h-3.5 w-3.5" aria-hidden />
+          {eyebrow}
+        </span>
+      )}
+      <h2 className="max-w-[16ch] font-display text-[32px] font-medium leading-[1.1] tracking-tight text-text sm:text-[42px]">
         {title}
       </h2>
       <p className="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-text-muted">{body}</p>
