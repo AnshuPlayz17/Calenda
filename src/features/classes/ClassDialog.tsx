@@ -10,11 +10,17 @@ import type { NewClassInput, SchoolClass } from '@/lib/types'
 const BLANK: NewClassInput = { name: '', courseCode: '', teacher: '', room: '' }
 
 export function ClassDialog({
-  open, onClose, existing,
+  open, onClose, existing, startInDelete = false,
 }: {
   open: boolean
   onClose: () => void
   existing: SchoolClass | null
+  /**
+   * Open straight into the delete confirmation. Delete lived only at the
+   * bottom of the edit form, which meant the way to remove a class was to
+   * pick "Edit" -- so it read as missing rather than hidden.
+   */
+  startInDelete?: boolean
 }) {
   const { current } = useSchoolYear()
   const create = useCreateClass(current?.id)
@@ -36,7 +42,7 @@ export function ClassDialog({
   useEffect(() => {
     if (!open) return
     setError(null)
-    setConfirmingDelete(false)
+    setConfirmingDelete(startInDelete && existing !== null)
     setTypedName('')
     setForm(existing
       ? {
@@ -46,7 +52,7 @@ export function ClassDialog({
           room: existing.room ?? '',
         }
       : BLANK)
-  }, [open, existing])
+  }, [open, existing, startInDelete])
 
   const set = <K extends keyof NewClassInput>(k: K, v: NewClassInput[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
@@ -81,17 +87,24 @@ export function ClassDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={existing ? 'Edit class' : 'Add a class'}
+      title={
+        existing
+          ? startInDelete ? `Delete ${existing.name}?` : 'Edit class'
+          : 'Add a class'
+      }
       description={existing ? undefined : 'You can change any of this later.'}
       footer={
-        <>
-          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="class-form" size="sm" loading={busy}>
-            {existing ? 'Save changes' : 'Add class'}
-          </Button>
-        </>
+        confirmingDelete ? null : (
+          <>
+            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="class-form" size="sm" loading={busy}>
+              {existing ? 'Save changes' : 'Add class'}
+            </Button>
+          </>
+        )
       }
     >
+      {!confirmingDelete && (
       <form id="class-form" onSubmit={submit} className="flex flex-col gap-4">
         {error && (
           <p role="alert"
@@ -113,9 +126,10 @@ export function ClassDialog({
                  onChange={(e) => set('room', e.target.value)} />
         </div>
       </form>
+      )}
 
       {existing && (
-        <div className="mt-6 border-t border-border pt-4">
+        <div className={confirmingDelete ? '' : 'mt-6 border-t border-border pt-4'}>
           {!confirmingDelete ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>

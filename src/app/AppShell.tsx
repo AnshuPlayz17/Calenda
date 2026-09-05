@@ -67,7 +67,7 @@ export function AppShell() {
   const sidebar = (
     <div className="flex h-full flex-col gap-1">
       <div className="px-3 pb-5 pt-1">
-        <Brand size="sm" />
+        <Brand size="sm" to="/dashboard" />
       </div>
 
       <button
@@ -182,7 +182,7 @@ export function AppShell() {
         >
           <Menu className="h-5 w-5" aria-hidden />
         </button>
-        <Brand size="sm" showSchool={false} />
+        <Brand size="sm" showSchool={false} to="/dashboard" />
       </header>
 
       <AnimatePresence>
