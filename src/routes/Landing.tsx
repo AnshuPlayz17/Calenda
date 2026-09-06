@@ -5,16 +5,13 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
-import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ConvergeScene } from '@/features/landing/ConvergeScene'
-import { Tilt } from '@/features/landing/Tilt'
+import { HeroStack } from '@/features/landing/HeroStack'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { StackScene } from '@/features/landing/StackScene'
 import { ProofScene } from '@/features/landing/ProofScene'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
-import { sampleUpcoming } from '@/data/sampleEvents'
-import { agendaLabel } from '@/lib/datetime'
 
 /**
  * The same page serves two jobs, and the difference is one redirect.
@@ -78,6 +75,14 @@ function Header() {
       <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:px-8">
         <Brand size="sm" to="/" />
         <div className="flex items-center gap-3">
+          {/* The founder page was reachable only from the footer of a page nine
+              thousand pixels tall, which is the same as not being reachable. */}
+          <Link
+            to="/created-by"
+            className="hidden text-[13.5px] text-text-muted no-underline transition-colors duration-150 hover:text-text sm:inline"
+          >
+            About the founder
+          </Link>
           <ThemeToggle />
           <Link
             to={signedIn ? '/dashboard' : '/sign-in'}
@@ -208,9 +213,7 @@ function Hero() {
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
-          <Tilt>
-            <UpcomingPreview />
-          </Tilt>
+          <HeroStack />
           <motion.p
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -260,53 +263,6 @@ function ScrollCue() {
   )
 }
 
-/**
- * A picture of the app, made of invented events.
- *
- * This showed the real 2026-27 school calendar until it was pointed out that
- * the first thing on the page should look like a screenshot of the product.
- * Real dates read as a feed you were already subscribed to; a mockup reads as
- * what your own term would look like once you had one.
- */
-function UpcomingPreview() {
-  const reduce = useReducedMotion()
-  const next = sampleUpcoming()
-
-  return (
-    <WindowFrame title="Coming up" aside="Sample">
-      <ul className="flex flex-col">
-        {next.map((e, i) => (
-          <motion.li
-            key={`${e.title}-${e.startDate}`}
-            initial={reduce ? false : { opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
-          >
-            <span
-              aria-hidden
-              className="h-7 w-[3px] shrink-0 rounded-full"
-              style={{ background: `var(--cat-${e.category})` }}
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-medium text-text">
-                {e.title}
-              </span>
-              {e.description && (
-                <span className="mt-0.5 block truncate text-[12px] text-text-muted">
-                  {e.description}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-[11.5px] tabular text-text-subtle">
-              {agendaLabel(e.startDate)}
-            </span>
-          </motion.li>
-        ))}
-      </ul>
-    </WindowFrame>
-  )
-}
 function Closing() {
   const signedIn = useSignedIn()
 
