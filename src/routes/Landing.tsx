@@ -189,7 +189,7 @@ function Hero() {
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="label-caps"
           >
-            For students at University of Toronto Schools
+            For students and parents
           </motion.p>
 
           {/* Each line rises out from behind its own edge rather than fading
@@ -265,6 +265,18 @@ function Hero() {
               </li>
             ))}
           </motion.ul>
+
+          {/* Says where it actually runs, without promising where it might.
+              The schema holds one school today, so anything more would be a
+              claim the code cannot back. */}
+          <motion.p
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mt-6 text-[12.5px] text-text-subtle"
+          >
+            Set up for University of Toronto Schools.
+          </motion.p>
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
