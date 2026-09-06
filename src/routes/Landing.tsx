@@ -3,12 +3,16 @@ import { Link, Navigate } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import {
   ArrowRight, CalendarDays, CheckCircle2, ClipboardList,
-  NotebookPen, ShieldCheck, Users,
+  NotebookPen, Users,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { WindowFrame } from '@/components/ui/WindowFrame'
+import { ConvergeScene } from '@/features/landing/ConvergeScene'
+import { Tilt } from '@/features/landing/Tilt'
+import { ImportScene } from '@/features/landing/ImportScene'
+import { ProofScene } from '@/features/landing/ProofScene'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
@@ -38,9 +42,10 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
     <div className="min-h-dvh bg-bg">
       <Header />
       <Hero />
-      <Problem />
+      <ConvergeScene />
+      <ImportScene />
       <Features />
-      <Privacy />
+      <ProofScene />
       <Closing />
       <Footer />
     </div>
@@ -131,18 +136,24 @@ function Hero() {
             For students at University of Toronto Schools
           </motion.p>
 
-          <motion.h1
-            initial={reduce ? false : { opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]"
-          >
-            {/* The break sets the shape on wide screens; on a phone there is
-                no room for it and the second line runs into the edge. */}
-            Everything you need{' '}
-            <br className="hidden sm:inline" />
-            for school, in one place.
-          </motion.h1>
+          {/* Each line rises out from behind its own edge rather than fading
+              in as a block. It is the one place on the page where the type
+              itself is the moving thing, which is worth spending here: it is
+              the first sentence anybody reads. */}
+          <h1 className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]">
+            {['Everything you need', 'for school, in one place.'].map((line, i) => (
+              <span key={line} className="block overflow-hidden pb-[0.06em]">
+                <motion.span
+                  className="block"
+                  initial={reduce ? false : { y: '108%' }}
+                  animate={{ y: '0%' }}
+                  transition={{ duration: 0.85, delay: 0.05 + i * 0.09, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {line}
+                </motion.span>
+              </span>
+            ))}
+          </h1>
 
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 14 }}
@@ -201,7 +212,9 @@ function Hero() {
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
-          <UpcomingPreview />
+          <Tilt>
+            <UpcomingPreview />
+          </Tilt>
           <motion.p
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -213,7 +226,41 @@ function Hero() {
           </motion.p>
         </motion.div>
       </div>
+
+      <ScrollCue />
     </section>
+  )
+}
+
+/**
+ * Says there is more, and gets out of the way.
+ *
+ * The hero is a full screen with a card in it, and on a laptop nothing below
+ * it is visible -- so the page can read as finished before it has started.
+ * This fades out over the first fifth of a screen: it has done its job by the
+ * time anyone has scrolled enough to need it gone.
+ */
+function ScrollCue() {
+  const reduce = useReducedMotion()
+  const { scrollY } = useScroll()
+  const opacity = useTransform(scrollY, [0, 160], [1, 0])
+
+  if (reduce) return null
+
+  return (
+    <motion.div
+      style={{ opacity }}
+      aria-hidden
+      className="pointer-events-none mx-auto mt-14 hidden w-full max-w-[1120px] items-center gap-3 px-5 sm:px-8 lg:flex"
+    >
+      <span className="label-caps">Keep going</span>
+      <motion.span
+        className="h-px w-16 origin-left bg-border-strong"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      />
+    </motion.div>
   )
 }
 
@@ -265,51 +312,6 @@ function UpcomingPreview() {
   )
 }
 
-function Problem() {
-  return (
-    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-[1120px]">
-        <Reveal>
-          <h2 className="max-w-[20ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
-            School information lives in too many places.
-          </h2>
-        </Reveal>
-
-        <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-3">
-          {[
-            {
-              before: 'A PDF of important dates',
-              after: 'Imported once, on your calendar all year — with duplicates caught before they land.',
-            },
-            {
-              before: 'Google Calendar for classes',
-              after: 'Brought in alongside everything else, read-only, so nothing in Google changes.',
-            },
-            {
-              before: 'Notes and deadlines scattered',
-              after: 'A workspace per class. Add an assignment and it appears on your calendar automatically.',
-            },
-          ].map((item, i) => (
-            <Reveal key={item.before} delay={i * 0.08}>
-              <p className="text-[13px] text-text-subtle line-through decoration-text-subtle/40">
-                {item.before}
-              </p>
-              <p className="mt-2 text-[15px] leading-relaxed text-text">{item.after}</p>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-
-/**
- * The same pinned treatment as the welcome walkthrough, deliberately: the
- * thing a visitor is deciding is whether this app does what they need, and
- * showing the real screens one at a time answers that better than a grid of
- * nine short paragraphs they will skim.
- */
 const TOUR: Chapter[] = [
   {
     id: 'tour-calendar',
@@ -357,48 +359,6 @@ function Features() {
         eyebrow="What it does"
         heading="Built for the way a school year actually works."
       />
-    </section>
-  )
-}
-
-function Privacy() {
-  return (
-    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-[1120px] items-start gap-10 lg:grid-cols-2">
-        <Reveal>
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
-            <ShieldCheck className="h-5 w-5" aria-hidden />
-          </span>
-          <h2 className="mt-5 max-w-[18ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[36px]">
-            Private by default, not by promise.
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
-            Your notes, personal events and deadlines are yours. Sharing is per item and
-            reversible, and the rules are enforced by the database itself — not by hiding
-            buttons.
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <ul className="flex flex-col gap-3">
-            {[
-              'Connecting a parent shares nothing on its own.',
-              'An admin can publish school events, and cannot read your private ones.',
-              'Google Calendar access is read-only, and no Google credential is stored.',
-              'Every rule has a test that tries to break it and must fail.',
-            ].map((line) => (
-              <li key={line} className="flex items-start gap-2.5">
-                <CheckCircle2
-                  className="mt-0.5 h-[17px] w-[17px] shrink-0"
-                  style={{ color: 'var(--success)' }}
-                  aria-hidden
-                />
-                <span className="text-[14.5px] leading-relaxed text-text">{line}</span>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-      </div>
     </section>
   )
 }
