@@ -66,7 +66,7 @@ export function PipelineScene() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.85', 'end 0.65'] })
 
   return (
-    <section ref={ref} className="bg-bg px-5 py-20 sm:px-8 sm:py-28">
+    <section ref={ref} className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto max-w-[1000px]">
         <p className="label-caps">From the school's PDF to your lock screen</p>
         <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
