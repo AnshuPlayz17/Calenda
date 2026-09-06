@@ -375,8 +375,12 @@ function Footer() {
       <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Brand size="sm" showSchool={false} />
         <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
-          A personal project. Not affiliated with, endorsed by, or an official product of
-          University of Toronto Schools.
+          A personal project by{' '}
+          <Link to="/created-by" className="text-text-muted underline-offset-2 hover:text-text hover:underline">
+            Anshu Arunav
+          </Link>
+          . Not affiliated with, endorsed by, or an official product of University of
+          Toronto Schools.
         </p>
       </div>
     </footer>
