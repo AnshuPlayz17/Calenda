@@ -5,7 +5,8 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
-import { ConvergeScene } from '@/features/landing/ConvergeScene'
+import { PipelineScene } from '@/features/landing/PipelineScene'
+import { ZoomScene } from '@/features/landing/ZoomScene'
 import { FounderScene } from '@/features/landing/FounderScene'
 import { HeroStack } from '@/features/landing/HeroStack'
 import { ImportScene } from '@/features/landing/ImportScene'
@@ -56,7 +57,8 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
     <div className="min-h-dvh bg-bg">
       <Header />
       <Hero />
-      <ConvergeScene />
+      <ZoomScene />
+      <PipelineScene />
       <ImportScene />
       <StackScene />
       <ProofScene />
