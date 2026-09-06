@@ -32,17 +32,17 @@ const TOPICS: WheelCarouselItem[] = [
              with a test that tries to break it.`,
   },
   {
-    label: 'Does it change my Google Calendar?',
+    label: 'Does it touch Google?',
     detail: `No. Google Calendar is read only. Your events come in and sit alongside everything
              else, and nothing Calenda does writes back.`,
   },
   {
-    label: 'Do I have to type the school dates?',
+    label: 'Do I type the dates?',
     detail: `No. All forty-nine are already there before you sign in, including the sixteen that
              share a title and would defeat a simpler importer.`,
   },
   {
-    label: 'What if I miss a notification?',
+    label: 'What if I miss one?',
     detail: `You can set how far ahead each kind of thing warns you, and quiet hours you will not
              be woken inside. A reminder cannot arrive twice — the database refuses to store the
              second one.`,
@@ -51,7 +51,7 @@ const TOPICS: WheelCarouselItem[] = [
 
 export function TopicWheel() {
   return (
-    <section className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
+    <section className="relative z-10 px-5 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
           <p className="label-caps">Before you sign up</p>
@@ -60,7 +60,7 @@ export function TopicWheel() {
           </h2>
         </Reveal>
         <Reveal delay={0.08}>
-          <div className="mt-10">
+          <div className="mt-8">
             <WheelCarousel items={TOPICS} />
           </div>
         </Reveal>
