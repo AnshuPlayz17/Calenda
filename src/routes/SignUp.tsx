@@ -170,8 +170,8 @@ export function SignUp() {
       </form>
 
       <p className="mt-4 text-[12px] leading-relaxed text-text-subtle">
-        Calenda is a personal project, not an official product of University of Toronto
-        Schools. Your notes and personal events are visible only to you.
+        Calenda is a personal project, not an official product of any school. Your notes
+        and personal events are visible only to you.
       </p>
     </AuthLayout>
   )

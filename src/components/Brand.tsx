@@ -1,23 +1,25 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 /**
- * The [UTS LOGO] | Calenda lockup.
+ * The [MARK] | Calenda lockup.
  *
- * The school crest is University of Toronto Schools' trademark, so it is not
- * bundled with the source. Drop the official file at public/brand/uts-logo.svg
- * and it appears here automatically; until then a neutral Calenda mark stands
- * in, rather than an imitation of someone else's crest.
+ * There used to be a slot here for a school crest, loaded from public/brand/
+ * with Calenda's own mark standing in whenever the file was absent. It was
+ * always absent: a school crest is that school's trademark and could not be
+ * bundled with this source. So the slot only ever rendered its fallback, while
+ * tying the product to one particular school in the one place a reader takes
+ * as a statement of ownership. Calenda's own mark is now the only mark.
  */
 export function Brand({
   size = 'md',
-  showSchool = true,
+  showMark = true,
   className,
   to,
 }: {
   size?: 'sm' | 'md' | 'lg'
-  showSchool?: boolean
+  /** Whether the mark and its divider appear, or only the wordmark. */
+  showMark?: boolean
   className?: string
   /**
    * Where clicking the lockup goes. A logo in the corner is the one thing
@@ -27,27 +29,16 @@ export function Brand({
    */
   to?: string
 }) {
-  const [logoMissing, setLogoMissing] = useState(false)
-
   const mark = { sm: 'h-6 w-6', md: 'h-8 w-8', lg: 'h-11 w-11' }[size]
   const word = { sm: 'text-lg', md: 'text-2xl', lg: 'text-3xl' }[size]
 
   const inner = (
     <>
-      {showSchool &&
-        (logoMissing ? (
+      {showMark && (
+        <>
           <CalendaMark className={mark} />
-        ) : (
-          <img
-            src={`${import.meta.env.BASE_URL}brand/uts-logo.svg`}
-            alt="University of Toronto Schools"
-            className={cn(mark, 'object-contain')}
-            onError={() => setLogoMissing(true)}
-          />
-        ))}
-
-      {showSchool && (
-        <span aria-hidden className="h-6 w-px bg-border" />
+          <span aria-hidden className="h-6 w-px bg-border" />
+        </>
       )}
 
       <span
@@ -80,7 +71,7 @@ export function Brand({
   return <span className={cn('inline-flex items-center gap-2.5', className)}>{inner}</span>
 }
 
-/** Calenda's own mark. Deliberately not a facsimile of the school crest. */
+/** Calenda's own mark. Deliberately not a facsimile of any school's crest. */
 function CalendaMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} role="img" aria-label="Calenda">

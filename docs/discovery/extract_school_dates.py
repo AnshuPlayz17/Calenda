@@ -1,6 +1,6 @@
 """
-Phase 0 discovery: deterministic extraction of the UTS "Important Dates and
-Closures 2026-27 School Year" PDF.
+Phase 0 discovery: deterministic extraction of the school's "Important Dates
+and Closures 2026-27 School Year" PDF.
 
 Key finding: the PDF is a Google Docs (Skia) export whose embedded Inter subset
 maps several punctuation glyphs into the Unicode Private Use Area. A naive

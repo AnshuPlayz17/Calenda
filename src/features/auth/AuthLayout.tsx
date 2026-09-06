@@ -35,7 +35,7 @@ export function AuthLayout({
         style={{ background: 'var(--blue-900)' }}
       >
         <div className="relative z-10">
-          <Brand size="md" showSchool={false} to="/" className="[&_span]:text-white" />
+          <Brand size="md" showMark={false} to="/" className="[&_span]:text-white" />
         </div>
 
         <div className="relative z-10 max-w-[30ch]">
@@ -81,7 +81,7 @@ export function AuthLayout({
         </div>
 
         <p className="relative z-10 text-[12px]" style={{ color: 'var(--blue-300)' }}>
-          A personal project. Not an official product of University of Toronto Schools.
+          A personal project. Not an official product of any school.
         </p>
 
         {/* Ambient calendar grid, drawn rather than decorative imagery. */}

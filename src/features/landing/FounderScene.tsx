@@ -90,8 +90,8 @@ function Panel() {
         Anshu Arunav
       </h2>
       <p className="mt-6 max-w-[46ch] text-[17px] leading-relaxed text-text sm:text-[19px]">
-        A student at University of Toronto Schools who wanted the school year to stop
-        living in four places at once, and built the thing that fixes it.
+        A student who wanted the school year to stop living in four places at once, and
+        built the thing that fixes it.
       </p>
       <p className="mt-3 max-w-[46ch] text-[14.5px] leading-relaxed text-text-muted">
         Alone, end to end — database, authentication, notifications that reach a phone,
@@ -111,7 +111,7 @@ function Panel() {
 
       <p className="mt-9 max-w-[60ch] border-t border-border pt-6 text-[12px] leading-relaxed text-text-subtle">
         A personal project. Not affiliated with, endorsed by, or an official product of
-        University of Toronto Schools.
+        any school.
       </p>
     </>
   )
