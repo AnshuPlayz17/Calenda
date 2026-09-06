@@ -107,7 +107,9 @@ array, so the page and its navigation cannot drift apart.
 6. **Numbers** — counted figures and two charts, all computed from the sample year
 7. **Questions** — pinned, and the only scene that travels *sideways*: six
    answers on a horizontal rail, one step per stop
-8. **Themes** — three live previews side by side, scoped by `[data-preview]`
+8. **Anywhere** — pinned; a dotted world map lights up from a growing circle
+   while ten cities land in turn, each showing its real local time. It is a
+   map of *where it works*, never of users — see below
 9. **Privacy** — pinned; six adversarial RLS tests resolving to "Refused"
 10. **Founder** — a panel hinged at its bottom edge, swinging open
 11. **Closing** — deliberately still
@@ -123,3 +125,11 @@ second look at the import otherwise has to hunt for it by dragging.
 All the dates and figures on this page are invented — `src/data/sampleSchoolYear.ts`
 and `src/data/sampleEvents.ts`. Anything that counts them reads the array rather
 than repeating a number in prose, so the copy cannot drift from the data.
+
+**There is no map of users and there must not be one.** Calenda has one user and
+a few testers; dots captioned "our community" would be the only invented claim on
+a page whose whole argument is that its contents are checkable. The world scene
+shows where it *works* — the timezone behaviour, which is real, tested and worth
+saying. Its clock readings come from `Intl.DateTimeFormat` at render, so they are
+never a number anybody typed. The map itself is generated: run
+`npm i -D world-atlas topojson-client && node scripts/build-world-dots.mjs`.

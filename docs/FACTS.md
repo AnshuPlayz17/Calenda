@@ -71,7 +71,20 @@ access as the wrong user and requires it to fail:
 - Postgres full-text, tsvector + GIN over events, notebook pages, assignments,
   tasks, file names; websearch_to_tsquery so user input cannot throw
 
+## Timezones (schema + supabase/migrations/*_notification_scheduling.sql)
+- `profiles.timezone`, per user, default America/Toronto
+- All-day events stored date-only and timezone-free — a date does not shift for
+  a reader in another zone. Formatted without going through `Date` (src/lib/events.ts)
+- Reminders are scheduled at 09:00 **in the user's zone**:
+  `(e.start_date + time '09:00') at time zone pr.timezone`
+- Quiet hours are evaluated `at time zone tz`, per day of the week
+- The landing page's world scene says exactly this and nothing more. The clock
+  readings on it come from `Intl.DateTimeFormat` in the reader's browser.
+
 ## NOT BUILT — must not appear on the page
+- **A user base.** There is one user and a handful of testers. No map, counter
+  or testimonial may imply otherwise. The world scene is a map of where Calenda
+  works, not of who uses it, and its caption says so.
 - File uploads / storage (no storage code exists in src/)
 - AI study tools
 - SMS delivery

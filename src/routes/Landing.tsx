@@ -11,7 +11,7 @@ import { QuestionScene } from '@/features/landing/QuestionScene'
 import { MagnetLines } from '@/components/motion/MagnetLines'
 import { Spotlight } from '@/components/motion/Spotlight'
 import { PipelineScene } from '@/features/landing/PipelineScene'
-import { ThemeScene } from '@/features/landing/ThemeScene'
+import { WorldScene } from '@/features/landing/WorldScene'
 import { ZoomScene } from '@/features/landing/ZoomScene'
 import { FounderScene } from '@/features/landing/FounderScene'
 import { HeroStack } from '@/features/landing/HeroStack'
@@ -75,7 +75,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <div id="more"><StackScene /></div>
       <div id="numbers"><NumbersScene /></div>
       <div id="questions"><QuestionScene /></div>
-      <div id="themes"><ThemeScene /></div>
+      <div id="world"><WorldScene /></div>
       <div id="privacy"><ProofScene /></div>
       <FounderScene />
       <div id="start"><Closing /></div>

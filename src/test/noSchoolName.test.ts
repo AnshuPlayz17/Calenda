@@ -17,7 +17,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const ROOT = path.resolve(__dirname, '../..')
@@ -29,15 +29,34 @@ const FORBIDDEN = [
   'utschools',
 ]
 
-const TEXT = /\.(ts|tsx|js|jsx|css|html|md|json|sql|yml|yaml|py|sh|toml)$/
+const TEXT = /\.(ts|tsx|js|jsx|mjs|cjs|css|html|md|json|sql|yml|yaml|py|sh|toml)$/
 /** The abbreviation on its own. Plenty of ordinary words contain it: shortcuts,
  *  outputs, puts -- so a bare substring search would fail on the whole codebase. */
 const ABBREVIATION = new RegExp(`(^|[^a-z])${'u' + 't' + 's'}([^a-z]|$)`)
 
-function trackedTextFiles(): string[] {
-  return execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
+/**
+ * Everything git would consider part of the project: tracked files plus new
+ * ones that are not ignored.
+ *
+ * `--others --exclude-standard` matters. Plain `ls-files` misses a brand-new
+ * file until it is staged, which is precisely when a fresh mention of the name
+ * would be introduced and precisely when this test should catch it. And a file
+ * deleted but not yet staged is still listed, so anything gone from disk is
+ * skipped rather than crashing the run.
+ */
+function projectFiles(): string[] {
+  return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
     .split('\n')
-    .filter((f) => f && TEXT.test(f))
+    .filter(Boolean)
+    .filter((f) => existsSync(path.join(ROOT, f)))
+}
+
+function trackedTextFiles(): string[] {
+  return projectFiles()
+    .filter((f) => TEXT.test(f))
     .filter((f) => !f.endsWith('noSchoolName.test.ts'))
     .filter((f) => f !== 'package-lock.json')
 }
@@ -60,10 +79,7 @@ describe('no school is named in the source', () => {
   })
 
   it('has no occurrence in a file or directory name either', () => {
-    const all = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
-      .split('\n')
-      .filter(Boolean)
-    const offenders = all.filter((f) => {
+    const offenders = projectFiles().filter((f) => {
       const lower = f.toLowerCase()
       return (
         FORBIDDEN.some((needle) => lower.includes(needle.replace(/ /g, '-')))
