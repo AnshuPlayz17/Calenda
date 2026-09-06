@@ -9,6 +9,7 @@ import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { WindowFrame } from '@/components/ui/WindowFrame'
+import { ConvergeScene } from '@/features/landing/ConvergeScene'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { ProofScene } from '@/features/landing/ProofScene'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
@@ -40,7 +41,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
     <div className="min-h-dvh bg-bg">
       <Header />
       <Hero />
-      <Problem />
+      <ConvergeScene />
       <ImportScene />
       <Features />
       <ProofScene />
@@ -268,51 +269,6 @@ function UpcomingPreview() {
   )
 }
 
-function Problem() {
-  return (
-    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-[1120px]">
-        <Reveal>
-          <h2 className="max-w-[20ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
-            School information lives in too many places.
-          </h2>
-        </Reveal>
-
-        <div className="mt-10 grid gap-x-10 gap-y-8 sm:grid-cols-3">
-          {[
-            {
-              before: 'A PDF of important dates',
-              after: 'Imported once, on your calendar all year — with duplicates caught before they land.',
-            },
-            {
-              before: 'Google Calendar for classes',
-              after: 'Brought in alongside everything else, read-only, so nothing in Google changes.',
-            },
-            {
-              before: 'Notes and deadlines scattered',
-              after: 'A workspace per class. Add an assignment and it appears on your calendar automatically.',
-            },
-          ].map((item, i) => (
-            <Reveal key={item.before} delay={i * 0.08}>
-              <p className="text-[13px] text-text-subtle line-through decoration-text-subtle/40">
-                {item.before}
-              </p>
-              <p className="mt-2 text-[15px] leading-relaxed text-text">{item.after}</p>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-
-/**
- * The same pinned treatment as the welcome walkthrough, deliberately: the
- * thing a visitor is deciding is whether this app does what they need, and
- * showing the real screens one at a time answers that better than a grid of
- * nine short paragraphs they will skim.
- */
 const TOUR: Chapter[] = [
   {
     id: 'tour-calendar',
