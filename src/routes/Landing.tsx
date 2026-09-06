@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
-import {
-  ArrowRight, CalendarDays, CheckCircle2, ClipboardList,
-  NotebookPen, Users,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
@@ -12,9 +9,8 @@ import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ConvergeScene } from '@/features/landing/ConvergeScene'
 import { Tilt } from '@/features/landing/Tilt'
 import { ImportScene } from '@/features/landing/ImportScene'
+import { StackScene } from '@/features/landing/StackScene'
 import { ProofScene } from '@/features/landing/ProofScene'
-import { PinnedStory } from '@/features/welcome/PinnedStory'
-import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 import { sampleUpcoming } from '@/data/sampleEvents'
@@ -44,7 +40,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <Hero />
       <ConvergeScene />
       <ImportScene />
-      <Features />
+      <StackScene />
       <ProofScene />
       <Closing />
       <Footer />
@@ -311,58 +307,6 @@ function UpcomingPreview() {
     </WindowFrame>
   )
 }
-
-const TOUR: Chapter[] = [
-  {
-    id: 'tour-calendar',
-    Icon: CalendarDays,
-    eyebrow: 'The school calendar',
-    title: 'Every date, without typing one.',
-    body: 'The Important Dates PDF becomes real events — PA days, exams, breaks, '
-      + 'assemblies — with duplicates caught before they land.',
-    demo: 'calendar',
-  },
-  {
-    id: 'tour-classes',
-    Icon: NotebookPen,
-    eyebrow: 'Your classes',
-    title: 'Notes where the class is.',
-    body: 'A workspace per subject, so a chemistry note is in chemistry rather '
-      + 'than seventeenth in one long list.',
-    demo: 'classes',
-  },
-  {
-    id: 'tour-deadlines',
-    Icon: ClipboardList,
-    eyebrow: 'Deadlines',
-    title: 'One date, two places, always agreed.',
-    body: 'An assignment shows on your calendar because it is due — not because '
-      + 'a copy of it was put there.',
-    demo: 'assignments',
-  },
-  {
-    id: 'tour-parents',
-    Icon: Users,
-    eyebrow: 'Parents',
-    title: 'Shared only where you say.',
-    body: 'Connecting a parent shows them nothing by itself. Every class and '
-      + 'event is shared one at a time, and can be unshared.',
-    demo: 'parents',
-  },
-]
-
-function Features() {
-  return (
-    <section>
-      <PinnedStory
-        chapters={TOUR}
-        eyebrow="What it does"
-        heading="Built for the way a school year actually works."
-      />
-    </section>
-  )
-}
-
 function Closing() {
   const signedIn = useSignedIn()
 
