@@ -1,43 +1,45 @@
 import { useState } from 'react'
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
+import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
 import { useScrollScene, useBeat, scatter, held, prefersLightMotion } from './scrollScene'
 import { cn } from '@/lib/cn'
 
 /**
- * The import, told with the real calendar.
+ * The import, told with an example year.
  *
- * This is the one genuinely hard problem the product solves, and the page has
- * never mentioned it. The school's PDF contains forty-nine dates, and sixteen
- * of them are the words "Late Start" -- byte for byte the same string, on
- * sixteen different days. Match on the title and you keep one and lose fifteen.
- * Match on the date and you break Winter Break, which is one holiday filed as
- * two entries with different dates.
+ * This is the one genuinely hard problem the product solves. A school calendar
+ * repeats itself: the same words land on many different days, and one holiday
+ * gets filed as two entries with different dates. Match on the title and you
+ * keep one and lose the rest; match on the date and you split the holiday. That
+ * is why the identity key is both together.
  *
- * So the scene shows exactly that, with the actual data rather than a diagram:
- * the dates leave the document, land in a grid, and then the sixteen identical
- * ones light up while everything else recedes. The reader sees the collision
- * before the copy names it.
+ * The dates here are invented -- see src/data/sampleSchoolYear.ts. They used to
+ * be one real school's, which was accurate and wrong twice over: a visitor who
+ * has not signed up reads a real calendar as somebody else's feed rather than
+ * as a picture of their own, and the moment there is a second school those
+ * numbers are the wrong school's. What is kept is the shape, because the shape
+ * is a property of school calendars in general and is the reason the software
+ * has to handle it.
  *
- * Forty-nine happens to be seven sevens, so the grid is square. That is luck,
- * not design, and if the school publishes fifty next year the grid reflows.
+ * Everything is counted from that file at render, including the grid, so a
+ * different sample year reflows rather than needing anything rewritten.
  */
 
-const EVENTS = schoolEvents2026_27
+const EVENTS = sampleSchoolYear
 const COLS = 7
 const ROWS = Math.ceil(EVENTS.length / COLS)
 
 /** The collision the identity key exists to survive. */
-const COLLIDING_TITLE = 'Late Start'
+const COLLIDING_TITLE = SAMPLE_REPEATED_TITLE
 const COLLISIONS = EVENTS.filter((e) => e.title === COLLIDING_TITLE).length
 
 const BEATS = [
   {
     eyebrow: 'One PDF',
     title: 'The school publishes a document.',
-    body: `Forty-nine dates for the year — PD days, exams, breaks, assemblies, late starts —
-           laid out for a human to read, not for a calendar to parse.`,
+    body: `A year of dates — PD days, exams, breaks, assemblies, late starts — laid out
+           for a person to read, not for a calendar to parse.`,
   },
   {
     eyebrow: 'Every date',
@@ -47,10 +49,10 @@ const BEATS = [
   },
   {
     eyebrow: 'The hard part',
-    title: `Sixteen of them are the same words.`,
-    body: `“Late Start” appears ${COLLISIONS} times, identical to the character, on
-           ${COLLISIONS} different days. Match on the title and fifteen disappear. So the
-           identity key is the title and the date together — and even then nothing is
+    title: `${COLLISIONS} of them are the same words.`,
+    body: `“${COLLIDING_TITLE}” appears ${COLLISIONS} times, identical to the character, on
+           ${COLLISIONS} different days. Match on the title and all but one disappear. So
+           the identity key is the title and the date together — and even then nothing is
            merged without showing you both.`,
   },
 ]
@@ -147,7 +149,7 @@ function Stage({ progress, light }: { progress: MotionValue<number>; light: bool
         className="absolute inset-x-[14%] inset-y-[6%] rounded-lg border border-border bg-surface p-5 shadow-md"
         aria-hidden
       >
-        <p className="label-caps">Important Dates 2026–27</p>
+        <p className="label-caps">Important Dates — sample</p>
         <div className="mt-4 flex flex-col gap-2">
           {Array.from({ length: 9 }, (_, i) => (
             <span
@@ -203,8 +205,8 @@ function Chip({
   const fromY = (10 + scatter(index + 97) * 76) * (ROWS / 100) * 100
 
   // Staggered so the page empties over the beat rather than all at once. The
-  // spread is deliberately wide -- forty-nine simultaneous arrivals reads as a
-  // transition, forty-nine staggered ones reads as reading.
+  // spread is deliberately wide -- fifty simultaneous arrivals reads as a
+  // transition, fifty staggered ones reads as reading.
   const lift = 0.08 + (index / EVENTS.length) * 0.26
   const land = lift + 0.16
 
@@ -214,8 +216,8 @@ function Chip({
   const scale = useTransform(t, [0, 0.5, 1], [0.55, 1.06, 1])
   const opacity = useTransform(t, [0, 0.18, 1], [0, 1, 1])
 
-  // The reveal: everything that is not a collision recedes, so the sixteen
-  // identical chips are the only thing left to look at.
+  // The reveal: everything that is not a collision recedes, so the identical
+  // chips are the only thing left to look at.
   const [dR, dV] = held([0.68, 0.78], [1, colliding ? 1 : 0.16])
   const [rR, rV] = held([0.68, 0.78], [0, colliding ? 1 : 0])
   const dim = useTransform(progress, dR, dV)
@@ -226,7 +228,7 @@ function Chip({
     <motion.div
       aria-hidden
       // On a weak device the chip is simply where it lands, and only its
-      // opacity moves. The argument is which sixteen light up at the end, not
+      // opacity moves. The argument is which chips light up at the end, not
       // the flight -- so the cheap version loses nothing that mattered.
       style={{
         ...(light ? { x: `${toX}%`, y: `${toY}%` } : { x, y, scale }),
