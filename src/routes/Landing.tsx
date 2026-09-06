@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ConvergeScene } from '@/features/landing/ConvergeScene'
+import { Tilt } from '@/features/landing/Tilt'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { ProofScene } from '@/features/landing/ProofScene'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
@@ -135,18 +136,24 @@ function Hero() {
             For students at University of Toronto Schools
           </motion.p>
 
-          <motion.h1
-            initial={reduce ? false : { opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]"
-          >
-            {/* The break sets the shape on wide screens; on a phone there is
-                no room for it and the second line runs into the edge. */}
-            Everything you need{' '}
-            <br className="hidden sm:inline" />
-            for school, in one place.
-          </motion.h1>
+          {/* Each line rises out from behind its own edge rather than fading
+              in as a block. It is the one place on the page where the type
+              itself is the moving thing, which is worth spending here: it is
+              the first sentence anybody reads. */}
+          <h1 className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]">
+            {['Everything you need', 'for school, in one place.'].map((line, i) => (
+              <span key={line} className="block overflow-hidden pb-[0.06em]">
+                <motion.span
+                  className="block"
+                  initial={reduce ? false : { y: '108%' }}
+                  animate={{ y: '0%' }}
+                  transition={{ duration: 0.85, delay: 0.05 + i * 0.09, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {line}
+                </motion.span>
+              </span>
+            ))}
+          </h1>
 
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 14 }}
@@ -205,7 +212,9 @@ function Hero() {
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
-          <UpcomingPreview />
+          <Tilt>
+            <UpcomingPreview />
+          </Tilt>
           <motion.p
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -217,7 +226,41 @@ function Hero() {
           </motion.p>
         </motion.div>
       </div>
+
+      <ScrollCue />
     </section>
+  )
+}
+
+/**
+ * Says there is more, and gets out of the way.
+ *
+ * The hero is a full screen with a card in it, and on a laptop nothing below
+ * it is visible -- so the page can read as finished before it has started.
+ * This fades out over the first fifth of a screen: it has done its job by the
+ * time anyone has scrolled enough to need it gone.
+ */
+function ScrollCue() {
+  const reduce = useReducedMotion()
+  const { scrollY } = useScroll()
+  const opacity = useTransform(scrollY, [0, 160], [1, 0])
+
+  if (reduce) return null
+
+  return (
+    <motion.div
+      style={{ opacity }}
+      aria-hidden
+      className="pointer-events-none mx-auto mt-14 hidden w-full max-w-[1120px] items-center gap-3 px-5 sm:px-8 lg:flex"
+    >
+      <span className="label-caps">Keep going</span>
+      <motion.span
+        className="h-px w-16 origin-left bg-border-strong"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.9, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      />
+    </motion.div>
   )
 }
 
