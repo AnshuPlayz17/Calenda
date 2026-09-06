@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import {
   ArrowRight, CalendarDays, CalendarPlus, ClipboardList, GraduationCap,
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Button } from '@/components/ui/Button'
+import { MagneticDock } from '@/components/motion/MagneticDock'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
@@ -44,6 +44,7 @@ function summarise(today: string, todayEvents: EventWithCategory[], upcoming: Ev
 }
 
 export function Dashboard() {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { current } = useSchoolYear()
   const reduce = useReducedMotion()
@@ -93,25 +94,41 @@ export function Dashboard() {
         </p>
       </motion.header>
 
-      <motion.div {...rise(1)} className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="sm" onClick={() => setDialogOpen(true)}>
-          <CalendarPlus className="h-4 w-4" aria-hidden /> Add event
-        </Button>
-        <Link
-          to="/classes"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
-        >
-          <ClipboardList className="h-4 w-4" aria-hidden /> Add assignment
-        </Link>
-        <Link
-          to="/classes"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
-        >
-          <NotebookPen className="h-4 w-4" aria-hidden /> New note
-        </Link>
-        <Button variant="secondary" size="sm" onClick={() => setDialogOpen(true)}>
-          <Lightbulb className="h-4 w-4" aria-hidden /> Suggest an event
-        </Button>
+      {/* The four things somebody opens the dashboard to do. The dock magnifies
+          under a cursor and is a plain row of buttons without one, which is the
+          right answer on a phone rather than a fallback. */}
+      <motion.div {...rise(1)} className="flex">
+        <MagneticDock
+          iconSize={44}
+          maxScale={1.45}
+          magneticDistance={130}
+          items={[
+            {
+              id: 'event',
+              label: 'Add event',
+              icon: <CalendarPlus className="h-[18px] w-[18px]" aria-hidden />,
+              onClick: () => setDialogOpen(true),
+            },
+            {
+              id: 'assignment',
+              label: 'Add assignment',
+              icon: <ClipboardList className="h-[18px] w-[18px]" aria-hidden />,
+              onClick: () => navigate('/classes'),
+            },
+            {
+              id: 'note',
+              label: 'New note',
+              icon: <NotebookPen className="h-[18px] w-[18px]" aria-hidden />,
+              onClick: () => navigate('/classes'),
+            },
+            {
+              id: 'suggest',
+              label: 'Suggest an event',
+              icon: <Lightbulb className="h-[18px] w-[18px]" aria-hidden />,
+              onClick: () => setDialogOpen(true),
+            },
+          ]}
+        />
       </motion.div>
 
       <div className="grid items-start gap-4 lg:grid-cols-3">

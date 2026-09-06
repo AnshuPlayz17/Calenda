@@ -6,7 +6,11 @@ import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { Atmosphere } from '@/features/landing/Atmosphere'
+import { NumbersScene } from '@/features/landing/NumbersScene'
+import { TopicWheel } from '@/features/landing/TopicWheel'
+import { MagnetLines } from '@/components/motion/MagnetLines'
 import { ParticleText } from '@/features/landing/ParticleText'
+import { Spotlight } from '@/components/motion/Spotlight'
 import { PipelineScene } from '@/features/landing/PipelineScene'
 import { ThemeScene } from '@/features/landing/ThemeScene'
 import { ZoomScene } from '@/features/landing/ZoomScene'
@@ -65,6 +69,8 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <PipelineScene />
       <ImportScene />
       <StackScene />
+      <NumbersScene />
+      <TopicWheel />
       <ThemeScene />
       <ProofScene />
       <FounderScene />
@@ -143,6 +149,19 @@ function Hero() {
   return (
     <section className="relative z-10 overflow-hidden px-5 pb-14 pt-12 sm:px-8 sm:pb-20 sm:pt-16">
       {/* Ambient calendar grid, drawn rather than an image. */}
+      {/* A field that turns toward the cursor, behind everything and very faint.
+          It is the first thing the page does in response to a person. */}
+      <div aria-hidden className="pointer-events-none absolute -right-[8%] top-[6%] hidden opacity-[0.16] lg:block">
+        <MagnetLines
+          rows={9}
+          columns={9}
+          containerSize="34vmin"
+          lineColor="var(--text-subtle)"
+          lineWidth="0.5vmin"
+          lineHeight="3vmin"
+        />
+      </div>
+
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -308,7 +327,10 @@ function Closing() {
     // rather than telling, so it does the opposite: no demo, no motion beyond
     // the reveal, one sentence and a door. A closing card that competes with
     // the scenes above it just delays the click it exists to collect.
-    <section className="relative z-10 border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
+    <section className="relative z-10 overflow-hidden border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
+      {/* A light that follows the cursor over the last screen, where somebody
+          is either about to click or about to leave. */}
+      <Spotlight className="bg-brand/[0.07] blur-[80px]" size={420} />
       <Reveal className="mx-auto max-w-[1120px]">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-end">
             <div>

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { Brand } from '@/components/Brand'
+import { CircuitBoard } from '@/components/motion/CircuitBoard'
+import { Bell, CalendarDays, FileText, GraduationCap } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 /**
@@ -44,6 +46,38 @@ export function AuthLayout({
             Community events, your own calendar, class notebooks and every deadline —
             together, and organised the way you actually think about them.
           </p>
+        </div>
+
+        {/* What happens after signing in, while somebody is deciding whether to.
+            Scoped tokens rather than the page's, because this panel is a fixed
+            dark ground regardless of the theme around it. */}
+        <div
+          className="relative z-10 -mx-2 mt-8"
+          style={{
+            ['--border' as string]: 'rgb(255 255 255 / 0.14)',
+            ['--border-strong' as string]: 'rgb(255 255 255 / 0.3)',
+            ['--surface' as string]: 'var(--blue-800)',
+            ['--brand' as string]: 'var(--blue-300)',
+            ['--text-muted' as string]: 'var(--blue-200)',
+          }}
+        >
+          <CircuitBoard
+            width={480}
+            height={190}
+            pulseSpeed={2.6}
+            nodes={[
+              { id: 'pdf', x: 40, y: 95, label: 'School dates', icon: <FileText className="h-3 w-3" /> },
+              { id: 'cls', x: 190, y: 40, label: 'Your classes', icon: <GraduationCap className="h-3 w-3" /> },
+              { id: 'cal', x: 190, y: 150, label: 'Your calendar', icon: <CalendarDays className="h-3 w-3" /> },
+              { id: 'you', x: 430, y: 95, label: 'A reminder', icon: <Bell className="h-3 w-3" /> },
+            ]}
+            connections={[
+              { from: 'pdf', to: 'cls', animated: true },
+              { from: 'pdf', to: 'cal', animated: true },
+              { from: 'cls', to: 'you', animated: true },
+              { from: 'cal', to: 'you', animated: true },
+            ]}
+          />
         </div>
 
         <p className="relative z-10 text-[12px]" style={{ color: 'var(--blue-300)' }}>

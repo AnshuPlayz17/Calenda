@@ -3,6 +3,7 @@ import type { MotionValue } from 'motion/react'
 import { useRef } from 'react'
 import { useScroll, useReducedMotion } from 'motion/react'
 import { held } from './scrollScene'
+import { DataPath } from './DataPath'
 
 /**
  * Where a date actually comes from, and where it ends up.
@@ -76,6 +77,10 @@ export function PipelineScene() {
           The only step that is yours is the fourth — adding your classes. Everything
           before it has already happened, and everything after it follows.
         </p>
+
+        <div className="mt-10 max-w-[620px]">
+          <DataPath />
+        </div>
 
         <div className="relative mt-14 pl-8 sm:pl-12">
           <Spine progress={scrollYProgress} reduce={reduce} />
