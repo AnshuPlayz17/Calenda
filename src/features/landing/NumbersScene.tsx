@@ -2,15 +2,21 @@ import { useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { Reveal } from '@/components/Reveal'
 import { AnimatedNumber } from '@/components/motion/AnimatedNumber'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
+import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
 import { cn } from '@/lib/cn'
 
 /**
- * The year, counted.
+ * A year, counted.
  *
- * Everything here is computed from src/data/schoolCalendar.ts at render, so the
- * page cannot drift from the file it describes -- if next year's calendar has
- * fifty-one dates, the headline says fifty-one without anyone editing it.
+ * Everything here is computed from src/data/sampleSchoolYear.ts at render, so
+ * the page cannot drift from the file it describes -- change the sample and
+ * every figure, bar and caption follows without anyone editing prose.
+ *
+ * The dates are invented. They were one real school's until it became clear
+ * that a marketing page showing a genuine calendar reads as somebody else's
+ * feed, and that the numbers would be the wrong school's the moment there is a
+ * second one. The shape is true of school calendars generally; the dates are
+ * nobody's.
  *
  * On colour, deliberately: the app's thirteen category colours are NOT used to
  * encode these bars. They were built to sit as small dots beside text labels,
@@ -25,7 +31,7 @@ import { cn } from '@/lib/cn'
  * a label, which is the job it was designed for.
  */
 
-const EVENTS = schoolEvents2026_27
+const EVENTS = sampleSchoolYear
 const MONTH_LABELS = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 
 /** Counted at render rather than written down, so this cannot go stale. */
@@ -58,26 +64,30 @@ export function NumbersScene() {
   const cats = byCategory()
   const peak = Math.max(...months.map((m) => m.count))
   const busiest = months.find((m) => m.count === peak)
-  const repeated = EVENTS.filter((e) => e.title === 'Late Start').length
+  const repeated = EVENTS.filter((e) => e.title === SAMPLE_REPEATED_TITLE).length
 
   return (
     <section className="relative z-10 border-y border-border bg-surface px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
-          <p className="label-caps">The year, counted</p>
+          <p className="label-caps">A sample year, counted</p>
           <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
             This is the shape of a school year.
           </h2>
           <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed text-text-muted">
-            Every figure below is counted from the school's own calendar when this page
-            renders — not typed in. If next year's document has a different shape, so does
-            this.
+            An example year, not any school's — but the shape is real, and every figure
+            below is counted from it when this page renders rather than typed in. Your
+            school's document has its own shape, and Calenda reads that one.
           </p>
         </Reveal>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-3">
-          <Stat value={EVENTS.length} label="dates in the year" detail="Imported once, before you sign in." />
-          <Stat value={repeated} label="share one title" detail="“Late Start”, on that many different days." />
+          <Stat value={EVENTS.length} label="dates in the year" detail="Read from one document, in one pass." />
+          <Stat
+            value={repeated}
+            label="share one title"
+            detail={`“${SAMPLE_REPEATED_TITLE}”, on that many different days — the case that breaks naive matching.`}
+          />
           <Stat
             value={peak}
             label={`in ${busiest?.label ?? 'one month'}`}
@@ -117,7 +127,7 @@ function MonthChart({ months }: { months: ReturnType<typeof byMonth> }) {
       <figure>
         <figcaption className="text-[15px] font-medium text-text">Dates by month</figcaption>
         <p className="mt-1 text-[12.5px] text-text-muted">
-          September and June carry the most, which is when a calendar is least use to you.
+          The ends of terms carry the most, which is when a calendar is least use to you.
         </p>
 
         <div className="mt-6 flex h-[180px] items-end gap-2" role="img" aria-label="School dates per month, September through June">
