@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -55,6 +55,13 @@ function useSignedIn() {
 function Header() {
   const [scrolled, setScrolled] = useState(false)
   const signedIn = useSignedIn()
+  const reduce = useReducedMotion()
+  const { scrollYProgress } = useScroll()
+  // Sprung, so a flick of the wheel does not make the rail twitch. Not sprung
+  // under reduced motion, where it becomes a plain readout rather than a moving
+  // thing -- the position is still useful, the movement is what was objected to.
+  const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 })
+  const readProgress = reduce ? scrollYProgress : smooth
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -72,6 +79,15 @@ function Header() {
           : 'border-b border-transparent')
       }
     >
+      {/* The one element present in every scene, so it is the only place a
+          sense of the whole page can live. It reads position, not time, and it
+          is the connective tissue between six sections that otherwise each
+          animate alone. */}
+      <motion.span
+        aria-hidden
+        style={{ scaleX: readProgress }}
+        className="absolute inset-x-0 bottom-0 h-px origin-left bg-brand"
+      />
       <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:px-8">
         <Brand size="sm" to="/" />
         <div className="flex items-center gap-3">
@@ -267,12 +283,16 @@ function Closing() {
   const signedIn = useSignedIn()
 
   return (
-    <section className="px-5 py-20 sm:px-8 sm:py-24">
+    // The last thing on a page that has spent nine thousand pixels showing
+    // rather than telling, so it does the opposite: no demo, no motion beyond
+    // the reveal, one sentence and a door. A closing card that competes with
+    // the scenes above it just delays the click it exists to collect.
+    <section className="border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
       <Reveal className="mx-auto max-w-[1120px]">
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-          <div className="grid gap-8 p-8 sm:p-12 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-end">
             <div>
-              <h2 className="max-w-[18ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
+              <p className="label-caps">Ready when you are</p>
+              <h2 className="mt-4 max-w-[17ch] font-display text-[38px] font-medium leading-[1.04] tracking-tight sm:text-[58px]">
                 Start the year knowing what's coming.
               </h2>
               <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
@@ -301,24 +321,18 @@ function Closing() {
 
             {/* What actually happens, in order, so the first minute holds no
                 surprises. */}
-            <ol className="flex flex-col gap-3">
+            <ol className="flex flex-col divide-y divide-border border-y border-border">
               {[
                 'Sign in with Google, GitHub or Discord',
                 'The school calendar is already imported',
                 'Add your classes, and deadlines follow',
               ].map((step, i) => (
-                <li
-                  key={step}
-                  className="flex items-start gap-3 rounded-xl border border-border px-4 py-3"
-                >
-                  <span className="tabular grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-[12px] font-medium text-brand">
-                    {i + 1}
-                  </span>
-                  <span className="text-[13.5px] leading-snug text-text">{step}</span>
+                <li key={step} className="flex items-baseline gap-4 py-3.5">
+                  <span className="label-caps tabular shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[14px] leading-snug text-text">{step}</span>
                 </li>
               ))}
             </ol>
-          </div>
         </div>
       </Reveal>
     </section>

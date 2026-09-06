@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { schoolEvents2026_27 } from '@/data/schoolCalendar'
-import { useScrollScene, useBeat, scatter, held } from './scrollScene'
+import { useScrollScene, useBeat, scatter, held, prefersLightMotion } from './scrollScene'
 import { cn } from '@/lib/cn'
 
 /**
@@ -56,6 +57,9 @@ const BEATS = [
 
 export function ImportScene() {
   const { ref, reduce, progress, height } = useScrollScene(4)
+  // Decided once on mount, never re-read: a scene that changes mechanism
+  // halfway through a scroll is worse than either mechanism.
+  const [light] = useState(prefersLightMotion)
 
   if (reduce) return <StaticImport />
 
@@ -64,7 +68,7 @@ export function ImportScene() {
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-8 pt-16">
         <div className="mx-auto grid w-full max-w-[1180px] items-center gap-8 px-6 lg:grid-cols-[0.85fr_1fr] lg:gap-14">
           <BeatText progress={progress} />
-          <Stage progress={progress} />
+          <Stage progress={progress} light={light} />
         </div>
       </div>
     </section>
@@ -127,7 +131,7 @@ function BeatBlock({
   )
 }
 
-function Stage({ progress }: { progress: MotionValue<number> }) {
+function Stage({ progress, light }: { progress: MotionValue<number>; light: boolean }) {
   // The document recedes as its contents leave it.
   const [poR, poV] = held([0, 0.16, 0.34], [1, 1, 0])
   const [psR, psV] = held([0, 0.34], [1, 0.94])
@@ -163,18 +167,20 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
       />
 
       {EVENTS.map((e, i) => (
-        <Chip key={`${e.title}-${e.startDate}`} event={e} index={i} progress={progress} />
+        <Chip key={`${e.title}-${e.startDate}`} event={e} index={i} progress={progress} light={light} />
       ))}
     </div>
   )
 }
 
 function Chip({
-  event, index, progress,
+  event, index, progress, light,
 }: {
   event: (typeof EVENTS)[number]
   index: number
   progress: MotionValue<number>
+  /** Skip the flight: land in place and scrub opacity only. */
+  light: boolean
 }) {
   const colliding = event.title === COLLIDING_TITLE
 
@@ -219,8 +225,12 @@ function Chip({
   return (
     <motion.div
       aria-hidden
+      // On a weak device the chip is simply where it lands, and only its
+      // opacity moves. The argument is which sixteen light up at the end, not
+      // the flight -- so the cheap version loses nothing that mattered.
       style={{
-        x, y, scale, opacity: shown,
+        ...(light ? { x: `${toX}%`, y: `${toY}%` } : { x, y, scale }),
+        opacity: shown,
         width: `${100 / COLS}%`,
         height: `${100 / ROWS}%`,
       }}
