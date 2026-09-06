@@ -5,7 +5,9 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
+import { Atmosphere } from '@/features/landing/Atmosphere'
 import { PipelineScene } from '@/features/landing/PipelineScene'
+import { ThemeScene } from '@/features/landing/ThemeScene'
 import { ZoomScene } from '@/features/landing/ZoomScene'
 import { FounderScene } from '@/features/landing/FounderScene'
 import { HeroStack } from '@/features/landing/HeroStack'
@@ -54,13 +56,15 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
   }
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="relative min-h-dvh bg-bg">
+      <Atmosphere />
       <Header />
       <Hero />
       <ZoomScene />
       <PipelineScene />
       <ImportScene />
       <StackScene />
+      <ThemeScene />
       <ProofScene />
       <FounderScene />
       <Closing />
@@ -136,7 +140,7 @@ function Hero() {
   const cardY = useTransform(scrollY, [0, 600], [0, reduce ? 0 : -40])
 
   return (
-    <section className="relative overflow-hidden px-5 pb-14 pt-12 sm:px-8 sm:pb-20 sm:pt-16">
+    <section className="relative z-10 overflow-hidden px-5 pb-14 pt-12 sm:px-8 sm:pb-20 sm:pt-16">
       {/* Ambient calendar grid, drawn rather than an image. */}
       <div
         aria-hidden
@@ -303,7 +307,7 @@ function Closing() {
     // rather than telling, so it does the opposite: no demo, no motion beyond
     // the reveal, one sentence and a door. A closing card that competes with
     // the scenes above it just delays the click it exists to collect.
-    <section className="border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
+    <section className="relative z-10 border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
       <Reveal className="mx-auto max-w-[1120px]">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-end">
             <div>
@@ -357,7 +361,7 @@ function Closing() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border px-5 py-10 sm:px-8">
+    <footer className="relative z-10 border-t border-border px-5 py-10 sm:px-8">
       <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Brand size="sm" showSchool={false} />
         <div className="flex flex-col gap-3 sm:items-end">

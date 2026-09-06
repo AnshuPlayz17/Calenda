@@ -71,7 +71,7 @@ export function StackScene() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
 
   return (
-    <section ref={ref} className="bg-bg px-5 pb-24 pt-16 sm:px-8 sm:pb-32 sm:pt-24">
+    <section ref={ref} className="relative z-10 px-5 pb-24 pt-16 sm:px-8 sm:pb-32 sm:pt-24">
       <div className="mx-auto max-w-[1120px]">
         <p className="label-caps">What else it does</p>
         <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
