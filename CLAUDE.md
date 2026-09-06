@@ -1,7 +1,7 @@
 # Calenda — working notes
 
-A school productivity app for students and parents at University of Toronto
-Schools. React 19 + Vite + Tailwind v4 on GitHub Pages; Supabase (Postgres,
+A school productivity app for students and parents. React 19 + Vite +
+Tailwind v4 on GitHub Pages; Supabase (Postgres,
 Auth, Edge Functions) behind it. `docs/SPEC.md` holds the architecture and the
 reasoning behind each decision; `docs/DATA-MODEL.md` the schema and RLS design;
 `docs/FACTS.md` every claim the marketing pages are allowed to make, with the
@@ -15,8 +15,10 @@ These came from the project owner and hold unless he says otherwise.
   something is free when it is not, and never fake a feature to look complete.
   SMS in particular ships as a dormant adapter and must never be claimed as
   working — carrier email-to-SMS gateways are dead and Twilio has no free tier.
-- **Never imply Calenda is an official UTS product.** The disclaimer in the
-  footers is load-bearing, especially on `/created-by`.
+- **Never imply Calenda is any school's official product, and do not name a
+  school anywhere.** The owner had every mention of the school it started at
+  removed, so the disclaimers now say "any school" and the lockup carries no
+  crest. The disclaimers are load-bearing; keep them, keep them generic.
 - **No secrets in frontend code.** Only the Supabase URL and anon key, which are
   safe by design.
 - **Permission is enforced in the database, never by hiding UI.** 54 RLS

@@ -9,7 +9,7 @@ need to know and do for school?"* by combining school-community events, a
 personal calendar, Google Calendar, class workspaces, notebooks, assignments and
 personalised reminders.
 
-**Not** an official University of Toronto Schools product. Every build carries an
+**Not** an official product of any school. Every build carries an
 unofficial/personal-project marker.
 
 ---
@@ -21,7 +21,7 @@ unofficial/personal-project marker.
 | Authentication | Many providers, unrestricted — Google, Microsoft, GitHub, Discord, Facebook, email+password, magic link | §3 |
 | Google Calendar | Import only — see §7 for why two-way was dropped | §7 |
 | Notifications | Maximum free coverage: Email + Web Push; SMS adapter ready but dormant | §8 |
-| Brand colour | U of T Blue `#1E3765` (PMS 655) as UTS-affiliated primary | §9 |
+| Brand colour | Deep navy `#1E3765` as the primary | §9 |
 
 ### 1.1 Apple Sign In — flagged cost
 
@@ -357,7 +357,7 @@ and nothing else is affected. No paid dependency is introduced.
 
 ## 13. Design system
 
-**Primary `#1E3765`** (U of T Blue, PMS 655), with a generated 50–950 ramp. A
+**Primary `#1E3765`**, a deep navy, with a generated 50–950 ramp. A
 restrained palette: one brand blue, one warm accent for urgency, semantic
 success/warning/danger, and a neutral grey scale carrying most of the interface.
 

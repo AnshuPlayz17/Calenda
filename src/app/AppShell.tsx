@@ -201,7 +201,7 @@ export function AppShell() {
         >
           <Menu className="h-5 w-5" aria-hidden />
         </button>
-        <Brand size="sm" showSchool={false} to="/dashboard" />
+        <Brand size="sm" showMark={false} to="/dashboard" />
       </header>
 
       <AnimatePresence>

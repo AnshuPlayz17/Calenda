@@ -271,18 +271,6 @@ function Hero() {
               </li>
             ))}
           </motion.ul>
-
-          {/* Says where it actually runs, without promising where it might.
-              The schema holds one school today, so anything more would be a
-              claim the code cannot back. */}
-          <motion.p
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="mt-6 text-[12.5px] text-text-subtle"
-          >
-            Set up for University of Toronto Schools.
-          </motion.p>
         </div>
 
         <motion.div style={{ y: cardY }} className="relative">
@@ -406,7 +394,7 @@ function Footer() {
   return (
     <footer className="relative z-10 border-t border-border px-5 pb-24 pt-10 sm:px-8 xl:pb-10">
       <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Brand size="sm" showSchool={false} />
+        <Brand size="sm" showMark={false} />
         <div className="flex flex-col gap-3 sm:items-end">
           {/* The header is for getting into the product. This belongs at the
               end, where somebody who has read the whole page is the one asking. */}
@@ -418,7 +406,7 @@ function Footer() {
           </a>
           <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
             A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
-            official product of University of Toronto Schools.
+            official product of any school.
           </p>
         </div>
       </div>

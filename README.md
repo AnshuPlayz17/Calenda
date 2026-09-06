@@ -5,7 +5,7 @@ Google Calendar, class workspaces, notebooks, assignments and personalised
 reminders in one place.
 
 > Calenda is a personal project. It is not affiliated with, endorsed by, or an
-> official product of University of Toronto Schools.
+> official product of any school.
 
 ## Documentation
 
@@ -236,7 +236,7 @@ links. The build also writes a `404.html` fallback. For a custom domain, set
 
 ## Branding
 
-The school crest is University of Toronto Schools' trademark and is not bundled
-with this source. Drop the official file at `public/brand/uts-logo.svg` and the
-lockup picks it up automatically; until then a neutral Calenda mark stands in
-rather than an imitation of someone else's crest.
+Calenda's own mark and wordmark are the whole lockup. There used to be a slot
+for a school crest, which was never filled -- a crest is that school's
+trademark and could not be bundled here -- and which tied the product to one
+school in the place a reader reads as ownership. It is gone.

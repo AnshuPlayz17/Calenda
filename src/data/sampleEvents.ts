@@ -11,8 +11,8 @@ import type { SeedEvent } from './schoolCalendar'
  *
  * These are made up, and deliberately mixed -- school-wide dates next to the
  * kind of personal deadline you would add yourself -- because that mixture is
- * the thing being demonstrated. Nothing here is a real University of Toronto
- * Schools date, and nothing on the page says it is.
+ * the thing being demonstrated. Nothing here is a real date from a real school,
+ * and nothing on the page says it is.
  *
  * Offsets from today rather than fixed dates, so a mockup of "coming up"
  * always shows dates that are actually coming up, in any school year.

@@ -98,7 +98,7 @@ export function Welcome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Brand size="lg" showSchool={false} />
+          <Brand size="lg" showMark={false} />
         </motion.div>
 
         <motion.h1

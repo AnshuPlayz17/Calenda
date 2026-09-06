@@ -1,6 +1,6 @@
 # Phase 0 — School Events PDF: inspection findings
 
-Source: `source/uts-important-dates-2026-27.pdf`
+Source: `source/important-dates-2026-27.pdf`
 Title metadata: `Important Dates and Closures 2026-27 School Year`
 Producer: `Skia/PDF m154 Google Docs Renderer` · 7 pages · not encrypted · no tables (plain text flow)
 
