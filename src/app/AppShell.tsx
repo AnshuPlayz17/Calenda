@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
-  Settings, ShieldCheck, Menu, X, LogOut, Search, Info,
+  Settings, ShieldCheck, Menu, X, LogOut, Search, Info, UserRound,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -147,6 +147,14 @@ export function AppShell() {
         >
           <Info className="h-4 w-4 shrink-0" aria-hidden />
           About Calenda
+        </Link>
+
+        <Link
+          to="/created-by"
+          className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] text-text-subtle no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+        >
+          <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+          About the founder
         </Link>
 
         <YearSwitcher />
