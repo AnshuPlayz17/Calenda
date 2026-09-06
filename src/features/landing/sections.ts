@@ -28,7 +28,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
   { id: 'more', label: 'What else', blurb: 'Classes, deadlines and reminders' },
   { id: 'numbers', label: 'Numbers', blurb: 'The year, counted' },
   { id: 'questions', label: 'Questions', blurb: 'The six things everyone asks' },
-  { id: 'themes', label: 'Themes', blurb: 'Three looks, switched live' },
+  { id: 'world', label: 'Anywhere', blurb: 'One date, read in every timezone' },
   { id: 'privacy', label: 'Privacy', blurb: 'Six ways in, all six refused' },
   { id: 'founder', label: 'Founder', blurb: 'Who built it, and why' },
   { id: 'start', label: 'Sign up', blurb: 'What the first minute looks like' },
