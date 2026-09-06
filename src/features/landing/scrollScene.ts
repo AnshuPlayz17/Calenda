@@ -95,3 +95,29 @@ export function scatter(seed: number): number {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
   return x - Math.floor(x)
 }
+
+/**
+ * True where scrubbing dozens of elements per frame is a bad bet.
+ *
+ * The import scene drives forty-nine chips, each carrying five scroll-linked
+ * values -- fine on a laptop and fine on a recent phone, and not obviously fine
+ * on the mid-range Android a lot of students actually carry. Headless Chromium
+ * on a build machine cannot tell you which, so this does not try to measure
+ * anything at runtime: it reads the two properties that are cheap, honest and
+ * available before the first frame.
+ *
+ * Read once, deliberately. A viewport that crosses the breakpoint mid-scroll
+ * would otherwise swap the whole scene's mechanism underneath the reader, which
+ * is worse than either mechanism.
+ */
+export function prefersLightMotion(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const narrow = window.matchMedia('(max-width: 767px)').matches
+    const cores = navigator.hardwareConcurrency
+    return narrow || (typeof cores === 'number' && cores <= 4)
+  } catch {
+    // A browser that cannot answer gets the cheaper scene, not a crash.
+    return true
+  }
+}
