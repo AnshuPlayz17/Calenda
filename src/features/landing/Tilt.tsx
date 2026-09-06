@@ -15,15 +15,30 @@ import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } fro
  * pointer, because on a touchscreen the effect can only fire on tap and a card
  * that flinches when you try to press it is worse than a card that sits still.
  */
-export function Tilt({ children, className }: { children: ReactNode; className?: string }) {
+export function Tilt({
+  children,
+  className,
+  rotationFactor = 2.2,
+  isReverse = false,
+}: {
+  children: ReactNode
+  className?: string
+  /** Maximum tilt in degrees. Small on purpose -- see the note above. */
+  rotationFactor?: number
+  /** Lean away from the pointer rather than toward it. */
+  isReverse?: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
 
   const px = useMotionValue(0)
   const py = useMotionValue(0)
   const spring = { stiffness: 140, damping: 18, mass: 0.6 }
-  const rotateY = useSpring(useTransform(px, [-0.5, 0.5], [-2.2, 2.2]), spring)
-  const rotateX = useSpring(useTransform(py, [-0.5, 0.5], [1.8, -1.8]), spring)
+  const dir = isReverse ? -1 : 1
+  const rotateY = useSpring(
+    useTransform(px, [-0.5, 0.5], [-rotationFactor * dir, rotationFactor * dir]), spring)
+  const rotateX = useSpring(
+    useTransform(py, [-0.5, 0.5], [rotationFactor * 0.82 * dir, -rotationFactor * 0.82 * dir]), spring)
 
   if (reduce) return <div className={className}>{children}</div>
 
