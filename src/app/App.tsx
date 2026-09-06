@@ -25,8 +25,8 @@ import { SignIn } from '@/routes/SignIn'
 import { SignUp } from '@/routes/SignUp'
 import { AuthCallback } from '@/routes/AuthCallback'
 
-/** Public, but nobody's first stop -- so it splits like the signed-in app does. */
-const CreatedBy = lazy(() => import('@/routes/CreatedBy').then((m) => ({ default: m.CreatedBy })))
+/* The founder page is a section of the landing page now, not a page of its own.
+   The old URL is kept because it has been linked; it lands on the section. */
 
 /** Named exports, so each needs unwrapping into the default `lazy` expects. */
 const AppShell = lazy(() => import('./AppShell').then((m) => ({ default: m.AppShell })))
@@ -106,7 +106,7 @@ export function App() {
               {/* The same page, but it does not bounce a signed-in reader to
                   the dashboard -- this is the one the app links to. */}
               <Route path="/about" element={<Landing redirectSignedIn={false} />} />
-              <Route path="/created-by" element={<CreatedBy />} />
+              <Route path="/created-by" element={<Navigate to="/about#founder" replace />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
               <Route path="/welcome" element={<Welcome />} />

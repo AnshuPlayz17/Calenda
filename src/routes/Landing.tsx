@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { ConvergeScene } from '@/features/landing/ConvergeScene'
+import { FounderScene } from '@/features/landing/FounderScene'
 import { HeroStack } from '@/features/landing/HeroStack'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { StackScene } from '@/features/landing/StackScene'
@@ -26,6 +27,26 @@ import { usePreview } from '@/lib/preview'
 export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolean }) {
   const { session, loading } = useAuth()
   const preview = usePreview()
+  const { hash } = useLocation()
+
+  // Hash routing means the browser never scrolls to a fragment itself -- the
+  // whole path already lives in the hash. Anyone arriving from the app sidebar
+  // has asked for one section specifically, so take them there.
+  //
+  // Not to its top, though. That section is a pinned scene whose panel is shut
+  // at scroll progress zero, so landing on the boundary lands on a blank frame.
+  // Aim past the point where it has finished opening.
+  useEffect(() => {
+    if (hash !== '#founder') return
+    const id = window.setTimeout(() => {
+      const el = document.getElementById('founder')
+      if (!el) return
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const track = Math.max(0, el.offsetHeight - window.innerHeight)
+      window.scrollTo({ top: top + track * 0.55, behavior: 'auto' })
+    }, 60)
+    return () => window.clearTimeout(id)
+  }, [hash])
 
   if (redirectSignedIn && !loading && (session || preview.active)) {
     return <Navigate to="/dashboard" replace />
@@ -39,6 +60,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <ImportScene />
       <StackScene />
       <ProofScene />
+      <FounderScene />
       <Closing />
       <Footer />
     </div>
@@ -339,12 +361,12 @@ function Footer() {
         <div className="flex flex-col gap-3 sm:items-end">
           {/* The header is for getting into the product. This belongs at the
               end, where somebody who has read the whole page is the one asking. */}
-          <Link
-            to="/created-by"
+          <a
+            href="#founder"
             className="text-[13px] font-medium text-text-muted no-underline underline-offset-2 transition-colors duration-150 hover:text-text hover:underline"
           >
             About the founder
-          </Link>
+          </a>
           <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
             A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
             official product of University of Toronto Schools.

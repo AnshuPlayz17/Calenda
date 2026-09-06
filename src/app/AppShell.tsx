@@ -150,7 +150,7 @@ export function AppShell() {
         </Link>
 
         <Link
-          to="/created-by"
+          to="/about#founder"
           className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] text-text-subtle no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-text"
         >
           <UserRound className="h-4 w-4 shrink-0" aria-hidden />
