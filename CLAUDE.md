@@ -89,17 +89,35 @@ npm run build`.
 
 ## The landing page
 
-Six sections, deliberately five *different* motion mechanisms — a fourth
-identical pinned section is the failure mode of this genre:
+Eleven chapters, and the rule that governs them is that no two adjacent ones
+move the same way — a fourth identical pinned section is the failure mode of
+this genre. `src/features/landing/sections.ts` is the list, in order; the route
+wraps each scene with the matching id and the companion rail reads the same
+array, so the page and its navigation cannot drift apart.
 
 1. **Hero** — masked headline reveal, pointer tilt, a stack that parts on exit
-2. **Converge** — three sources pulling into alignment as the section passes
-3. **Import** — pinned; 49 real dates fly into a 7x7 grid, then the 16 identical
-   "Late Start" chips light up. Falls back to no flight below 768px or on <= 4
-   cores
-4. **Stack** — a CSS-sticky deck, no pin
-5. **Proof** — pinned; six adversarial RLS tests resolving to "Refused"
-6. **Closing** — deliberately still
+2. **A day** — pinned; a summary card cross-dissolving into its detail view
+3. **The path** — a drawn spine down six stages, not pinned
+4. **The import** — pinned; 51 invented dates fly into a 7-column grid, then the
+   15 identical "Late Start" chips light up. Falls back to no flight below 768px
+   or on <= 4 cores
+5. **What else** — a CSS-sticky deck, no pin
+6. **Numbers** — counted figures and two charts, all computed from the sample year
+7. **Questions** — pinned, and the only scene that travels *sideways*: six
+   answers on a horizontal rail, one step per stop
+8. **Themes** — three live previews side by side, scoped by `[data-preview]`
+9. **Privacy** — pinned; six adversarial RLS tests resolving to "Refused"
+10. **Founder** — a panel hinged at its bottom edge, swinging open
+11. **Closing** — deliberately still
 
-A hairline in the sticky header fills as you read; it is the only element
-present in every section.
+Two things are on screen the whole way down. A hairline in the sticky header
+fills as you read, which answers *how far through*. `ScrollCompanion` answers
+*through what*: a tick rail down the right margin above 1280px, a pill at the
+bottom below it, naming the chapter being read and offering a step in either
+direction. The second half matters — a page built entirely from scroll-driven
+scenes quietly assumes everyone travels it once, forwards, and anyone wanting a
+second look at the import otherwise has to hunt for it by dragging.
+
+All the dates and figures on this page are invented — `src/data/sampleSchoolYear.ts`
+and `src/data/sampleEvents.ts`. Anything that counts them reads the array rather
+than repeating a number in prose, so the copy cannot drift from the data.

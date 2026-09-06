@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { Atmosphere } from '@/features/landing/Atmosphere'
 import { NumbersScene } from '@/features/landing/NumbersScene'
-import { TopicWheel } from '@/features/landing/TopicWheel'
+import { QuestionScene } from '@/features/landing/QuestionScene'
 import { MagnetLines } from '@/components/motion/MagnetLines'
 import { Spotlight } from '@/components/motion/Spotlight'
 import { PipelineScene } from '@/features/landing/PipelineScene'
@@ -18,6 +18,7 @@ import { HeroStack } from '@/features/landing/HeroStack'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { StackScene } from '@/features/landing/StackScene'
 import { ProofScene } from '@/features/landing/ProofScene'
+import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
@@ -63,18 +64,23 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
     <div className="relative min-h-dvh bg-bg">
       <Atmosphere />
       <Header />
-      <Hero />
-      <ZoomScene />
-      <PipelineScene />
-      <ImportScene />
-      <StackScene />
-      <NumbersScene />
-      <TopicWheel />
-      <ThemeScene />
-      <ProofScene />
+      {/* The ids are the anchors the companion rail jumps to, and they live
+          here rather than inside each scene so the order of the page and the
+          order of the rail are the same list. FounderScene carries its own id
+          already -- it is linked to from the app sidebar. */}
+      <div id="top"><Hero /></div>
+      <div id="glance"><ZoomScene /></div>
+      <div id="pipeline"><PipelineScene /></div>
+      <div id="import"><ImportScene /></div>
+      <div id="more"><StackScene /></div>
+      <div id="numbers"><NumbersScene /></div>
+      <div id="questions"><QuestionScene /></div>
+      <div id="themes"><ThemeScene /></div>
+      <div id="privacy"><ProofScene /></div>
       <FounderScene />
-      <Closing />
+      <div id="start"><Closing /></div>
       <Footer />
+      <ScrollCompanion />
     </div>
   )
 }
@@ -113,10 +119,10 @@ function Header() {
           : 'border-b border-transparent')
       }
     >
-      {/* The one element present in every scene, so it is the only place a
-          sense of the whole page can live. It reads position, not time, and it
-          is the connective tissue between six sections that otherwise each
-          animate alone. */}
+      {/* How far through, at a glance, in the one bar of chrome that is always
+          on screen. It reads position, not time. The companion rail says which
+          chapter and offers a way back; this says how much is left, which is
+          the question a reader has before they have a name for the section. */}
       <motion.span
         aria-hidden
         style={{ scaleX: readProgress }}
@@ -394,8 +400,11 @@ function Closing() {
 }
 
 function Footer() {
+  // The extra bottom padding is for the companion pill, which is fixed to the
+  // bottom of the window on anything narrower than xl. Without it the last line
+  // of the disclaimer ends up underneath the control.
   return (
-    <footer className="relative z-10 border-t border-border px-5 py-10 sm:px-8">
+    <footer className="relative z-10 border-t border-border px-5 pb-24 pt-10 sm:px-8 xl:pb-10">
       <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Brand size="sm" showSchool={false} />
         <div className="flex flex-col gap-3 sm:items-end">
