@@ -3,13 +3,14 @@ import { Link, Navigate } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import {
   ArrowRight, CalendarDays, CheckCircle2, ClipboardList,
-  NotebookPen, ShieldCheck, Users,
+  NotebookPen, Users,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Reveal } from '@/components/Reveal'
 import { WindowFrame } from '@/components/ui/WindowFrame'
 import { ImportScene } from '@/features/landing/ImportScene'
+import { ProofScene } from '@/features/landing/ProofScene'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 import { useAuth } from '@/lib/auth'
@@ -42,7 +43,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       <Problem />
       <ImportScene />
       <Features />
-      <Privacy />
+      <ProofScene />
       <Closing />
       <Footer />
     </div>
@@ -359,48 +360,6 @@ function Features() {
         eyebrow="What it does"
         heading="Built for the way a school year actually works."
       />
-    </section>
-  )
-}
-
-function Privacy() {
-  return (
-    <section className="border-y border-border bg-surface px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-[1120px] items-start gap-10 lg:grid-cols-2">
-        <Reveal>
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
-            <ShieldCheck className="h-5 w-5" aria-hidden />
-          </span>
-          <h2 className="mt-5 max-w-[18ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[36px]">
-            Private by default, not by promise.
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
-            Your notes, personal events and deadlines are yours. Sharing is per item and
-            reversible, and the rules are enforced by the database itself — not by hiding
-            buttons.
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <ul className="flex flex-col gap-3">
-            {[
-              'Connecting a parent shares nothing on its own.',
-              'An admin can publish school events, and cannot read your private ones.',
-              'Google Calendar access is read-only, and no Google credential is stored.',
-              'Every rule has a test that tries to break it and must fail.',
-            ].map((line) => (
-              <li key={line} className="flex items-start gap-2.5">
-                <CheckCircle2
-                  className="mt-0.5 h-[17px] w-[17px] shrink-0"
-                  style={{ color: 'var(--success)' }}
-                  aria-hidden
-                />
-                <span className="text-[14.5px] leading-relaxed text-text">{line}</span>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-      </div>
     </section>
   )
 }
