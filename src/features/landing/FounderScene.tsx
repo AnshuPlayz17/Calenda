@@ -74,32 +74,45 @@ function Lid({ progress }: { progress: MotionValue<number> }) {
   )
 }
 
-/** The content itself, identical whether it arrived by hinge or by scrolling. */
+/**
+ * The content itself, identical whether it arrived by hinge or by scrolling.
+ *
+ * Deliberately short. It began as a paragraph of six lines and a row of four
+ * figures, which is a lot of reading to arrive at after nine thousand pixels --
+ * and the figures were doing the persuading anyway. Two sentences, then the
+ * numbers, then the disclaimer that has to be here.
+ */
 function Panel() {
   return (
     <>
       <p className="label-caps">Created by</p>
-      <h2 className="mt-3 font-display text-[36px] font-medium leading-[1.05] tracking-tight sm:text-[52px]">
+      <h2 className="mt-4 font-display text-[42px] font-medium leading-[1.02] tracking-tight sm:text-[64px]">
         Anshu Arunav
       </h2>
-      <p className="mt-5 max-w-[56ch] text-[15.5px] leading-relaxed text-text-muted sm:text-[16.5px]">
-        A student at University of Toronto Schools, who wanted the school year to stop
-        living in four places at once — and then built the thing that fixes it, end to
-        end, alone. Not a prototype and not a class project: a real database, real
-        authentication, notifications that reach a phone, and a test suite that tries to
-        break into it on every change.
+      <p className="mt-6 max-w-[46ch] text-[17px] leading-relaxed text-text sm:text-[19px]">
+        A student at University of Toronto Schools who wanted the school year to stop
+        living in four places at once, and built the thing that fixes it.
+      </p>
+      <p className="mt-3 max-w-[46ch] text-[14.5px] leading-relaxed text-text-muted">
+        Alone, end to end — database, authentication, notifications that reach a phone,
+        and a test suite that tries to break in on every change.
       </p>
 
-      <dl className="mt-8 grid gap-6 border-t border-border pt-7 sm:grid-cols-4">
+      <dl className="mt-10 flex flex-wrap gap-x-12 gap-y-6 border-t border-border pt-8">
         {NUMBERS.map((n) => (
           <div key={n.label}>
-            <dt className="font-display text-[30px] font-medium leading-none tracking-tight text-text sm:text-[34px]">
+            <dt className="font-display text-[32px] font-medium leading-none tracking-tight text-text sm:text-[38px]">
               <CountUp to={n.value} />
             </dt>
-            <dd className="mt-1.5 text-[12.5px] leading-snug text-text-muted">{n.label}</dd>
+            <dd className="mt-2 text-[12px] leading-snug text-text-subtle">{n.label}</dd>
           </div>
         ))}
       </dl>
+
+      <p className="mt-9 max-w-[60ch] border-t border-border pt-6 text-[12px] leading-relaxed text-text-subtle">
+        A personal project. Not affiliated with, endorsed by, or an official product of
+        University of Toronto Schools.
+      </p>
     </>
   )
 }
