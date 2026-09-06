@@ -91,14 +91,6 @@ function Header() {
       <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:px-8">
         <Brand size="sm" to="/" />
         <div className="flex items-center gap-3">
-          {/* The founder page was reachable only from the footer of a page nine
-              thousand pixels tall, which is the same as not being reachable. */}
-          <Link
-            to="/created-by"
-            className="hidden text-[13.5px] text-text-muted no-underline transition-colors duration-150 hover:text-text sm:inline"
-          >
-            About the founder
-          </Link>
           <ThemeToggle />
           <Link
             to={signedIn ? '/dashboard' : '/sign-in'}
@@ -344,14 +336,20 @@ function Footer() {
     <footer className="border-t border-border px-5 py-10 sm:px-8">
       <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Brand size="sm" showSchool={false} />
-        <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
-          A personal project by{' '}
-          <Link to="/created-by" className="text-text-muted underline-offset-2 hover:text-text hover:underline">
-            Anshu Arunav
+        <div className="flex flex-col gap-3 sm:items-end">
+          {/* The header is for getting into the product. This belongs at the
+              end, where somebody who has read the whole page is the one asking. */}
+          <Link
+            to="/created-by"
+            className="text-[13px] font-medium text-text-muted no-underline underline-offset-2 transition-colors duration-150 hover:text-text hover:underline"
+          >
+            About the founder
           </Link>
-          . Not affiliated with, endorsed by, or an official product of University of
-          Toronto Schools.
-        </p>
+          <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
+            A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
+            official product of University of Toronto Schools.
+          </p>
+        </div>
       </div>
     </footer>
   )
