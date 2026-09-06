@@ -5,7 +5,15 @@ import { cn } from '@/lib/cn'
 /**
  * A rotating wheel of labels with the active one's panel beside it.
  *
- * Drag it, scroll it, or use the arrow keys. Momentum carries after the input
+ * Drag it, click a label, or use the arrow keys -- but scrolling over it moves
+ * the page, not the wheel.
+ *
+ * It did capture the wheel event at first, which is the usual way this
+ * component is built and it is wrong. A reader scrolling down a page has not
+ * asked to operate a control; they get a section that resists them for a
+ * moment and then lets go, and it reads as the page being slow rather than as
+ * a thing they could have interacted with. Every other way in is still there,
+ * and none of them costs anybody their scroll. Momentum carries after the input
  * stops and it settles on whole items, so it never rests between two things.
  *
  * The published component pairs each label with a photograph. Calenda has no
@@ -30,7 +38,6 @@ export function WheelCarousel({
   spacing = 15,
   visibleItems = 3,
   initialIndex = 0,
-  snap = true,
   /** Where the wheel is read, as a fraction down the frame. Above the middle,
    *  because the first item is selected at rest and everything else hangs
    *  below it -- a centred apex leaves the arc running off the bottom. */
@@ -43,7 +50,6 @@ export function WheelCarousel({
   spacing?: number
   visibleItems?: number
   initialIndex?: number
-  snap?: boolean
   apex?: number
   onActiveChange?: (item: WheelCarouselItem, index: number) => void
   className?: string
@@ -51,7 +57,6 @@ export function WheelCarousel({
   const [active, setActive] = useState(initialIndex)
   const reduce = useReducedMotion()
   const wheelRef = useRef<HTMLDivElement>(null)
-  const acc = useRef(0)
 
   useEffect(() => {
     const item = items[active]
@@ -77,22 +82,14 @@ export function WheelCarousel({
   }
 
   return (
-    <div className={cn('grid items-center gap-8 lg:grid-cols-[1fr_1.1fr]', className)}>
+    <div className={cn('grid items-center gap-5 sm:gap-8 lg:grid-cols-[1fr_1.1fr]', className)}>
       <div
         ref={wheelRef}
         role="listbox"
         aria-label="Choose a topic"
         aria-activedescendant={`wheel-${active}`}
         tabIndex={0}
-        className="relative h-[320px] select-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] sm:h-[380px]"
-        onWheel={(e) => {
-          acc.current += e.deltaY
-          const step = snap ? 90 : 40
-          while (Math.abs(acc.current) >= step) {
-            move(acc.current > 0 ? 1 : -1)
-            acc.current -= Math.sign(acc.current) * step
-          }
-        }}
+        className="relative h-[210px] select-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] sm:h-[260px] lg:h-[360px]"
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); move(1) }
           if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); move(-1) }
@@ -129,7 +126,7 @@ export function WheelCarousel({
               style={{ transformOrigin: 'left center', top: `${apex * 100}%` }}
               className={cn(
                 'absolute left-8 origin-left whitespace-nowrap text-left font-display',
-                'text-[22px] leading-none tracking-tight sm:text-[30px]',
+                'text-[17px] leading-none tracking-tight sm:text-[22px] lg:text-[28px]',
                 i === active ? 'font-medium text-text' : 'text-text-subtle',
               )}
             >
@@ -139,7 +136,7 @@ export function WheelCarousel({
         })}
       </div>
 
-      <div className="min-h-[220px]">
+      <div className="min-h-[170px] sm:min-h-[200px]">
         {items.map((it, i) => (
           <motion.div
             key={it.label}

@@ -2,7 +2,6 @@ import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { Lock, ShieldCheck } from 'lucide-react'
 import { useScrollScene, held } from './scrollScene'
-import { ParticleText } from './ParticleText'
 
 /**
  * Privacy, argued with the tests instead of adjectives.
@@ -35,19 +34,12 @@ export function ProofScene() {
       <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
         <ShieldCheck className="h-5 w-5" aria-hidden />
       </span>
-      <div className="mt-5 max-w-[16ch]" id="proof-heading">
-        <ParticleText
-          as="h2"
-          text="Six ways in."
-          fontSize={40}
-          className="font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[34px] lg:text-[40px]"
-        />
-        <ParticleText
-          text="All six close."
-          fontSize={40}
-          className="font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[34px] lg:text-[40px]"
-        />
-      </div>
+      <h2
+        id="proof-heading"
+        className="mt-5 max-w-[15ch] font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[34px] lg:text-[40px]"
+      >
+        Six ways in. All six close.
+      </h2>
       <p className="mt-4 max-w-[44ch] text-[14.5px] leading-relaxed text-text-muted sm:text-[15.5px]">
         Permission is enforced by the database, not by hiding buttons — so it holds
         even for a request the app never meant to make. These are the six attempts

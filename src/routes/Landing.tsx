@@ -9,7 +9,6 @@ import { Atmosphere } from '@/features/landing/Atmosphere'
 import { NumbersScene } from '@/features/landing/NumbersScene'
 import { TopicWheel } from '@/features/landing/TopicWheel'
 import { MagnetLines } from '@/components/motion/MagnetLines'
-import { ParticleText } from '@/features/landing/ParticleText'
 import { Spotlight } from '@/components/motion/Spotlight'
 import { PipelineScene } from '@/features/landing/PipelineScene'
 import { ThemeScene } from '@/features/landing/ThemeScene'
@@ -334,14 +333,6 @@ function Closing() {
       <Reveal className="mx-auto max-w-[1120px]">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-end">
             <div>
-              <div className="mb-6 max-w-[420px]">
-                <ParticleText
-                  text="Calenda"
-                  fontSize={92}
-                  particleDensity={5}
-                  className="font-display text-brand"
-                />
-              </div>
               <p className="label-caps">Ready when you are</p>
               <h2 className="mt-4 max-w-[17ch] font-display text-[38px] font-medium leading-[1.04] tracking-tight sm:text-[58px]">
                 Start the year knowing what's coming.
