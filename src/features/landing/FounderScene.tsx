@@ -2,6 +2,7 @@ import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { useScrollScene, held } from './scrollScene'
 import { CountUp } from './CountUp'
+import { ParticleText } from './ParticleText'
 
 /**
  * Who made this, as a panel that opens.
@@ -86,9 +87,14 @@ function Panel() {
   return (
     <>
       <p className="label-caps">Created by</p>
-      <h2 className="mt-4 font-display text-[42px] font-medium leading-[1.02] tracking-tight sm:text-[64px]">
-        Anshu Arunav
-      </h2>
+      <div className="mt-4">
+        <ParticleText
+          as="h2"
+          text="Anshu Arunav"
+          fontSize={64}
+          className="font-display text-[42px] font-medium leading-[1.02] tracking-tight sm:text-[64px]"
+        />
+      </div>
       <p className="mt-6 max-w-[46ch] text-[17px] leading-relaxed text-text sm:text-[19px]">
         A student at University of Toronto Schools who wanted the school year to stop
         living in four places at once, and built the thing that fixes it.
