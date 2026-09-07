@@ -25,7 +25,11 @@ type AuthContextValue = {
   isAdmin: boolean
   signInWithProvider: (provider: Provider) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
-  signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    about?: { fullName: string; role: 'student' | 'parent' },
+  ) => Promise<{ error: string | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
   /** Sends a recovery link. Only reachable when `emailDelivery` is on. */
   resetPassword: (email: string) => Promise<{ error: string | null }>
@@ -128,13 +132,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error ? friendlyError(error.message) : null }
       },
 
-      async signUpWithPassword(email, password) {
-        const { error } = await supabase.auth.signUp({
+      async signUpWithPassword(email, password, about) {
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirectTo },
+          options: {
+            emailRedirectTo: redirectTo,
+            // The handle_new_user trigger reads full_name out of here, which is
+            // how OAuth sign-ups get a name. Passing it means a password
+            // sign-up arrives with one too, rather than being the only kind of
+            // account the app can never greet by name.
+            data: about ? { full_name: about.fullName } : undefined,
+          },
         })
-        return { error: error ? friendlyError(error.message) : null }
+        if (error) return { error: friendlyError(error.message) }
+
+        // Role is a second call on purpose. It cannot ride along in the signup
+        // metadata, because that is user-controlled input the trigger copies
+        // verbatim -- and role is the column is_admin() reads. It goes through
+        // the profiles policy instead, which permits student and parent and
+        // refuses admin. See 20260907000100.
+        if (about && data.user) {
+          await supabase.from('profiles')
+            .update({ full_name: about.fullName, role: about.role })
+            .eq('id', data.user.id)
+        }
+        return { error: null }
       },
 
       async signInWithMagicLink(email) {

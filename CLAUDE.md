@@ -213,6 +213,35 @@ the link fell through to the catch-all inside `RequireAuth` and its
 read them. **The evidence destroyed itself.** Reading every position is cheaper
 than another round of guessing at two emails an hour.
 
+## Identity, and the hole that was in it
+
+**Any signed-in user could make themselves an admin, and nothing caught it.**
+`profiles_update` was row-level with no column restriction — `id = auth.uid()`
+in both `using` and `with check` — so one call from the browser console set
+`role = 'admin'`, and `is_admin()` gates 19 of the 54 policies. The `init`
+migration states the intent ("the client never chooses its own role") and that
+is true of the trigger, which runs on INSERT. Nobody closed UPDATE.
+
+The six adversarial tests did not catch it because they *set* `role = 'admin'`
+as fixture setup and then check what an admin cannot read — the escalation path
+itself was never under test. **When a test file uses a privilege as setup, ask
+whether anything tests the acquiring of it.** Fixed in `20260907000100`; there
+are now 16 assertions, four of them on this.
+
+**Nothing in the app could set a name or a role.** Password sign-ups arrived
+with `full_name` null forever — `handle_new_user()` reads it out of OAuth
+metadata, which a password sign-up has none of — everyone was silently
+`student`, and Settings displayed both read-only. The sign-up form now asks,
+and `AccountCard` makes all three editable, because collecting something a
+person cannot correct is worse than not collecting it.
+
+Role goes through a second `update` rather than the sign-up metadata: that
+metadata is user-controlled input the trigger copies verbatim, and role is the
+column `is_admin()` reads.
+
+**OAuth users never see the sign-up form.** They get a name from their provider
+and are still silently `student`. The fix is a first-run step, not a form field.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
