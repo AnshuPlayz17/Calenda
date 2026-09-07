@@ -222,97 +222,112 @@ begin
     0::bigint);
 end $$;
 
--- (7) A user cannot promote themselves to admin -------------------------------
+-- (7) The role column is not writable by a client at all ---------------------
 --
--- The hole this covers was open for the project's whole life and none of the
--- six tests above would have failed while it was: they set role = 'admin' as
--- fixture setup, then check what an admin cannot read. Nobody attacked the
--- setting of it. is_admin() gates nineteen policies, so this single update was
--- the key to all of them.
+-- This is the real control, and it is a column grant rather than a policy:
+--
+--   revoke update on profiles from authenticated;
+--   grant  update (full_name, avatar_url, grade, timezone, onboarded_at) ...
+--
+-- Postgres checks column privileges before row-level security, so an update
+-- naming `role` is refused before any policy runs. Tested by attempting it and
+-- requiring the error, because a redundant policy added later could otherwise
+-- make it look guarded when the grant is what is doing the work.
+do $$
+declare denied boolean := false;
+begin
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a1', true);
+    set local role authenticated;
+    update profiles set role = 'admin'
+      where id = '00000000-0000-0000-0000-0000000000a1';
+  exception when insufficient_privilege then
+    denied := true;
+  end;
+  reset role;
+
+  perform expect('a client CANNOT name the role column in an update', denied, true);
+end $$;
+
 do $$
 declare escalated text;
 begin
-  perform set_config('request.jwt.claim.sub',
-    '00000000-0000-0000-0000-0000000000a1', true);
-  set local role authenticated;
-
-  -- The policy refuses the row rather than raising, so this updates nothing.
-  update profiles set role = 'admin'
-    where id = '00000000-0000-0000-0000-0000000000a1';
-
-  reset role;
-
   select role::text into escalated from profiles
     where id = '00000000-0000-0000-0000-0000000000a1';
-
-  perform expect(
-    'a student CANNOT make themselves an admin',
-    escalated, 'student');
+  perform expect('...so a student is still a student', escalated, 'student');
 end $$;
 
--- Nor may they promote somebody else, which the row check already forbids but
--- is worth stating: a hole here would be the same hole with an extra step.
+-- (8) set_my_role is the only way through, and it refuses admin ---------------
 do $$
-declare other text;
-begin
-  perform set_config('request.jwt.claim.sub',
-    '00000000-0000-0000-0000-0000000000a1', true);
-  set local role authenticated;
-
-  update profiles set role = 'admin'
-    where id = '00000000-0000-0000-0000-0000000000a4';
-
-  reset role;
-
-  select role::text into other from profiles
-    where id = '00000000-0000-0000-0000-0000000000a4';
-
-  perform expect(
-    'a student CANNOT make somebody else an admin',
-    other, 'student');
-end $$;
-
--- (8) ...but self-service of the honest fields still works --------------------
---
--- The fix must not go so far that the sign-up form cannot do its job. A person
--- declaring themselves a parent is not a privilege claim; it changes what the
--- app shows them and nothing about what they may reach.
-do $$
-declare declared text; named text;
+declare declared text;
 begin
   perform set_config('request.jwt.claim.sub',
     '00000000-0000-0000-0000-0000000000a4', true);
   set local role authenticated;
-
-  update profiles set role = 'parent', full_name = 'Stranger Danger'
-    where id = '00000000-0000-0000-0000-0000000000a4';
-
+  perform set_my_role('parent');
   reset role;
 
-  select role::text, full_name into declared, named from profiles
+  select role::text into declared from profiles
     where id = '00000000-0000-0000-0000-0000000000a4';
-
   perform expect('a user CAN declare themselves a parent', declared, 'parent');
-  perform expect('a user CAN set their own name', named, 'Stranger Danger');
 end $$;
 
--- (9) An admin may still grant admin, or the role becomes unassignable --------
 do $$
-declare granted text;
+declare refused boolean := false; still text;
 begin
-  perform set_config('request.jwt.claim.sub',
-    '00000000-0000-0000-0000-0000000000a3', true);
-  set local role authenticated;
-
-  update profiles set role = 'admin'
-    where id = '00000000-0000-0000-0000-0000000000a4';
-
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a4', true);
+    set local role authenticated;
+    perform set_my_role('admin');
+  exception when others then
+    refused := true;
+  end;
   reset role;
 
-  select role::text into granted from profiles
+  select role::text into still from profiles
     where id = '00000000-0000-0000-0000-0000000000a4';
 
-  perform expect('an admin CAN grant admin', granted, 'admin');
+  perform expect('set_my_role REFUSES admin', refused, true);
+  perform expect('...and the role is unchanged', still, 'parent');
+end $$;
+
+-- It edits the caller's row and no other, because the id comes from the token
+-- rather than from an argument. There is no shape of call that reaches a4 as
+-- a1, but the property is worth pinning: a future signature taking an id would
+-- break this test rather than shipping quietly.
+do $$
+declare victim text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+  perform set_my_role('student');
+  reset role;
+
+  select role::text into victim from profiles
+    where id = '00000000-0000-0000-0000-0000000000a4';
+  perform expect('set_my_role CANNOT touch another row', victim, 'parent');
+end $$;
+
+-- (9) The fields that are granted still work ----------------------------------
+-- The guard must not go so far that a person cannot fix their own name, which
+-- is the whole point of the settings page.
+do $$
+declare named text; zone text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+  update profiles set full_name = 'Sam Student', timezone = 'Europe/London'
+    where id = '00000000-0000-0000-0000-0000000000a1';
+  reset role;
+
+  select full_name, timezone into named, zone from profiles
+    where id = '00000000-0000-0000-0000-0000000000a1';
+  perform expect('a user CAN set their own name', named, 'Sam Student');
+  perform expect('a user CAN set their own timezone', zone, 'Europe/London');
 end $$;
 
 select tests_reset();

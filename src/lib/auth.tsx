@@ -28,7 +28,7 @@ type AuthContextValue = {
   signUpWithPassword: (
     email: string,
     password: string,
-    about?: { fullName: string; role: 'student' | 'parent' },
+    about?: { fullName: string; role: 'student' | 'parent'; grade?: string },
   ) => Promise<{ error: string | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
   /** Sends a recovery link. Only reachable when `emailDelivery` is on. */
@@ -40,6 +40,32 @@ type AuthContextValue = {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+/**
+ * The zone this device is actually in.
+ *
+ * profiles.timezone defaults to 'America/Toronto' and, until now, nothing in
+ * the app ever changed it -- there was no resolvedOptions() call anywhere in
+ * the codebase. So every account in the world was Toronto, while the dispatcher
+ * schedules reminders as `(start_date + time '09:00') at time zone pr.timezone`
+ * and reads quiet hours in the same zone. A user in London was being sent their
+ * "nine in the morning" reminder at two in the afternoon, and the landing page
+ * has a whole chapter claiming otherwise.
+ *
+ * Read rather than asked. The browser already knows, a list of four hundred
+ * zone names is a worse question than no question, and a wrong answer here is
+ * invisible until a reminder arrives at the wrong time.
+ */
+export function deviceTimeZone(): string | null {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    // An empty or missing value is possible on old engines; storing it would
+    // make `at time zone` throw inside the dispatcher for that row.
+    return zone && zone.includes('/') ? zone : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Auth errors are deliberately uniform. Distinguishing "no such account" from
@@ -78,13 +104,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  /**
+   * Load the profile, and keep its stored zone level with the device.
+   *
+   * The sync is inlined rather than a second function on purpose: as a
+   * separate one it made this an unstable reference and the effects below
+   * started reporting a missing dependency. One function, no chain.
+   *
+   * It runs on load rather than only at sign-up because the accounts that most
+   * need it already exist -- every one of them says America/Toronto, the schema
+   * default that nothing ever changed -- and because OAuth users never see the
+   * sign-up form at all. It writes only when the two differ, so it is one
+   * comparison on almost every load and a request on almost none.
+   *
+   * Following the device is the behaviour "nine in your morning" describes.
+   * Settings says where the value comes from, so somebody who travels can see
+   * why their reminders moved rather than wondering.
+   */
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
       .select('id, full_name, avatar_url, role, grade, timezone, onboarded_at')
       .eq('id', userId)
       .maybeSingle()
-    setProfile((data as Profile) ?? null)
+
+    const loaded = (data as Profile) ?? null
+    setProfile(loaded)
+    if (!loaded) return
+
+    const zone = deviceTimeZone()
+    if (!zone || zone === loaded.timezone) return
+
+    const { error } = await supabase.from('profiles')
+      .update({ timezone: zone }).eq('id', loaded.id)
+    if (!error) setProfile({ ...loaded, timezone: zone })
   }
 
   useEffect(() => {
@@ -147,14 +200,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         if (error) return { error: friendlyError(error.message) }
 
-        // Role is a second call on purpose. It cannot ride along in the signup
-        // metadata, because that is user-controlled input the trigger copies
-        // verbatim -- and role is the column is_admin() reads. It goes through
-        // the profiles policy instead, which permits student and parent and
-        // refuses admin. See 20260907000100.
+        // Role goes through set_my_role rather than an update, because the
+        // role column is not granted to clients at all -- naming it in an
+        // update is refused by Postgres before any policy runs. That function
+        // is the one path through, and it refuses admin by name.
+        // See 20260907000200.
         if (about && data.user) {
+          await supabase.rpc('set_my_role', { new_role: about.role })
           await supabase.from('profiles')
-            .update({ full_name: about.fullName, role: about.role })
+            .update({
+              full_name: about.fullName,
+              grade: about.grade?.trim() || null,
+              timezone: deviceTimeZone(),
+            })
             .eq('id', data.user.id)
         }
         return { error: null }

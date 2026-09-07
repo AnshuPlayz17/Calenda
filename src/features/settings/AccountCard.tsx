@@ -16,10 +16,13 @@ import { supabase } from '@/lib/supabase'
  * screen worse rather than better: a typo made once at sign-up would have been
  * permanent.
  *
- * Email and time zone stay read-only. Changing an address is an auth operation
- * with its own confirmation flow, and the time zone is read from the browser
- * rather than chosen -- inventing a picker for it would be offering a setting
- * that the app then overrides.
+ * Email and time zone stay read-only, for different reasons. Changing an
+ * address is an auth operation with its own confirmation flow. The time zone
+ * genuinely is read from the device now -- a claim this comment made one
+ * commit too early, before anything in the app called resolvedOptions() and
+ * while every account in the world still said America/Toronto. Offering a
+ * picker would be offering a setting the app then overwrites on next load, so
+ * it says where the value comes from instead.
  */
 export function AccountCard() {
   const { profile, user, refreshProfile } = useAuth()
@@ -39,10 +42,13 @@ export function AccountCard() {
     setGrade(profile.grade ?? '')
   }, [profile])
 
+  const isAdmin = profile?.role === 'admin'
   const dirty = Boolean(profile) && (
     fullName !== (profile?.full_name ?? '')
-    || role !== (profile?.role === 'parent' ? 'parent' : 'student')
     || grade !== (profile?.grade ?? '')
+    // An admin's radios never match their stored role, so counting that as an
+    // edit would leave Save permanently lit for them.
+    || (!isAdmin && role !== (profile?.role === 'parent' ? 'parent' : 'student'))
   )
 
   async function save(e: React.FormEvent) {
@@ -52,20 +58,25 @@ export function AccountCard() {
     setError(null)
     setSaved(false)
 
+    // Two calls, because role is not one of the columns a client may name in
+    // an update -- see supabase/migrations/20260907000200. The granted fields
+    // go through the table; the role goes through the function that guards it.
     const { error } = await supabase.from('profiles')
       .update({
         full_name: fullName.trim() || null,
-        role,
         grade: grade.trim() || null,
       })
       .eq('id', user.id)
 
+    // An admin is left alone. The radios here can only say student or parent,
+    // so calling this for an admin would demote them for pressing Save on a
+    // form they opened to fix a typo in their name.
+    const roleError = profile?.role === 'admin' || role === profile?.role
+      ? null
+      : (await supabase.rpc('set_my_role', { new_role: role })).error
+
     setBusy(false)
-    if (error) {
-      // The policy refuses rather than explains, which is correct of it. An
-      // admin editing their own row here keeps their role; nobody else can
-      // reach a value the policy would refuse, because the control only offers
-      // the two it allows.
+    if (error || roleError) {
       setError('That could not be saved. Please try again.')
       return
     }
@@ -113,12 +124,13 @@ export function AccountCard() {
             ))}
           </div>
           {profile?.role === 'admin' && (
-            // Shown rather than hidden. An admin who edits this card would
-            // otherwise silently demote themselves by saving a form whose
-            // radios cannot represent the role they hold.
-            <p className="mt-2 text-[12.5px] leading-relaxed text-warning">
-              This account is an administrator. Saving here sets it to
-              {' '}{role}{' '}and gives up that access.
+            // Said rather than hidden. The radios cannot represent admin, so
+            // without this the card would look like it had quietly demoted
+            // somebody the moment they opened it. Saving does not: the role
+            // call is skipped entirely for an admin.
+            <p className="mt-2 text-[12.5px] leading-relaxed text-text-subtle">
+              This account is an administrator. That is set in the database, not
+              here, and saving this form leaves it alone.
             </p>
           )}
         </div>
@@ -138,6 +150,10 @@ export function AccountCard() {
           <div>
             <dt className="label-caps">Time zone</dt>
             <dd className="mt-0.5 text-[13.5px] text-text">{profile?.timezone ?? '—'}</dd>
+            <dd className="mt-0.5 text-[12px] leading-relaxed text-text-subtle">
+              Read from this device. Reminders arrive at nine in your morning,
+              wherever that is.
+            </dd>
           </div>
         </dl>
 

@@ -215,18 +215,28 @@ than another round of guessing at two emails an hour.
 
 ## Identity, and the hole that was in it
 
-**Any signed-in user could make themselves an admin, and nothing caught it.**
-`profiles_update` was row-level with no column restriction — `id = auth.uid()`
-in both `using` and `with check` — so one call from the browser console set
-`role = 'admin'`, and `is_admin()` gates 19 of the 54 policies. The `init`
-migration states the intent ("the client never chooses its own role") and that
-is true of the trigger, which runs on INSERT. Nobody closed UPDATE.
+**The role column is not writable by a client, and the control is a GRANT, not
+a policy.** `rls.sql` ends with `revoke update on profiles from authenticated`
+followed by a grant naming five columns; `role` is deliberately absent. Postgres
+checks column privileges *before* RLS, so an update naming `role` is refused
+before any policy runs.
 
-The six adversarial tests did not catch it because they *set* `role = 'admin'`
-as fixture setup and then check what an admin cannot read — the escalation path
-itself was never under test. **When a test file uses a privilege as setup, ask
-whether anything tests the acquiring of it.** Fixed in `20260907000100`; there
-are now 16 assertions, four of them on this.
+This was misread once, badly. Reading `profiles_update` alone — row-level, no
+column restriction — looks exactly like a privilege escalation, and it was
+reported as one, on a partial read of a file whose next screen said otherwise.
+**Before calling something a hole, check the grants as well as the policies.**
+`20260907000100` came out of that mistake; it is kept as a redundant second
+layer, and `20260907000200` records the correction.
+
+`set_my_role()` is the only way through: a definer function that accepts
+`student` or `parent` and refuses `admin` by name. Admin is granted in SQL by
+somebody who already has the database, never from a client.
+
+The six original tests would not have caught a real escalation either: they
+*set* `role = 'admin'` as fixture setup and then check what an admin cannot
+read, so the acquiring of the privilege was never attacked. **When a test file
+uses a privilege as setup, ask whether anything tests the getting of it.** 19
+assertions now.
 
 **Nothing in the app could set a name or a role.** Password sign-ups arrived
 with `full_name` null forever — `handle_new_user()` reads it out of OAuth
@@ -235,9 +245,29 @@ metadata, which a password sign-up has none of — everyone was silently
 and `AccountCard` makes all three editable, because collecting something a
 person cannot correct is worse than not collecting it.
 
-Role goes through a second `update` rather than the sign-up metadata: that
+Role goes through `set_my_role()` rather than the sign-up metadata: that
 metadata is user-controlled input the trigger copies verbatim, and role is the
 column `is_admin()` reads.
+
+**Every account in the world said `America/Toronto`.** The schema defaults it
+and nothing ever changed it — there was no `resolvedOptions()` call anywhere —
+while the dispatcher schedules on `(start_date + time '09:00') at time zone
+pr.timezone` and reads quiet hours in the same zone. A user in London was
+getting their "nine in the morning" at two in the afternoon, under a landing
+page with a whole chapter claiming otherwise. It is read from the device on
+every profile load now, which also catches every account that already exists.
+
+**The sign-up email path is two steps, and that is a measurement.** Six fields
+plus a submit button do not fit a 700px window: the harness found "Create
+account" 41px below the fold at 1280×700 and 123px at 375×667. Step two is the
+same shape the OAuth first-run screen will need.
+
+**`authcheck.mjs` only ever measured the screen that offers the form, never the
+form.** It existed to catch a submit button below the fold and for its whole
+life measured a state where that button is not rendered — so every field added
+was unchecked. It now walks the choose screen, the form, and sign-up's second
+step: 34 configurations. Anything inside `[data-dev-only]` is skipped, because
+the not-connected card is absent whenever a Supabase project is configured.
 
 **OAuth users never see the sign-up form.** They get a name from their provider
 and are still silently `student`. The fix is a first-run step, not a form field.

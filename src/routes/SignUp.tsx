@@ -36,9 +36,20 @@ export function SignUp() {
   // sat below the fold behind three promises, three provider buttons and three
   // inputs. Nothing was removed to fix it; what someone is not doing yet is
   // just not drawn yet.
-  const [useEmail, setUseEmail] = useState(false)
+  // The email path is two steps, and that is a measurement rather than a
+  // preference. Six fields plus a submit button do not fit a 700px window: the
+  // harness found "Create account" 41px below the fold at 1280x700 and 123px
+  // below at 375x667, with an input below it too. Padding could not buy that
+  // back. Each step fits with room to spare, and the second step is the same
+  // shape the first-run screen for OAuth users will need, since they never see
+  // this form at all.
+  //
+  // Nothing is created until the end. Making the account after step one would
+  // leave a nameless account behind every abandoned sign-up.
+  const [step, setStep] = useState<'choose' | 'credentials' | 'about'>('choose')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<'student' | 'parent'>('student')
+  const [grade, setGrade] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -46,6 +57,18 @@ export function SignUp() {
   const [error, setError] = useState<string | null>(null)
 
   if (session || preview.active) return <Navigate to="/dashboard" replace />
+
+  function toAbout(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    // Checked before moving on, so a mismatch is caught on the step that
+    // contains the fields rather than one screen later.
+    if (password !== confirm) return setError("Those passwords don't match.")
+    if (password.length < MIN_PASSWORD) {
+      return setError(`Use at least ${MIN_PASSWORD} characters.`)
+    }
+    setStep('about')
+  }
 
   async function withProvider(p: Provider) {
     setBusy(p)
@@ -60,18 +83,13 @@ export function SignUp() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
-    // Checked here as well as by the input, so a mismatch is caught before a
-    // round trip rather than after one.
-    if (password !== confirm) return setError("Those passwords don't match.")
-    if (password.length < MIN_PASSWORD) {
-      return setError(`Use at least ${MIN_PASSWORD} characters.`)
-    }
-
     setBusy('password')
     const { error } = await signUpWithPassword(email, password, {
       fullName: fullName.trim(),
       role,
+      // A parent has no grade. Sending the field's last value because it was
+      // typed before the answer changed would file a parent in year eleven.
+      grade: role === 'student' ? grade.trim() : '',
     })
     setBusy(null)
     if (error) return setError(error)
@@ -99,7 +117,7 @@ export function SignUp() {
     >
       <AuthError message={error} />
 
-      {!useEmail ? (
+      {step === 'choose' && (
         <div className="mt-6 flex flex-col gap-2">
           {/* The three promises that used to sit here are on the panel now,
               where they became four scenes of the real thing rather than four
@@ -110,28 +128,21 @@ export function SignUp() {
 
           <Separator>or</Separator>
 
-          <Button variant="ghost" size="md" fullWidth onClick={() => setUseEmail(true)}>
+          <Button variant="ghost" size="md" fullWidth onClick={() => setStep('credentials')}>
             <Mail className="h-4 w-4" aria-hidden /> Use an email and password
           </Button>
         </div>
-      ) : (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
-          <Input
-            label="Your name"
-            autoComplete="name"
-            required
-            autoFocus
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
+      )}
 
-          <RolePicker value={role} onChange={setRole} />
-
+      {step === 'credentials' && (
+        <form onSubmit={toAbout} className="mt-6 flex flex-col gap-4">
+          <StepMark at={1} />
           <Input
             label="Email"
             type="email"
             autoComplete="email"
             required
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -154,16 +165,48 @@ export function SignUp() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
+          {/* Not "Create account". Nothing is created by this press, and a
+              button that names an action it does not perform is the reason
+              people stop reading buttons. */}
+          <Button type="submit" size="lg" fullWidth>Continue</Button>
+          <BackLink onClick={() => { setStep('choose'); setError(null) }}>
+            All sign-up options
+          </BackLink>
+        </form>
+      )}
+
+      {step === 'about' && (
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+          <StepMark at={2} />
+          <Input
+            label="Your name"
+            autoComplete="name"
+            required
+            autoFocus
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+
+          <RolePicker value={role} onChange={setRole} />
+
+          {/* Only a student has one, and it is rendered conditionally rather
+              than disabled: a greyed-out field still occupies the fold and
+              still reads as something the reader has failed to fill in. */}
+          {role === 'student' && (
+            <Input
+              label="Grade"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              hint="Optional. Only you and a parent you link with can see it."
+            />
+          )}
+
           <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
             Create account
           </Button>
-          <button
-            type="button"
-            onClick={() => setUseEmail(false)}
-            className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> All sign-up options
-          </button>
+          <BackLink onClick={() => { setStep('credentials'); setError(null) }}>
+            Back
+          </BackLink>
         </form>
       )}
 
@@ -171,6 +214,42 @@ export function SignUp() {
         Creating an account needs a Supabase project. You can still look around.
       </NotConnected>
     </AuthLayout>
+  )
+}
+
+/**
+ * Which of the two steps this is.
+ *
+ * Two marks rather than the words "Step 1 of 2", because the count is the
+ * whole message and the sentence is four times the height of it on a window
+ * that has none to spare.
+ */
+function StepMark({ at }: { at: 1 | 2 }) {
+  return (
+    <div className="flex items-center gap-1.5" aria-label={`Step ${at} of 2`}>
+      {[1, 2].map((n) => (
+        <span
+          key={n}
+          aria-hidden
+          className={
+            'block h-1 rounded-full transition-all duration-300 '
+            + (n === at ? 'w-6 bg-brand' : 'w-3 bg-border')
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
+function BackLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {children}
+    </button>
   )
 }
 

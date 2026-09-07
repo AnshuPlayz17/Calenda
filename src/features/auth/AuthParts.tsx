@@ -87,7 +87,12 @@ export function NotConnected({ children }: { children: ReactNode }) {
   if (isConfigured) return null
 
   return (
-    <div className="mt-8 rounded-xl border border-border bg-surface p-4">
+    // Marked so the harness can tell it apart from the page. It renders only
+    // when there is no Supabase project configured, which is a local condition
+    // and never true for a visitor -- verified by building with credentials,
+    // where it is absent entirely. Measuring it in the fold check was measuring
+    // a screen nobody is ever shown.
+    <div data-dev-only className="mt-8 rounded-xl border border-border bg-surface p-4">
       <p className="text-[13.5px] font-medium text-text">Not connected yet</p>
       <p className="mt-1 text-[12.5px] leading-relaxed text-text-muted">{children}</p>
       <Button size="sm" className="mt-3" onClick={preview.enter}>
