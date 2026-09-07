@@ -22,6 +22,7 @@ export type LandingSection = {
 
 export const LANDING_SECTIONS: LandingSection[] = [
   { id: 'top', label: 'Opening', blurb: 'What Calenda is, in one screen' },
+  { id: 'schools', label: 'Schools', blurb: 'Fifteen independent schools across the GTA' },
   { id: 'glance', label: 'A day', blurb: 'One event, close up and far away' },
   { id: 'pipeline', label: 'The path', blurb: 'Where a date comes from, end to end' },
   { id: 'import', label: 'The import', blurb: 'Fifty-one dates, fifteen of them identical' },

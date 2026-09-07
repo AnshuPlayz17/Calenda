@@ -81,6 +81,18 @@ access as the wrong user and requires it to fail:
 - The landing page's world scene says exactly this and nothing more. The clock
   readings on it come from `Intl.DateTimeFormat` in the reader's browser.
 
+## The schools section (src/data/schools.ts)
+- Fifteen GTA independent schools are named. Every `site` URL was verified in
+  September 2026; `acronym` is present only where the school uses one itself.
+- **No school has agreed to anything.** Not a partner, sponsor, customer or
+  endorser of any of them. The page may say Calenda *works with* their published
+  calendars — a compatibility statement — and must not say partnered, trusted by,
+  official, or our schools.
+- One school's calendar has ever been imported. The section deliberately does not
+  distinguish them, so no card may claim a live import either.
+- Crests are hotlinked from each school's own server and are that school's
+  trademark. A monogram stands in wherever a URL is absent or fails to load.
+
 ## NOT BUILT — must not appear on the page
 - **A user base.** There is one user and a handful of testers. No map, counter
   or testimonial may imply otherwise. The world scene is a map of where Calenda
