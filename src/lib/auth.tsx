@@ -28,8 +28,13 @@ type AuthContextValue = {
   signUpWithPassword: (
     email: string,
     password: string,
-    about?: { fullName: string; role: 'student' | 'parent'; grade?: string },
-  ) => Promise<{ error: string | null }>
+    about?: SignUpDetails,
+    // `warning` is for something that went wrong *after* the account existed --
+    // an invite code that did not take. It is not an error: refusing to sign
+    // somebody in over a typo in an optional field would be the worse outcome,
+    // and every one of these is fixable in Settings. But a parent who typed a
+    // code needs to be told it did not work, so it cannot be swallowed either.
+  ) => Promise<{ error: string | null; warning?: string | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
   /** Sends a recovery link. Only reachable when `emailDelivery` is on. */
   resetPassword: (email: string) => Promise<{ error: string | null }>
@@ -37,6 +42,19 @@ type AuthContextValue = {
   updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+}
+
+/** Everything the sign-up form collects beyond an address and a password. */
+export type SignUpDetails = {
+  fullName: string
+  role: 'student' | 'parent'
+  /** Students only. A parent has no grade and none is sent for them. */
+  grade?: string
+  /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
+  school?: string
+  /** Parents only: a code from their student, and how they are related. */
+  inviteCode?: string
+  relation?: 'mother' | 'father' | 'guardian' | 'other'
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -97,6 +115,61 @@ function friendlyError(message: string): string {
     return 'That sign-in method is not available yet.'
   }
   return 'Something went wrong signing you in. Please try again.'
+}
+
+/**
+ * Everything the form collected, written after the account exists.
+ *
+ * Deliberately several calls rather than one, because the columns live behind
+ * different doors. role is not granted to clients at all and goes through
+ * set_my_role; the invite is redeemed by a definer function so a parent never
+ * gains read access to the invites table; the rest are plain columns on the
+ * profile. Trying to do it in one statement is what shipped broken before --
+ * naming an ungranted column makes Postgres refuse the whole update, taking
+ * the name down with it.
+ *
+ * Failures here do not fail the sign-up. The account exists by this point and
+ * every one of these is correctable in Settings; refusing to sign somebody in
+ * because their invite code had a typo would be the worse outcome. The one
+ * exception is the code itself, which is reported, because a parent who typed
+ * it needs to know it did not take.
+ */
+async function applyDetails(userId: string, about: SignUpDetails): Promise<string | null> {
+  await supabase.rpc('set_my_role', { new_role: about.role })
+
+  await supabase.from('profiles')
+    .update({
+      full_name: about.fullName,
+      grade: about.grade?.trim() || null,
+      school: about.school?.trim() || null,
+      timezone: deviceTimeZone(),
+    })
+    .eq('id', userId)
+
+  if (about.role !== 'parent' || !about.inviteCode?.trim()) return null
+
+  const { data, error } = await supabase.rpc('redeem_parent_invite', {
+    invite_code: about.inviteCode.trim(),
+  })
+  if (error) {
+    // The function raises with a sentence written for a person -- "That code is
+    // not valid. Ask for a new one." -- so it is passed through rather than
+    // replaced with something vaguer.
+    return error.message
+  }
+
+  // The relation is set afterwards rather than by widening the redeem
+  // function. Adding a parameter to a definer function does not preserve its
+  // existing call sites -- it makes them ambiguous -- and the function already
+  // returns the student it linked, so there is nothing to add.
+  const studentId = (data as { out_student_id: string }[] | null)?.[0]?.out_student_id
+  if (studentId && about.relation) {
+    await supabase.from('parent_links')
+      .update({ relation: about.relation })
+      .eq('parent_id', userId)
+      .eq('student_id', studentId)
+  }
+  return null
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -205,17 +278,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // update is refused by Postgres before any policy runs. That function
         // is the one path through, and it refuses admin by name.
         // See 20260907000200.
-        if (about && data.user) {
-          await supabase.rpc('set_my_role', { new_role: about.role })
-          await supabase.from('profiles')
-            .update({
-              full_name: about.fullName,
-              grade: about.grade?.trim() || null,
-              timezone: deviceTimeZone(),
-            })
-            .eq('id', data.user.id)
-        }
-        return { error: null }
+        const warning = about && data.user
+          ? await applyDetails(data.user.id, about)
+          : null
+        return { error: null, warning }
       },
 
       async signInWithMagicLink(email) {
