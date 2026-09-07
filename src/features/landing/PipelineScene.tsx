@@ -1,6 +1,6 @@
 import { motion, useTransform } from 'motion/react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { MotionValue } from 'motion/react'
-import { useRef } from 'react'
 import { useScroll, useReducedMotion } from 'motion/react'
 import { held } from './scrollScene'
 import { DataPath } from './DataPath'
@@ -65,6 +65,7 @@ export function PipelineScene() {
   const ref = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.85', 'end 0.65'] })
+  const { scrollY } = useScroll()
 
   return (
     <section ref={ref} className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
@@ -82,8 +83,10 @@ export function PipelineScene() {
           <DataPath />
         </div>
 
-        <div className="relative mt-14 pl-8 sm:pl-12">
-          <Spine progress={scrollYProgress} reduce={reduce} />
+        {/* The stages are indented far enough that the chip, centred on the line,
+            clears the text column. */}
+        <div className="relative mt-14 pl-8 sm:pl-16">
+          <Spine scrollY={scrollY} reduce={reduce} />
           <ol className="flex flex-col gap-9 sm:gap-11">
             {STAGES.map((s, i) => (
               <Stage key={s.n} stage={s} index={i} progress={scrollYProgress} reduce={reduce} />
@@ -106,34 +109,76 @@ export function PipelineScene() {
  */
 const FORMS = ['a line of text', 'a staged row', 'a decision', 'one calendar', 'an event', 'a reminder']
 
-/** The line the stages hang from, drawn as you read down it. */
-function Spine({ progress, reduce }: { progress: MotionValue<number>; reduce: boolean | null }) {
-  const scaleY = useTransform(progress, [0, 0.92], [0, 1])
-  // `top` rather than a transform: a percentage translate would be a
-  // percentage of the chip's own height, and the distance it has to cover is
-  // the spine's. One absolutely-positioned element laying itself out costs
-  // nothing measurable; measuring the spine on every resize would cost more.
-  const top = useTransform(progress, [0, 0.92], ['0%', '100%'])
+/**
+ * Where on the screen the reader is assumed to be looking.
+ *
+ * The line's head, and the chip riding it, are positioned from this rather
+ * than from the section's scroll progress. Progress was the obvious choice and
+ * it was wrong by a lot: the spine is nineteen hundred pixels of stages inside
+ * a section that scrolls twenty-five hundred, so a head driven by progress
+ * barely moves relative to the window -- it sat below the fold for the whole
+ * scene and never appeared at all. Driven from the reading line it is level
+ * with the stage being read by construction, which is also the only definition
+ * of "not delayed" that holds at every viewport height.
+ */
+const READ_LINE = 0.46
+
+/**
+ * The line the stages hang from, drawn to wherever the reader has got to.
+ *
+ * One measurement of the spine, taken on mount and on resize, and then the
+ * head is arithmetic on the window's scroll position -- no layout read per
+ * frame, and no dependence on how tall the six stages happen to be.
+ */
+function Spine({ scrollY, reduce }: { scrollY: MotionValue<number>; reduce: boolean | null }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const geom = useRef({ top: 0, height: 1 })
+
+  const measure = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    geom.current = { top: r.top + window.scrollY, height: Math.max(1, r.height) }
+  }, [])
+
+  useEffect(() => {
+    measure()
+    // The bundled fonts land after first paint and change every stage's height.
+    const settle = window.setTimeout(measure, 400)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.clearTimeout(settle)
+      window.removeEventListener('resize', measure)
+    }
+  }, [measure])
+
+  const head = useTransform(scrollY, (y) => {
+    const line = y + window.innerHeight * READ_LINE
+    return Math.min(1, Math.max(0, (line - geom.current.top) / geom.current.height))
+  })
+  const top = useTransform(head, (v) => `${v * 100}%`)
 
   return (
-    <span aria-hidden className="absolute bottom-2 left-[9px] top-2 w-px bg-border sm:left-[13px]">
+    <span ref={ref} aria-hidden className="absolute bottom-2 left-[9px] top-2 w-px bg-border sm:left-[13px]">
       <motion.span
-        style={reduce ? { transformOrigin: 'top' } : { scaleY, transformOrigin: 'top' }}
+        style={reduce ? { transformOrigin: 'top' } : { scaleY: head, transformOrigin: 'top' }}
         className="absolute inset-0 block bg-accent"
       />
+
+      {/* Centred on the line rather than beside it. Off to one side it read as
+          a label pointing at the line; sitting on it, it reads as the thing
+          travelling down it -- which is what it is. The dot it used to carry
+          went with the move: a dot inside a chip on a line is three marks
+          saying one thing. */}
       {!reduce && (
         <motion.span
           style={{ top }}
-          className="absolute left-0 grid -translate-x-1/2 -translate-y-1/2 place-items-center"
+          className="absolute left-0 hidden -translate-x-1/2 -translate-y-1/2 sm:block"
         >
-          <span className="relative grid place-items-center">
-            <span className="absolute h-6 w-6 rounded-full bg-accent/15" />
-            <span className="relative block h-2 w-2 rounded-full bg-accent" />
-            <span className="absolute left-4 whitespace-nowrap rounded-md border border-accent-border bg-bg px-2 py-1 text-2xs font-medium text-accent shadow-sm">
-              {FORMS.map((form, i) => (
-                <Form key={form} form={form} index={i} progress={progress} />
-              ))}
-            </span>
+          <span className="relative block whitespace-nowrap rounded-full border border-accent-border bg-bg px-3 py-1 text-2xs font-medium text-accent shadow-sm">
+            {FORMS.map((form, i) => (
+              <Form key={form} form={form} index={i} head={head} />
+            ))}
           </span>
         </motion.span>
       )}
@@ -147,13 +192,15 @@ function Spine({ progress, reduce }: { progress: MotionValue<number>; reduce: bo
  * They are stacked rather than swapped, so the chip's width is the widest of
  * the six at all times and never reflows underneath the reader mid-travel.
  */
-function Form({ form, index, progress }: { form: string; index: number; progress: MotionValue<number> }) {
-  const step = 0.92 / FORMS.length
+function Form({ form, index, head }: { form: string; index: number; head: MotionValue<number> }) {
+  // Named off the head's own position down the line, so the chip says what the
+  // stage it is level with says.
+  const step = 1 / FORMS.length
   const at = index * step
   const [r, v] = index === FORMS.length - 1
-    ? held([at, at + step * 0.3], [0, 1])
-    : held([at, at + step * 0.3, at + step * 0.9, at + step * 1.2], [0, 1, 1, 0])
-  const opacity = useTransform(progress, r, v)
+    ? held([at, at + step * 0.25], [0, 1])
+    : held([at, at + step * 0.25, at + step * 0.85, at + step * 1.1], [0, 1, 1, 0])
+  const opacity = useTransform(head, r, v)
 
   return (
     <motion.span
@@ -173,6 +220,8 @@ function Stage({
   progress: MotionValue<number>
   reduce: boolean | null
 }) {
+  // The same span the line draws over, so the stage lighting up and the chip
+  // arriving at it are the same moment rather than two that nearly coincide.
   const at = (index / STAGES.length) * 0.92
   const [r, v] = held([at, at + 0.14], [0, 1])
   const t = useTransform(progress, r, v)
@@ -186,7 +235,7 @@ function Stage({
       <motion.span
         aria-hidden
         style={reduce ? undefined : { scale: dot }}
-        className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border-2 border-bg bg-accent sm:-left-12"
+        className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border-2 border-bg bg-accent sm:-left-16"
       />
       <p className="label-caps tabular">{stage.n}</p>
       <h3 className="mt-1.5 max-w-[34ch] text-[16.5px] font-medium leading-snug text-text sm:text-[18px]">
