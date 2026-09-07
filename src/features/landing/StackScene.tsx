@@ -1,27 +1,30 @@
-import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react'
+import { motion, useMotionTemplate, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
-import { useRef } from 'react'
 import { CalendarClock, GraduationCap, NotebookPen } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { DemoPanel } from '@/features/welcome/DemoPanel'
 import type { DemoKind } from '@/features/welcome/DemoPanel'
-import { held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
+import { ChapterHeading, Measure, PinnedFrame } from './Chapter'
 
 /**
- * What else it does, as a deck that stacks.
+ * What else it does, panned across rather than stacked up.
  *
- * This replaces a four-chapter pinned tour, for two reasons. Two of its
- * chapters -- the school calendar, and what a parent can see -- are now told
- * properly by the import scene and the six attempts, so it was repeating the
- * page back to itself. And it sat directly after a pinned scene: two
- * full-viewport pins in a row is the point at which a reader stops reading the
- * argument and starts recognising the device.
+ * This was a CSS-sticky deck: three cards that gathered on top of each other
+ * as you passed. The deck was chosen because it cost no extra scroll and
+ * because the chapter before it is pinned -- two full-viewport pins in a row
+ * is where a reader stops reading the argument and starts recognising the
+ * device.
  *
- * So this is a different mechanism. Each card sticks a little lower than the
- * one before, and the deck gathers as you pass -- the sections layer instead of
- * replacing each other, which is closer to what the product actually is. It is
- * ordinary CSS stickiness, so it costs no extra scroll distance and there is
- * nothing to keep in sync.
+ * It travels sideways now. The page had exactly one sideways move in twelve
+ * chapters and it was asked for more, and this is the right chapter to spend
+ * it on: three peers, no order between them, which is what a row is for and
+ * what a stack quietly denies by putting one on top.
+ *
+ * Deliberately not the same sideways move as the questions chapter. That one
+ * is a rail of discrete stops -- one card centred, step, next card. This is a
+ * continuous pan across three full-width panels, so the reader is travelling
+ * along one surface rather than clicking through a set.
  */
 
 type Layer = {
@@ -62,55 +65,109 @@ const LAYERS: Layer[] = [
   },
 ]
 
-/** Clears the page header, then a card's worth of offset for each layer above. */
-const TOP = (i: number) => 84 + i * 16
+const LEAD = 0.12
+const SPAN = 0.74
 
 export function StackScene() {
-  const ref = useRef<HTMLDivElement>(null)
-  const reduce = useReducedMotion()
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
+  const { ref, reduce, progress, height } = useScrollScene(paced(3))
+
+  const heading = (
+    <ChapterHeading
+      eyebrow="What else it does"
+      title="Three more things, and none of them ask you twice."
+    />
+  )
+
+  // One value moves the whole surface. Panels are placed in panel-widths, not
+  // in stage fractions -- a percentage translate is a percentage of the track,
+  // which is three panels wide, and that is the trap that once piled
+  // forty-nine chips into a corner.
+  const [slideR, slideV] = held([LEAD, LEAD + SPAN], [0, LAYERS.length - 1])
+  const slide = useTransform(progress, slideR, slideV)
+  const back = useTransform(slide, (v) => -v)
+  const x = useMotionTemplate`calc(var(--panel-stride) * ${back})`
+
+  if (reduce) {
+    return (
+      <section className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
+        <Measure>
+          {heading}
+          <div className="mt-12 flex flex-col gap-8">
+            {LAYERS.map((layer) => <Panel key={layer.eyebrow} layer={layer} />)}
+          </div>
+        </Measure>
+      </section>
+    )
+  }
 
   return (
-    <section ref={ref} className="relative z-10 px-5 pb-24 pt-16 sm:px-8 sm:pb-32 sm:pt-24">
-      <div className="mx-auto max-w-[1120px]">
-        <p className="label-caps text-accent">What else it does</p>
-        <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
-          Three more things, and none of them ask you twice.
-        </h2>
+    <section ref={ref} className="relative z-10" style={{ height }}>
+      <PinnedFrame>
+        <Measure className="shrink-0">{heading}</Measure>
 
-        <div className="mt-10 flex flex-col gap-5">
-          {LAYERS.map((layer, i) => (
-            <Card key={layer.eyebrow} layer={layer} index={i} progress={scrollYProgress} reduce={reduce} />
-          ))}
+        {/* The track runs to both edges of the window: a panel arriving from
+            off-screen is the whole signal that there are more of them. */}
+        <div className="mt-10 overflow-hidden">
+          <motion.ul style={{ x, ...TRACK }} className="flex items-stretch gap-8 will-change-transform">
+            {LAYERS.map((layer, i) => (
+              <Slide key={layer.eyebrow} layer={layer} index={i} progress={progress} />
+            ))}
+          </motion.ul>
         </div>
-      </div>
+      </PinnedFrame>
     </section>
   )
 }
 
-function Card({
-  layer, index, progress, reduce,
-}: {
+/**
+ * The track's geometry, as CSS rather than measured pixels.
+ *
+ * The padding centres the first and last panel in the window at either end of
+ * the travel, whatever the window is.
+ */
+const TRACK = {
+  '--panel': 'clamp(280px, 84vw, 940px)',
+  '--panel-stride': 'calc(var(--panel) + 2rem)',
+  paddingLeft: 'max(1.25rem, calc(50% - var(--panel) / 2))',
+  paddingRight: 'max(1.25rem, calc(50% - var(--panel) / 2))',
+} as React.CSSProperties
+
+/** One panel, coming forward as it reaches the centre of the window. */
+function Slide({ layer, index, progress }: {
   layer: Layer
   index: number
   progress: MotionValue<number>
-  reduce: boolean | null
 }) {
-  const { Icon, eyebrow, title, body, demo } = layer
-  const last = index === LAYERS.length - 1
+  const step = SPAN / (LAYERS.length - 1)
+  const at = LEAD + index * step
 
-  // A card recedes slightly once the next one has covered it, so the deck reads
-  // as depth rather than as three cards that happen to overlap. The last one
-  // never recedes: there is nothing on top of it to recede behind.
-  const from = index / LAYERS.length
-  const [range, values] = held([from + 0.12, from + 0.42], [1, last ? 1 : 0.965])
-  const scale = useTransform(progress, range, values)
+  const range: number[] = []
+  const values: number[] = []
+  if (index > 0) { range.push(at - step * 0.7); values.push(0.3) }
+  range.push(at); values.push(1)
+  if (index < LAYERS.length - 1) { range.push(at + step * 0.7); values.push(0.3) }
+  const [fr, fv] = held(range, values)
+
+  const focus = useTransform(progress, fr, fv)
+  const scale = useTransform(focus, [0.3, 1], [0.93, 1])
+  // The demo drifts against the pan. Three panels moving as one flat sheet is
+  // a filmstrip; a foreground that lags its own card is a surface with depth,
+  // and it costs one more transform per panel.
+  const [pR, pV] = held([at - step, at + step], [26, -26])
+  const drift = useTransform(progress, pR, pV)
 
   return (
-    <motion.article
-      style={reduce ? undefined : { scale, top: TOP(index) }}
-      className="sticky overflow-hidden rounded-2xl border border-border bg-surface shadow-md"
-    >
+    <motion.li style={{ opacity: focus, scale }} className="w-[var(--panel)] shrink-0">
+      <Panel layer={layer} drift={drift} />
+    </motion.li>
+  )
+}
+
+function Panel({ layer, drift }: { layer: Layer; drift?: MotionValue<number> }) {
+  const { Icon, eyebrow, title, body, demo } = layer
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-surface shadow-md">
       <div className="grid items-center gap-8 p-6 sm:p-9 lg:grid-cols-[0.9fr_1fr] lg:gap-12">
         <div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent-border bg-accent-subtle px-3 py-1 text-[12px] font-medium text-accent">
@@ -124,10 +181,10 @@ function Card({
             {body}
           </p>
         </div>
-        <div className="h-[280px] sm:h-[320px]" aria-hidden>
+        <motion.div style={drift ? { x: drift } : undefined} className="h-[240px] sm:h-[300px]" aria-hidden>
           <DemoPanel kind={demo} />
-        </div>
+        </motion.div>
       </div>
-    </motion.article>
+    </article>
   )
 }

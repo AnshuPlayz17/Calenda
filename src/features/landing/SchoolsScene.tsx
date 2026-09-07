@@ -372,11 +372,11 @@ function Card({
             rel="noopener noreferrer"
             aria-label={`${school.name} — opens the school's website`}
             style={{ y: cardY, scale: magnet }}
-            className="group relative block origin-bottom outline-none"
+            className="group relative block origin-bottom outline-none transition-transform duration-200 hover:-translate-y-1"
           >
             <span
               style={{ borderRadius: 'calc(var(--tile, 56px) * 0.26)' }}
-              className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-accent-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+              className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center border border-border bg-gradient-to-b from-surface to-bg shadow-xs transition-[border-color,box-shadow] duration-200 group-hover:border-accent-border group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
             >
               <Crest school={school} />
               <ArrowUpRight
@@ -507,7 +507,7 @@ function StaticSchools() {
                     ['--tile' as string]: 'clamp(52px, 7.5vw, 96px)',
                     borderRadius: 'calc(var(--tile) * 0.26)',
                   }}
-                  className="grid h-[var(--tile)] w-[var(--tile)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-accent-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+                  className="grid h-[var(--tile)] w-[var(--tile)] place-items-center border border-border bg-gradient-to-b from-surface to-bg shadow-xs transition-[border-color,box-shadow,transform] duration-200 group-hover:-translate-y-1 group-hover:border-accent-border group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
                 >
                   <Crest school={school} />
                 </span>

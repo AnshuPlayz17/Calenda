@@ -227,7 +227,7 @@ function Card({
   return (
     <motion.li
       style={{ opacity: focus, scale }}
-      className="flex w-[var(--card)] shrink-0 flex-col rounded-2xl border border-border bg-surface p-6 sm:p-8"
+      className="group flex w-[var(--card)] shrink-0 flex-col rounded-2xl border border-border bg-surface p-6 transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-accent-border sm:p-8"
     >
       <span className="label-caps tabular">
         {String(index + 1).padStart(2, '0')}

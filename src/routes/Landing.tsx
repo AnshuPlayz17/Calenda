@@ -91,7 +91,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
   return (
     <div className="relative min-h-dvh bg-bg">
       <Atmosphere />
-      <Header accent={chapters.section.accent} />
+      <Header accent={chapters.section.accent} chapter={chapters.active} />
       {/* The ids are the anchors the companion rail jumps to, and they live
           here rather than inside each scene so the order of the page and the
           order of the rail are the same list. FounderScene carries its own id
@@ -120,7 +120,7 @@ function useSignedIn() {
   return Boolean(session || preview.active)
 }
 
-function Header({ accent }: { accent: string }) {
+function Header({ accent, chapter }: { accent: string; chapter: number }) {
   const [scrolled, setScrolled] = useState(false)
   const signedIn = useSignedIn()
   const reduce = useReducedMotion()
@@ -166,8 +166,31 @@ function Header({ accent }: { accent: string }) {
         className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-accent transition-colors duration-700"
       />
       <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between px-5 sm:px-8">
-        <Brand size="sm" to="/" />
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Brand size="sm" to="/" />
+          {/* Which chapter, beside the mark. Twelve names stacked in one slot
+              so the width never moves, cross-fading as the reader crosses each
+              boundary -- the header already knows where they are, and until now
+              only said it with a colour. */}
+          <span aria-hidden className="relative hidden h-4 items-center md:flex">
+            <span className="block h-4 w-px bg-border" />
+            <span className="relative ml-3 block">
+              {LANDING_SECTIONS.map((section, i) => (
+                <span
+                  key={section.id}
+                  className={
+                    'label-caps whitespace-nowrap transition-opacity duration-500 '
+                    + (i === 0 ? 'block ' : 'absolute inset-0 block ')
+                    + (i === chapter ? 'opacity-100' : 'opacity-0')
+                  }
+                >
+                  {section.label}
+                </span>
+              ))}
+            </span>
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           <ThemeToggle />
           <Link
             to={signedIn ? '/dashboard' : '/sign-in'}
@@ -199,12 +222,27 @@ function Hero() {
   const reduce = useReducedMotion()
   const signedIn = useSignedIn()
   const { scrollY } = useScroll()
+  // Read once on mount, deliberately: a window resized across the breakpoint
+  // mid-scroll would otherwise swap the hero's exit underneath the reader.
+  const [roomy] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024)
 
-  const exit = useTransform(scrollY, [0, 700], [0, 1], { clamp: true })
-  const copyY = useTransform(exit, [0, 1], [0, reduce ? 0 : -110])
-  const copyFade = useTransform(exit, [0, 0.75], [1, reduce ? 1 : 0])
-  const stackY = useTransform(exit, [0, 1], [0, reduce ? 0 : -180])
-  const stackTilt = useTransform(exit, [0, 1], [0, reduce ? 0 : 9])
+  // The hero does not scroll away, it is scrolled *into*. The copy falls back
+  // and dims while the card stack comes forward and grows past the edges of the
+  // window, so leaving the first screen reads as a camera push rather than as
+  // a page moving up. It hands over to the schools chapter mid-move.
+  const exit = useTransform(scrollY, [0, 760], [0, 1], { clamp: true })
+  const copyY = useTransform(exit, [0, 1], [0, reduce ? 0 : -130])
+  const copyScale = useTransform(exit, [0, 1], [1, reduce ? 1 : 0.93])
+  const copyFade = useTransform(exit, [0, 0.7], [1, reduce ? 1 : 0])
+  const stackY = useTransform(exit, [0, 1], [0, reduce ? 0 : -150])
+  // Only where there is room for it. Below lg the stack already fills its
+  // column, so any push-in at all puts it wider than the window -- clipped by
+  // the section, but still a 490px element inside a 375px screen, which is the
+  // sort of thing that stops being merely untidy the moment something inside it
+  // wants to be scrolled or read.
+  const stackScale = useTransform(exit, [0, 1], [1, reduce || !roomy ? 1.02 : 1.42])
+  const stackTilt = useTransform(exit, [0, 1], [0, reduce ? 0 : 7])
+  const stackFade = useTransform(exit, [0.55, 1], [1, reduce ? 1 : 0])
 
 
   return (
@@ -245,7 +283,7 @@ function Hero() {
       </div>
 
       <div className="relative mx-auto w-full max-w-[1240px]">
-        <motion.div style={{ y: copyY, opacity: copyFade }}>
+        <motion.div style={{ y: copyY, scale: copyScale, opacity: copyFade }} className="origin-top">
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -285,7 +323,7 @@ function Hero() {
         </motion.div>
 
         <div className="mt-12 grid items-start gap-12 lg:mt-16 lg:grid-cols-[0.92fr_1fr] lg:gap-16">
-          <motion.div style={{ y: copyY, opacity: copyFade }}>
+          <motion.div style={{ y: copyY, scale: copyScale, opacity: copyFade }} className="origin-top">
             <motion.p
               initial={reduce ? false : { opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
@@ -333,9 +371,18 @@ function Hero() {
                 'Free, with nothing to install',
                 'Works on your phone and laptop',
                 'Your notes stay private',
-              ].map((line) => (
+              ].map((line, i) => (
                 <li key={line} className="flex items-center gap-2 text-[15px] text-text-muted">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                  {/* Each tick arrives after its line, so the three read as
+                      being checked off rather than as having always been true. */}
+                  <motion.span
+                    initial={reduce ? false : { scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.5 + i * 0.12, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="grid shrink-0 place-items-center"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-accent" aria-hidden />
+                  </motion.span>
                   {line}
                 </li>
               ))}
@@ -343,7 +390,13 @@ function Hero() {
           </motion.div>
 
           <motion.div
-            style={{ y: stackY, rotateX: stackTilt, transformPerspective: 1400 }}
+            style={{
+              y: stackY,
+              scale: stackScale,
+              opacity: stackFade,
+              rotateX: stackTilt,
+              transformPerspective: 1400,
+            }}
             className="relative origin-top"
           >
             <HeroStack />
@@ -445,7 +498,17 @@ function Closing() {
               'The school calendar is already imported',
               'Add your classes, and deadlines follow',
             ].map((step, i) => (
-              <li key={step} className="flex items-baseline gap-5 py-4">
+              <li
+                key={step}
+                className="group relative flex items-baseline gap-5 py-4 transition-[padding] duration-200 hover:pl-2"
+              >
+                {/* A rule that draws in from the left edge under the pointer.
+                    Three steps, and this is the only thing on the last screen
+                    that answers a hover at all. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-px origin-top scale-y-0 bg-accent transition-transform duration-300 group-hover:scale-y-100"
+                />
                 <span className="label-caps tabular shrink-0 text-accent">{String(i + 1).padStart(2, '0')}</span>
                 <span className="text-[15px] leading-snug text-text">{step}</span>
               </li>

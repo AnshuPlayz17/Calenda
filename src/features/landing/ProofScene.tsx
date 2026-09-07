@@ -162,8 +162,22 @@ function ScrollRow({
   const [nR, nV] = held([at + STEP * 0.58, at + STEP * 0.72], [0, 1])
   const notch = useTransform(progress, nR, nV)
 
+  // And flashes at the moment of contact. The notch is the record that
+  // something was stopped; the flash is the stopping.
+  const [fR, fV] = held(
+    [at + STEP * 0.5, at + STEP * 0.62, at + STEP * 0.85],
+    [0, 1, 0],
+  )
+  const flash = useTransform(progress, fR, fV)
+  const flashScale = useTransform(flash, [0, 1], [1, 2.6])
+
   return (
     <motion.li style={{ opacity }} className="relative">
+      <motion.span
+        aria-hidden
+        style={{ scaleX: flashScale, opacity: flash }}
+        className="absolute -left-3 top-1/2 block h-9 w-[3px] -translate-y-1/2 rounded-full bg-accent blur-[2px]"
+      />
       <motion.span
         aria-hidden
         style={{ scaleY: notch, opacity: notch }}

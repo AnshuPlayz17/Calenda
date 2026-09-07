@@ -627,6 +627,20 @@
 }
 
 
+/* A slow ring opening out of a point and fading. Used by the world map's
+   markers, where ten of them are staggered so they never beat in time. */
+@keyframes landing-ping {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.5; }
+  70%  { transform: translate(-50%, -50%) scale(3.4); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(3.4); opacity: 0; }
+}
+.landing-ping {
+  animation: landing-ping 3.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-ping { animation: none; }
+}
+
 /* A pulse travelling along a circuit trace. Offsetting a dash pattern is a
    compositor-friendly way to move light along a path without redrawing it. */
 @keyframes circuit-pulse {

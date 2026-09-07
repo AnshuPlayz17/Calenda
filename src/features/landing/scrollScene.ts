@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useScroll, useTransform, useReducedMotion } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 
@@ -23,15 +23,17 @@ import type { MotionValue } from 'motion/react'
  * four, the founder's hinge is a beat and asks for two -- and this scales all of
  * them together, so their relative weights survive any change to the total.
  *
- * It is set high on purpose. Every beat inside every scene is expressed as a
- * fraction of its own scene, so raising this does not leave an animation
- * finishing in the first tenth and then sitting still: the whole thing slows
- * down and each step gets room to be read rather than glimpsed.
+ * It is 1: the pacing the page had before anyone went looking for a frame
+ * count. It was briefly 5.6 and a hundred and fifty-five screens, then 1.7 and
+ * fifty-four, and both were too slow to scroll. Frames are seconds times sixty
+ * and seconds are distance over speed, so length is the only lever on a frame
+ * count -- which is exactly why chasing one is a bad trade on a page with a
+ * sign-up button at the end.
  *
- * The cost is length, and it is a real cost -- the page is over a hundred
- * screens of scroll. This constant is the dial.
+ * Every beat inside every scene is a fraction of its own scene, so this scales
+ * the whole page without re-timing anything.
  */
-export const PACE = 5.6
+export const PACE = 1
 
 /** A scene's natural length, scaled by the page's pacing. */
 export function paced(screens: number) {
@@ -114,6 +116,23 @@ export function held(
 export function useBeat(progress: MotionValue<number>, from: number, to: number) {
   const [range, values] = held([from, to], [0, 1])
   return useTransform(progress, range, values)
+}
+
+/**
+ * True where a scene has room to push the camera in.
+ *
+ * A zoom is a scale, and a scale on an element that already fills its column
+ * puts it wider than the window. Clipped, but still a 500px element inside a
+ * 375px screen -- which the harness catches and a reader feels as content
+ * cropped for no reason. Below this the zooms flatten to almost nothing.
+ *
+ * Read once on mount, like every other mechanism switch on this page: a window
+ * resized across the breakpoint mid-scroll would otherwise change the scene
+ * underneath the reader.
+ */
+export function useRoomy() {
+  const [roomy] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024)
+  return roomy
 }
 
 /**
