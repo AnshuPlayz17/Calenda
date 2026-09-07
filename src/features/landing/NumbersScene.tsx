@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
@@ -221,6 +222,8 @@ function MonthChart({ progress }: { progress: MotionValue<number> | null }) {
             span={step * 2.2}
             height={`${(m.count / max) * 100}%`}
             strength={45 + (m.count / max) * 55}
+            label={`${m.count} in ${m.label}`}
+            count={m.count}
           />
         ))}
       </div>
@@ -236,15 +239,31 @@ function MonthChart({ progress }: { progress: MotionValue<number> | null }) {
   )
 }
 
-function Bar({ progress, at, span, height, strength }: {
+/**
+ * One month, with its count on it.
+ *
+ * The number sits above the bar and rises into place with it, rather than
+ * waiting for a hover -- a chart whose values are only available to a mouse is
+ * a chart with no values on a phone. The hover readout is still there on top of
+ * that, because the bar's own label is small and the month it belongs to is at
+ * the other end of it.
+ */
+function Bar({ progress, at, span, height, strength, label, count }: {
   progress: MotionValue<number> | null
   at: number
   span: number
   height: string
   strength: number
+  label: string
+  count: number
 }) {
+  const [hover, setHover] = useState(false)
   const [range, values] = held([at, at + span], [0, 1])
   const scaleY = useTransform(progress ?? ZERO, range, values)
+  const [nR, nV] = held([at + span * 0.5, at + span], [0, 1])
+  const numberIn = useTransform(progress ?? ZERO, nR, nV)
+  const numberY = useTransform(numberIn, [0, 1], [6, 0])
+
   const style = {
     height,
     transformOrigin: 'bottom',
@@ -253,10 +272,40 @@ function Bar({ progress, at, span, height, strength }: {
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col justify-end">
-      {progress
-        ? <motion.span style={{ ...style, scaleY }} className="block w-full rounded-t-[4px]" />
-        : <span style={style} className="block w-full rounded-t-[4px]" />}
+    <div
+      className="group relative flex h-full flex-1 flex-col justify-end"
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
+    >
+      {hover && (
+        <span className="tabular pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-2xs font-medium text-text shadow-sm">
+          {label}
+        </span>
+      )}
+
+      <div className="relative" style={{ height }}>
+        {progress ? (
+          <>
+            <motion.span
+              style={{ ...style, height: '100%', scaleY }}
+              className="block w-full rounded-t-[4px] transition-[filter] duration-150 group-hover:brightness-110"
+            />
+            <motion.span
+              style={{ opacity: numberIn, y: numberY }}
+              className="tabular absolute inset-x-0 -top-4 block text-center text-2xs font-medium text-text-muted"
+            >
+              {count}
+            </motion.span>
+          </>
+        ) : (
+          <>
+            <span style={{ ...style, height: '100%' }} className="block w-full rounded-t-[4px]" />
+            <span className="tabular absolute inset-x-0 -top-4 block text-center text-2xs font-medium text-text-muted">
+              {count}
+            </span>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -275,7 +324,7 @@ function CategoryChart({ progress }: { progress: MotionValue<number> | null }) {
 
       <ul className="mt-5 flex flex-col gap-3">
         {cats.map((c, i) => (
-          <li key={c.category}>
+          <li key={c.category} className="group">
             <div className="flex items-baseline justify-between gap-3">
               <span className="flex items-center gap-2 text-[13px] text-text">
                 <span
@@ -288,9 +337,15 @@ function CategoryChart({ progress }: { progress: MotionValue<number> | null }) {
               <span className="tabular shrink-0 text-xs font-medium text-text-muted">
                 {c.count}
                 <span className="text-text-subtle"> / {EVENTS.length}</span>
+                {/* The share, revealed on hover. Two numbers side by side at
+                    rest is one number too many; the one people actually want
+                    from a category chart is the proportion. */}
+                <span className="ml-1.5 text-accent opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  {Math.round((c.count / EVENTS.length) * 100)}%
+                </span>
               </span>
             </div>
-            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2">
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2 transition-colors duration-150 group-hover:bg-surface-3">
               <Fill
                 progress={progress}
                 at={CATS[0]! + i * step}

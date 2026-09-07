@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
-import { useScrollScene, useBeat, scatter, held, prefersLightMotion, paced } from './scrollScene'
+import { useScrollScene, useBeat, scatter, held, prefersLightMotion, paced, useRoomy } from './scrollScene'
 import { cn } from '@/lib/cn'
 
 /**
@@ -142,8 +142,21 @@ function Stage({ progress, light }: { progress: MotionValue<number>; light: bool
   const paperScale = useTransform(progress, psR, psV)
   const gridOpacity = useTransform(progress, goR, goV)
 
+  // The third beat is the collision, and the camera pushes in on it. By then
+  // the thirty-six chips that do not repeat have dimmed almost out, so
+  // enlarging the grid enlarges what is left of it -- fifteen chips that are
+  // the same words on different days, filling the frame. Scaling the stage
+  // rather than the chips keeps it to one transform on one element instead of
+  // fifty-one more scroll-linked values.
+  const roomy = useRoomy()
+  const [zR, zV] = held([0.6, 0.94], [1, roomy ? 1.42 : 1.04])
+  const zoom = useTransform(progress, zR, zV)
+
   return (
-    <div className="relative aspect-[7/6] w-full max-w-[620px] justify-self-center">
+    <motion.div
+      style={{ scale: zoom }}
+      className="relative aspect-[7/6] w-full max-w-[620px] origin-center justify-self-center"
+    >
       <motion.div
         style={{ opacity: paperOpacity, scale: paperScale }}
         className="absolute inset-x-[14%] inset-y-[6%] rounded-lg border border-border bg-surface p-5 shadow-md"
@@ -171,7 +184,7 @@ function Stage({ progress, light }: { progress: MotionValue<number>; light: bool
       {EVENTS.map((e, i) => (
         <Chip key={`${e.title}-${e.startDate}`} event={e} index={i} progress={progress} light={light} />
       ))}
-    </div>
+    </motion.div>
   )
 }
 
@@ -239,8 +252,13 @@ function Chip({
       className="absolute left-0 top-0 p-[3px] will-change-transform"
     >
       <div
+        // Every one of the fifty-one answers a hover with the date it is on.
+        // The grid says there are a lot of them and that some repeat; the only
+        // way to ask which day any particular one is, is to point at it.
+        title={`${event.title} — ${event.startDate}`}
         className={cn(
           'relative flex h-full w-full items-center overflow-hidden rounded-[5px] px-1.5',
+          'transition-[filter,box-shadow] duration-150 hover:brightness-105 hover:shadow-md',
           'text-[8.5px] font-medium leading-tight sm:text-[9.5px]',
         )}
         style={{

@@ -229,9 +229,21 @@ function Stage({
   const x = useTransform(t, [0, 1], [10, 0])
   // The node fills in as its stage arrives, so the line reads as passing through.
   const dot = useTransform(t, [0.2, 0.8], [0.35, 1])
+  const ring = useTransform(t, [0.15, 0.75], [0.6, 3.4])
+  const ringFade = useTransform(t, [0.15, 0.4, 0.8], [0, 0.55, 0])
 
   return (
     <motion.li style={reduce ? undefined : { opacity, x }} className="relative">
+      {/* A ring that opens out of the node as the line reaches it, then goes.
+          Six of them down the page make the head's arrival at each stage an
+          event rather than a dot quietly changing size. */}
+      {!reduce && (
+        <motion.span
+          aria-hidden
+          style={{ scale: ring, opacity: ringFade }}
+          className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border border-accent sm:-left-16"
+        />
+      )}
       <motion.span
         aria-hidden
         style={reduce ? undefined : { scale: dot }}

@@ -163,12 +163,15 @@ array, so the page and its navigation cannot drift apart.
 
 **The page's length is one constant.** `PACE` in `src/features/landing/scrollScene.ts`
 scales every pinned scene together; each scene declares how many screens it wants
-relative to the others and `paced()` multiplies. It is currently 5.6, which puts
-the page at about 155 screens — roughly 139,000px on a 1440x900 desktop, and a
-50-second traversal at a brisk flick. That is a deliberate choice and a real cost;
-change the one number to change all of it. Every beat inside every scene is a
-fraction of its own scene, so raising it slows everything down proportionally
-rather than leaving animations finishing early and then sitting still.
+relative to the others and `paced()` multiplies. It is 1 — the pacing the page
+was built at. It was tried at 5.6 (155 screens) and 1.7 (54 screens) chasing a
+frame count, and both were too slow to scroll.
+
+**Frames are seconds times sixty**, so a frame count is traversal time, and
+traversal time is distance over scroll speed. Animation richness does not move
+it; only length does. That makes a frame count a bad thing to optimise on a
+landing page, and a meaningless number to quote without the pace it was measured
+at.
 
 Reduced motion is unaffected by `PACE` — pinned scenes render their static
 composition and consume no scroll budget at all, so that path stays at about

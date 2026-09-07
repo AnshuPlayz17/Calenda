@@ -5,7 +5,7 @@ import { Globe } from 'lucide-react'
 import {
   WORLD_COLS, WORLD_ROWS, WORLD_LAT_MAX, WORLD_LAT_MIN, WORLD_DOTS,
 } from '@/data/worldMap'
-import { useScrollScene, held, prefersLightMotion, paced } from './scrollScene'
+import { useScrollScene, held, prefersLightMotion, paced, useRoomy } from './scrollScene'
 
 /**
  * Where Calenda works, told as a map that lights up.
@@ -80,6 +80,20 @@ export function WorldScene() {
   const [revealRange, revealValues] = held([LEAD * 0.4, LEAD + SPAN + 0.14], [0, REACH])
   const revealR = useTransform(progress, revealRange, revealValues)
 
+  // The camera pushes in as the cities land, and drifts east with them. The
+  // markers arrive in order of distance from Toronto, so the interesting half
+  // of the map moves right across the scene -- holding the frame still would
+  // leave the last five arrivals in a corner.
+  //
+  // Not below lg. The map already bleeds to both edges of a phone, so it is
+  // exactly the width of the window there and any scale at all makes it wider
+  // than the screen it is drawn on.
+  const roomy = useRoomy()
+  const [zR, zV] = held([LEAD, LEAD + SPAN], [1, roomy ? 1.3 : 1])
+  const mapZoom = useTransform(progress, zR, zV)
+  const [panR, panV] = held([LEAD, LEAD + SPAN], ['0%', roomy ? '-11%' : '0%'])
+  const mapPan = useTransform(progress, panR, panV)
+
   if (reduce) return <StaticWorld dots={dots} />
 
   return (
@@ -93,7 +107,10 @@ export function WorldScene() {
         <div className="mx-auto grid w-full max-w-[1240px] items-center gap-8 lg:grid-cols-[0.62fr_1fr] lg:gap-12">
           <div><Copy /></div>
 
-          <div className="relative -mx-5 sm:mx-0">
+          <motion.div
+            style={{ scale: mapZoom, x: mapPan }}
+            className="relative -mx-5 origin-center sm:mx-0"
+          >
             <Map dots={dots} revealR={revealR} />
             {/* Markers are HTML over the map rather than SVG text: at this
                 viewBox a glyph would be a third of a grid cell tall, and it
@@ -103,7 +120,7 @@ export function WorldScene() {
                 <Marker key={place.city} place={place} index={i} progress={progress} />
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
 
         <p className="mx-auto mt-6 w-full max-w-[1240px] text-[11.5px] leading-relaxed text-text-subtle">
@@ -229,10 +246,19 @@ function Marker({
 
   return (
     <div className="absolute" style={{ left: `${left}%`, top: `${top}%` }}>
+      {/* The arrival ring, which happens once. */}
       <motion.span
         aria-hidden
         style={{ scale: ringScale, opacity: ringOpacity }}
         className="absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent"
+      />
+      {/* And a slow one that keeps going, so a landed city still reads as a
+          place where something is running rather than as a dot that was
+          drawn. Ten of them, staggered, because ten in step is a metronome. */}
+      <motion.span
+        aria-hidden
+        style={{ opacity: dotOpacity, animationDelay: `${index * 0.42}s` }}
+        className="landing-ping absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent"
       />
       <motion.span
         aria-hidden
