@@ -23,6 +23,8 @@ import { PreviewProvider, usePreview } from '@/lib/preview'
 import { Landing } from '@/routes/Landing'
 import { SignIn } from '@/routes/SignIn'
 import { SignUp } from '@/routes/SignUp'
+import { ForgotPassword } from '@/routes/ForgotPassword'
+import { ResetPassword } from '@/routes/ResetPassword'
 import { AuthCallback } from '@/routes/AuthCallback'
 
 /* The founder page is a section of the landing page now, not a page of its own.
@@ -109,6 +111,10 @@ export function App() {
               <Route path="/created-by" element={<Navigate to="/about#founder" replace />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
+              {/* Both redirect to sign-in while email delivery is off, so a
+                  hand-typed URL never reaches a form that cannot work. */}
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route

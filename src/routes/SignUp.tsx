@@ -1,30 +1,28 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
-import { enabledProviders } from '@/lib/providers'
+import { AuthError, NotConnected, ProviderButtons, Separator } from '@/features/auth/AuthParts'
 import { useAuth } from '@/lib/auth'
-import { isConfigured } from '@/lib/env'
 import { usePreview } from '@/lib/preview'
-import { ProviderIcon } from '@/components/ProviderIcon'
 
 const MIN_PASSWORD = 8
-
-/** What you get, in the order it matters -- not a feature list. */
-const PROMISES = [
-  'Every school date already in it, imported from the PDF',
-  'Your own Google Calendar alongside it, read-only',
-  'A workspace per class: notes, assignments, deadlines',
-]
 
 export function SignUp() {
   const { session, signInWithProvider, signUpWithPassword } = useAuth()
   const navigate = useNavigate()
   const preview = usePreview()
 
+  // Same shape as sign-in: the providers are the front door and the email form
+  // is behind one press. It was all on screen at once, and the result was that
+  // at 1440x900 the "Create account" button -- the entire point of the page --
+  // sat below the fold behind three promises, three provider buttons and three
+  // inputs. Nothing was removed to fix it; what someone is not doing yet is
+  // just not drawn yet.
+  const [useEmail, setUseEmail] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -69,7 +67,7 @@ export function SignUp() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Set up Calenda for the school year. It takes about a minute."
+      subtitle="It takes about a minute."
       footer={
         <>
           Already have an account?{' '}
@@ -78,101 +76,71 @@ export function SignUp() {
           </Link>
         </>
       }
+      fineprint="Calenda is a personal project, not an official product of any school. Your notes and personal events are visible only to you."
     >
-      {!isConfigured && (
-        <div className="mt-5 rounded-xl border border-border bg-surface p-4">
-          <p className="text-[13.5px] font-medium text-text">Not connected yet</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-text-muted">
-            Creating an account needs a Supabase project. You can still look around.
-          </p>
-          <Button size="sm" className="mt-3" onClick={preview.enter}>
-            Explore the preview
+      <AuthError message={error} />
+
+      {!useEmail ? (
+        <div className="mt-6 flex flex-col gap-2">
+          {/* The three promises that used to sit here are on the panel now,
+              where they became four scenes of the real thing rather than four
+              lines about it. On a phone the panel is not drawn at all, which is
+              the correct trade: somebody who opened a sign-up page on a phone
+              has already decided. */}
+          <ProviderButtons verb="Sign up with" busy={busy} onPick={withProvider} />
+
+          <Separator>or</Separator>
+
+          <Button variant="ghost" size="md" fullWidth onClick={() => setUseEmail(true)}>
+            <Mail className="h-4 w-4" aria-hidden /> Use an email and password
           </Button>
         </div>
+      ) : (
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+          <Input
+            label="Email"
+            type="email"
+            autoComplete="email"
+            required
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            label="Password"
+            type="password"
+            required
+            minLength={MIN_PASSWORD}
+            autoComplete="new-password"
+            hint={`At least ${MIN_PASSWORD} characters.`}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Input
+            label="Confirm password"
+            type="password"
+            required
+            autoComplete="new-password"
+            error={mismatch ? "Those don't match." : undefined}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
+            Create account
+          </Button>
+          <button
+            type="button"
+            onClick={() => setUseEmail(false)}
+            className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> All sign-up options
+          </button>
+        </form>
       )}
 
-      <ul className="mt-5 flex flex-col gap-2">
-        {PROMISES.map((line) => (
-          <li key={line} className="flex items-start gap-2.5 text-[13px] text-text-muted">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-            {line}
-          </li>
-        ))}
-      </ul>
-
-      {error && (
-        <p
-          role="alert"
-          className="mt-5 rounded-lg border border-danger-border bg-danger-subtle px-3.5 py-2.5 text-[13px] text-danger"
-        >
-          {error}
-        </p>
-      )}
-
-      {enabledProviders.length > 0 && (
-        <>
-          <div className="mt-6 flex flex-col gap-2">
-            {enabledProviders.map((p) => (
-              <Button
-                key={p.id}
-                variant="secondary"
-                size="lg"
-                fullWidth
-                loading={busy === p.id}
-                onClick={() => void withProvider(p.id)}
-                className="justify-start"
-              >
-                <ProviderIcon provider={p.id} />
-                <span className="ml-1">Sign up with {p.label}</span>
-              </Button>
-            ))}
-          </div>
-
-          <div className="my-4 flex items-center gap-3">
-            <hr className="flex-1 border-border" />
-            <span className="label-caps">or use an email</span>
-            <hr className="flex-1 border-border" />
-          </div>
-        </>
-      )}
-
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Input
-          label="Email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Input
-          label="Password"
-          type="password"
-          required
-          minLength={MIN_PASSWORD}
-          autoComplete="new-password"
-          hint={`At least ${MIN_PASSWORD} characters.`}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <Input
-          label="Confirm password"
-          type="password"
-          required
-          autoComplete="new-password"
-          error={mismatch ? "Those don't match." : undefined}
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
-        <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
-          Create account
-        </Button>
-      </form>
-
-      <p className="mt-4 text-[12px] leading-relaxed text-text-subtle">
-        Calenda is a personal project, not an official product of any school. Your notes
-        and personal events are visible only to you.
-      </p>
+      <NotConnected>
+        Creating an account needs a Supabase project. You can still look around.
+      </NotConnected>
     </AuthLayout>
   )
 }

@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Mail, Wrench } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
-import { enabledProviders } from '@/lib/providers'
+import { AuthError, NotConnected, ProviderButtons, Separator } from '@/features/auth/AuthParts'
 import { useAuth } from '@/lib/auth'
-import { isConfigured } from '@/lib/env'
+import { emailDelivery, NO_RECOVERY_NOTE } from '@/lib/email'
 import { usePreview } from '@/lib/preview'
-import { ProviderIcon } from '@/components/ProviderIcon'
 
 export function SignIn() {
   const { session, signInWithProvider, signInWithPassword } = useAuth()
@@ -54,65 +53,23 @@ export function SignIn() {
         </>
       }
     >
-      {!isConfigured && (
-        <div className="mt-5 rounded-xl border border-border bg-surface p-4">
-          <p className="text-[13.5px] font-medium text-text">Not connected yet</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-text-muted">
-            Sign-in needs a Supabase project. You can still look around — the preview
-            is loaded with the real 2026–27 school calendar.
-          </p>
-          <Button size="sm" className="mt-3" onClick={preview.enter}>
-            Explore the preview
-          </Button>
-        </div>
-      )}
-
-      {error && (
-        <p
-          role="alert"
-          className="mt-5 rounded-lg border border-danger-border bg-danger-subtle px-3.5 py-2.5 text-[13px] text-danger"
-        >
-          {error}
-        </p>
-      )}
+      <AuthError message={error} />
 
       {!usePassword ? (
         <div className="mt-6 flex flex-col gap-2">
-          {enabledProviders.map((p) => (
-            <Button
-              key={p.id}
-              variant="secondary"
-              size="lg"
-              fullWidth
-              loading={busy === p.id}
-              onClick={() => void withProvider(p.id)}
-              className="justify-start"
-            >
-              <ProviderIcon provider={p.id} />
-              <span className="ml-1">Continue with {p.label}</span>
-            </Button>
-          ))}
+          <ProviderButtons verb="Continue with" busy={busy} onPick={withProvider} />
 
-          <div className="my-3 flex items-center gap-3">
-            <hr className="flex-1 border-border" />
-            <span className="label-caps">or</span>
-            <hr className="flex-1 border-border" />
-          </div>
+          <Separator>or</Separator>
 
           <Button variant="ghost" size="md" fullWidth onClick={() => setUsePassword(true)}>
             <Mail className="h-4 w-4" aria-hidden /> Use email and password
           </Button>
 
-          {/* Sign-in links are switched off rather than left to fail silently.
-              Delivery depends on an email sender that is not set up yet, so the
-              button looked like it worked and nothing ever arrived. */}
-          <div className="mt-2 flex items-start gap-2.5 rounded-lg border border-border bg-surface-2 px-3.5 py-3">
-            <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-text-subtle" aria-hidden />
-            <p className="text-[12.5px] leading-relaxed text-text-muted">
-              <span className="font-medium text-text">Email sign-in links are off.</span>{' '}
-              We're fixing this — use Google or a password for now.
-            </p>
-          </div>
+          {/* What used to be here was a notice explaining that email sign-in
+              links are switched off. It sat directly under the button offering
+              the alternative, and it apologised for the absence of something
+              the reader had not been shown and could not miss. The links being
+              off is true and stays true; it just is not news. */}
         </div>
       ) : (
         <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
@@ -133,18 +90,41 @@ export function SignIn() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          {/* A route back in, or an honest account of why there is not one.
+              Both are better than the nothing that was here: somebody who set
+              a password months ago and cannot remember it had no next step at
+              all, on a page whose entire job is letting them in. */}
+          {emailDelivery ? (
+            <Link
+              to="/forgot-password"
+              className="-mt-1 self-start text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          ) : (
+            <p className="-mt-1 text-[12.5px] leading-relaxed text-text-subtle">
+              {NO_RECOVERY_NOTE}
+            </p>
+          )}
+
           <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
             Sign in
           </Button>
           <button
             type="button"
             onClick={() => setUsePassword(false)}
-            className="text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+            className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
           >
-            Back
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> All sign-in options
           </button>
         </form>
       )}
+
+      <NotConnected>
+        Sign-in needs a Supabase project. You can still look around — the preview is
+        loaded with a full sample school year.
+      </NotConnected>
     </AuthLayout>
   )
 }

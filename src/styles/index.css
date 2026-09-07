@@ -367,6 +367,45 @@
 }
 
 /* ---------------------------------------------------------------------------
+   The dark panel.
+
+   The auth pages put a fixed dark ground beside the form, and it stays dark in
+   all three themes -- it is not a surface that flips, it is a photograph's
+   worth of contrast against the page. That means it cannot use the page's
+   neutrals, which is why it carries its own.
+
+   It carries its own copy of the accent ramp too, and that half is not
+   cosmetic. In the light themes `--accent` is oklch(0.52 ...), a lightness
+   chosen to sit *on* a light ground; against near-black it is close to
+   invisible. The panel takes the dark theme's 0.78 whatever the page around it
+   is doing, so the reel's four hues have the same contrast for everybody.
+
+   Only `--accent` is redeclared. The subtle, border and strong variants are
+   mixed with `--bg`, which inside the panel is the wrong ground, so nothing in
+   here uses them. */
+
+.panel-dark {
+  --panel:        oklch(0.21 0.028 262);
+  --panel-raised: oklch(0.26 0.030 262);
+  --panel-line:   rgb(255 255 255 / 0.12);
+  --panel-muted:  oklch(0.82 0.020 262);
+  --panel-subtle: oklch(0.72 0.022 262);
+  --panel-ink:    oklch(0.18 0.030 265);
+
+  [data-accent='indigo'] { --accent: oklch(0.78 0.115 265); }
+  [data-accent='violet'] { --accent: oklch(0.78 0.115 292); }
+  [data-accent='blue']   { --accent: oklch(0.78 0.115 240); }
+  [data-accent='azure']  { --accent: oklch(0.78 0.100 205); }
+  [data-accent='cyan']   { --accent: oklch(0.80 0.090 195); }
+  [data-accent='teal']   { --accent: oklch(0.80 0.090 175); }
+  [data-accent='green']  { --accent: oklch(0.80 0.100 150); }
+  [data-accent='moss']   { --accent: oklch(0.80 0.095 130); }
+  [data-accent='gold']   { --accent: oklch(0.82 0.100 80); }
+  [data-accent='amber']  { --accent: oklch(0.80 0.110 55); }
+  [data-accent='rose']   { --accent: oklch(0.78 0.115 350); }
+}
+
+/* ---------------------------------------------------------------------------
    Type scale.
 
    Every heading on the landing page used to carry its own three-breakpoint
@@ -391,6 +430,13 @@
   --text-display-sm: clamp(1.875rem, 1.4rem + 2.2vw, 2.875rem);
   --text-display:    clamp(2.25rem, 1.5rem + 3.4vw, 3.75rem);
   --text-display-lg: clamp(2.5rem, 1.5rem + 4.6vw, 4.75rem);
+
+  --color-panel:        var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-panel-line:   var(--panel-line);
+  --color-panel-muted:  var(--panel-muted);
+  --color-panel-subtle: var(--panel-subtle);
+  --color-panel-ink:    var(--panel-ink);
 
   --color-accent:          var(--accent);
   --color-accent-subtle:   var(--accent-subtle);
@@ -626,6 +672,15 @@
   pointer-events: none;
 }
 
+
+/* The auth reel's tick, filling over the scene's dwell so the bar is also a
+   clock. A CSS animation rather than a tweened one because it has to be
+   pausable in place -- see AuthReel.tsx. Reduced motion never reaches it: that
+   branch renders all four scenes at once and has no ticks at all. */
+@keyframes reel-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
 
 /* A slow ring opening out of a point and fading. Used by the world map's
    markers, where ten of them are staggered so they never beat in time. */
