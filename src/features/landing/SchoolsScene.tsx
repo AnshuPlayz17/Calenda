@@ -289,8 +289,8 @@ export function SchoolsScene() {
         <p className="mx-auto w-full max-w-[86ch] shrink-0 pt-2 text-center text-[11px] leading-relaxed text-text-subtle">
           Calenda reads the calendar each school publishes. It is not affiliated with,
           endorsed by, or a product of any of them, and no school here has any
-          involvement in it. Crests are each school's own, shown from the school's own
-          site, and link there.
+          involvement in it. No school's crest is used — each tile is initials set in
+          Calenda's own type — and every one links to that school's site.
         </p>
       </div>
     </section>
@@ -374,7 +374,10 @@ function Card({
             style={{ y: cardY, scale: magnet }}
             className="group relative block origin-bottom outline-none"
           >
-            <span className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center overflow-hidden rounded-2xl border border-border bg-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]">
+            <span
+              style={{ borderRadius: 'calc(var(--tile, 56px) * 0.26)' }}
+              className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+            >
               <Crest school={school} />
               <ArrowUpRight
                 aria-hidden
@@ -416,49 +419,52 @@ function Card({
 }
 
 /**
- * The school's crest, from the school's own server -- or its initials.
+ * The school's initials, drawn rather than fetched.
  *
- * The fallback is not a spinner or a broken-image icon. A hotlinked file is
- * out of our control by definition: it can move, be renamed in a redesign, or
- * be blocked by whoever is reading. So the monogram is drawn to look like a
- * choice, and a grid that is half crests and half monograms still looks
- * deliberate.
+ * A wall of fifteen real crests never looks like one row: they are drawn by
+ * fifteen different studios at fifteen aspect ratios, half of them are a crest
+ * welded to a wordmark, and each one is that school's trademark. Initials set
+ * in the page's own typeface are one system, and they are ours to draw.
+ *
+ * The whole difficulty is that they are not the same length. A single C beside
+ * SMCS at one type size gives you a lonely letter and a cramped acronym, so
+ * the size is a function of how many letters there are -- a one-letter
+ * monogram is an initial and can be large, a four-letter one is an acronym and
+ * has to be small. Both are then a fraction of the tile rather than a number
+ * of points, so they hold at every width and in the dock, where the tile is
+ * the same element at sixty per cent.
  */
+
+/** Of the tile's width, the type size each monogram length wants. */
+function opticalSize(letters: number) {
+  if (letters <= 1) return 0.44
+  if (letters === 2) return 0.355
+  if (letters === 3) return 0.275
+  return 0.225
+}
+
 function Crest({ school }: { school: School }) {
-  const [failed, setFailed] = useState(false)
-
-  if (!school.logo || failed) {
-    return (
-      // Sized from the tile rather than in points, so the initials stay in
-      // proportion at every width -- and in the dock, where the tile is the
-      // same element at sixty per cent.
-      <span
-        aria-hidden
-        style={{ fontSize: 'calc(var(--tile, 56px) * 0.26)' }}
-        className="font-display font-medium leading-none tracking-tight text-text-muted"
-      >
-        {school.monogram}
-      </span>
-    )
-  }
-
-  // Uncropped, the whole image is fitted inside the tile. Cropped, the tile
-  // fills with one edge of it -- which for a crest-and-wordmark lockup is the
-  // crest, and is why `crop` exists at all.
-  const fit = school.crop
-    ? 'h-full w-full object-cover'
-    : 'h-[74%] w-[74%] object-contain'
+  const letters = school.monogram.length
+  // Uppercase serif needs air between the letters; a single initial does not,
+  // and the trailing space of the last letter would push it off centre.
+  const tracking = letters > 1 ? 0.055 : 0
 
   return (
-    <img
-      src={school.logo}
-      alt=""
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-      style={school.crop ? { objectPosition: school.crop === 'top' ? 'center top' : 'left center' } : undefined}
-      className={fit}
-    />
+    <span
+      aria-hidden
+      style={{
+        fontSize: `calc(var(--tile, 56px) * ${opticalSize(letters)})`,
+        letterSpacing: `${tracking}em`,
+        // Letter-spacing is applied after every letter including the last, so
+        // centred text sits half a space to the left of where it looks centred.
+        // And caps in this face sit a little high in their own box.
+        marginRight: `-${tracking}em`,
+        transform: 'translateY(0.03em)',
+      }}
+      className="select-none font-display font-medium leading-none text-text transition-colors duration-200 group-hover:text-brand"
+    >
+      {school.monogram}
+    </span>
   )
 }
 
@@ -496,7 +502,13 @@ function StaticSchools() {
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center gap-2.5 no-underline outline-none"
               >
-                <span className="grid h-[clamp(48px,7.5vw,96px)] w-[clamp(48px,7.5vw,96px)] place-items-center overflow-hidden rounded-2xl border border-border bg-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]">
+                <span
+                  style={{
+                    ['--tile' as string]: 'clamp(52px, 7.5vw, 96px)',
+                    borderRadius: 'calc(var(--tile) * 0.26)',
+                  }}
+                  className="grid h-[var(--tile)] w-[var(--tile)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+                >
                   <Crest school={school} />
                 </span>
                 <span className="text-center">
@@ -519,8 +531,8 @@ function StaticSchools() {
         <p className="mt-5 max-w-[70ch] text-[11.5px] leading-relaxed text-text-subtle">
           Calenda reads the calendar each school publishes. It is not affiliated with,
           endorsed by, or a product of any of them, and no school here has any
-          involvement in it. Crests are each school's own, shown from the school's own
-          site, and link there.
+          involvement in it. No school's crest is used — each tile is initials set in
+          Calenda's own type — and every one links to that school's site.
         </p>
       </div>
     </section>
