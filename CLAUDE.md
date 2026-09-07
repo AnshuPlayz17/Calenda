@@ -163,15 +163,39 @@ to sit *on* a light ground, and against near-black it is nearly invisible. Only
 `--accent` is redeclared — the subtle/border/strong variants mix with `--bg`,
 which inside the panel is the wrong ground, so nothing in there uses them.
 
-**Nothing that needs an inbox is offered, because no email has been proved to
-arrive.** `src/lib/email.ts` holds one flag, `emailDelivery`, currently `false`.
-While it is false the forgot-password link is not rendered, both recovery routes
-redirect to sign-in rather than showing a form that would silently do nothing,
-and the password form carries one honest sentence saying to use a provider. The
-code path is complete and dormant — the same rule the SMS adapter follows. The
-file lists exactly what to do in the Supabase dashboard to turn it on, and step
-three of that list is *send yourself one and confirm it arrives*. That step is
-the entire reason the flag exists; do not flip it without doing it.
+**Password recovery is on, and one flag turns it off again.** `src/lib/email.ts`
+holds `emailDelivery`, now `true` — a recovery mail was sent from the Supabase
+dashboard and landed in the inbox rather than spam, which is the test the flag
+exists for. While it is false the link is not rendered, both routes redirect to
+sign-in rather than showing a form that would silently drop an address, and the
+password form carries one honest sentence pointing at the providers. Turn it
+back off the moment delivery stops being reliable; that path is kept working
+for exactly this reason.
+
+Still true: the built-in sender is about two messages an hour from a shared
+domain. Before this reaches more than a few testers, add SMTP under
+Authentication → Emails → Custom SMTP. **Brevo is the free option that does not
+need a domain** — it verifies a single sender address.
+
+**The redirect URL must keep its `#`.** `…/Calenda/#/reset-password` on the
+allow list under Authentication → URL Configuration. Supabase does not fail on
+a missing entry, it silently substitutes the Site URL — which is how a
+correctly configured project still delivers a link that goes nowhere.
+
+**A recovery token can land in three places, and supabase-js reads two of
+them.** `recoveryToken.ts` reads all three: `?code=` before the hash, `?code=`
+appended *inside* the hash, and `#access_token=` in a second fragment. The
+middle two are where a hash-routed app puts it and where `detectSessionInUrl`
+never looks, so a good link would report as expired. `ResetPassword` claims the
+credential itself rather than hoping, strips it out of the address bar before
+the password is typed, and has ten tests over the shapes.
+
+This was going to be settled by testing against the live site instead, and that
+turned out to be unanswerable: the route did not exist in the deployed build, so
+the link fell through to the catch-all inside `RequireAuth` and its
+`<Navigate replace>` discarded the query string and hash before anything could
+read them. **The evidence destroyed itself.** Reading every position is cheaper
+than another round of guessing at two emails an hour.
 
 ## The landing page
 

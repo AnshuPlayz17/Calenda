@@ -2,44 +2,49 @@
  * Whether Calenda can actually send an email.
  *
  * Everything that recovers an account goes through an inbox -- a magic link, a
- * password reset, a confirmation. None of it is worth putting on a page unless
- * a message genuinely arrives, and right now none has been verified to. Supabase
- * ships a built-in sender for auth mail, but it is rate limited to a couple of
- * messages an hour on the free tier and mail from its shared domain lands in
- * spam often enough that "we sent you a link" is a claim rather than a fact.
+ * password reset, a confirmation -- and none of it is worth putting on a page
+ * unless a message genuinely arrives. This was off until one did.
  *
- * So this is off, and while it is off the UI does not offer any of it. That is
- * the same rule the SMS adapter follows: the code path is complete and dormant,
- * and nothing on screen says it works. A "Forgot password?" link that leads to
- * a screen saying "check your inbox" when nothing was ever delivered is worse
- * than no link, because it sends someone away from the sign-in page to wait for
+ * It has now been verified, on 2026-09-07, against the live site: a recovery
+ * mail sent from Authentication -> Users landed in the inbox rather than in
+ * spam, from Supabase's built-in sender. That is the whole test this flag
+ * exists for, and it passed.
+ *
+ * WHAT IS STILL TRUE AND MATTERS
+ *
+ * The built-in sender is rate limited to roughly two messages an hour and
+ * comes from a shared Supabase domain, which is fine for one user and a few
+ * testers and is not fine for a school. Before this goes to more people, add
+ * SMTP credentials under Authentication -> Emails -> Custom SMTP. Brevo is the
+ * free option that does not need a domain -- it verifies a single sender
+ * address, so a personal address works. Resend is the other free tier but
+ * wants DNS records on a domain you own.
+ *
+ * The redirect URL must stay on the allow list under Authentication -> URL
+ * Configuration:
+ *
+ *     https://anshuplayz17.github.io/Calenda/#/reset-password
+ *
+ * The `#` is load-bearing. This app is hash-routed, and an entry without it
+ * sends the recovery link to the landing page with the token attached to the
+ * wrong route. Supabase does not fail in that case -- it silently substitutes
+ * the Site URL, which is how a correctly configured project still delivers a
+ * link that goes nowhere useful.
+ *
+ * Turning this back off is one line, and is the right move if delivery ever
+ * stops being reliable. A reset that silently drops an address is worse than
+ * no reset, because it sends someone away from the sign-in page to wait for
  * something that is not coming.
- *
- * ---------------------------------------------------------------------------
- * To turn it on
- *
- * 1. In the Supabase dashboard, Authentication -> Emails, either accept the
- *    built-in sender or add SMTP credentials under "Custom SMTP". Free options
- *    that work: Resend (3,000/month) and Brevo (300/day). Both need a domain
- *    you can add DNS records to.
- * 2. Authentication -> URL Configuration: add the site URL and the redirect URL
- *    `<site>/#/reset-password` to the allow list. The hash matters -- this app
- *    is hash-routed, and a redirect without it lands on the landing page with
- *    the recovery token attached to the wrong route.
- * 3. Send yourself a reset from the live site and confirm it arrives, in the
- *    inbox rather than in spam.
- * 4. Only then flip this to `true`.
- *
- * Step 3 is not optional. It is the entire reason this flag exists.
- * ---------------------------------------------------------------------------
  */
-export const emailDelivery = false
+export const emailDelivery = true
 
 /**
- * What to tell someone who cannot get in, given the above.
+ * What to tell someone who cannot get in, when the flag above is off.
  *
- * Kept here next to the flag so the message and the reason for it cannot drift
- * apart, and so there is exactly one sentence to change when it goes live.
+ * Unused while it is on, and deliberately kept: turning delivery back off has
+ * to be one line, and it is not if the honest message has to be rewritten from
+ * scratch at the same time. Kept here beside the flag so the message and the
+ * reason for it cannot drift apart.
  */
 export const NO_RECOVERY_NOTE
   = 'Password recovery by email is not switched on yet. If you signed up with '
