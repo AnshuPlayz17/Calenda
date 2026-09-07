@@ -119,10 +119,10 @@ export function QuestionScene() {
 
   const heading = (
     <>
-      <p className="label-caps">Before you sign up</p>
+      <p className="label-caps text-accent">Before you sign up</p>
       <h2
         id="questions-heading"
-        className="mt-3 max-w-[20ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]"
+        className="mt-3 max-w-[20ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
       >
         The six questions everyone asks.
       </h2>
@@ -168,7 +168,7 @@ export function QuestionScene() {
                   key={t.label}
                   className={cn(
                     'h-px flex-1 transition-colors duration-300',
-                    i <= active ? 'bg-brand' : 'bg-border',
+                    i <= active ? 'bg-accent' : 'bg-border',
                   )}
                 />
               ))}
@@ -232,7 +232,7 @@ function Card({
       <span className="label-caps tabular">
         {String(index + 1).padStart(2, '0')}
       </span>
-      <h3 className="mt-4 font-display text-[22px] font-medium leading-[1.15] tracking-tight text-text sm:text-[27px]">
+      <h3 className="mt-4 font-display text-title-sm font-medium leading-[1.12] tracking-tight text-text sm:text-title">
         {item.label}
       </h3>
       <p className="mt-4 text-[14.5px] leading-relaxed text-text-muted sm:text-[15.5px]">

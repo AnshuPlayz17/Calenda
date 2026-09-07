@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
@@ -8,7 +8,6 @@ import { Reveal } from '@/components/Reveal'
 import { Atmosphere } from '@/features/landing/Atmosphere'
 import { NumbersScene } from '@/features/landing/NumbersScene'
 import { QuestionScene } from '@/features/landing/QuestionScene'
-import { MagnetLines } from '@/components/motion/MagnetLines'
 import { Spotlight } from '@/components/motion/Spotlight'
 import { PipelineScene } from '@/features/landing/PipelineScene'
 import { WorldScene } from '@/features/landing/WorldScene'
@@ -20,6 +19,9 @@ import { StackScene } from '@/features/landing/StackScene'
 import { ProofScene } from '@/features/landing/ProofScene'
 import { SchoolsScene } from '@/features/landing/SchoolsScene'
 import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
+import { Chapter } from '@/features/landing/Chapter'
+import { useChapters } from '@/features/landing/useChapters'
+import { LANDING_SECTIONS } from '@/features/landing/sections'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
@@ -37,6 +39,31 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
   const { session, loading } = useAuth()
   const preview = usePreview()
   const { hash } = useLocation()
+  const chapters = useChapters()
+
+  // Built once. `useChapters` sets state on every chapter boundary, and this
+  // component renders the whole page -- so without this, crossing into a new
+  // chapter re-rendered all twelve scenes, the import's fifty-one chips and
+  // the world map's thirteen hundred dots included. The harness measured it
+  // exactly: twelve chapter boundaries, nine to twelve frames over 100ms, on
+  // every viewport and under reduced motion, where nothing else was moving.
+  // Stable elements let React skip those subtrees entirely.
+  const page = useMemo(() => (
+    <>
+      <Chapter id="top" accent={accentOf('top')}><Hero /></Chapter>
+      <Chapter id="schools" accent={accentOf('schools')}><SchoolsScene /></Chapter>
+      <Chapter id="glance" accent={accentOf('glance')}><ZoomScene /></Chapter>
+      <Chapter id="pipeline" accent={accentOf('pipeline')}><PipelineScene /></Chapter>
+      <Chapter id="import" accent={accentOf('import')}><ImportScene /></Chapter>
+      <Chapter id="more" accent={accentOf('more')}><StackScene /></Chapter>
+      <Chapter id="numbers" accent={accentOf('numbers')}><NumbersScene /></Chapter>
+      <Chapter id="questions" accent={accentOf('questions')}><QuestionScene /></Chapter>
+      <Chapter id="world" accent={accentOf('world')}><WorldScene /></Chapter>
+      <Chapter id="privacy" accent={accentOf('privacy')}><ProofScene /></Chapter>
+      <FounderScene />
+      <Chapter id="start" accent={accentOf('start')}><Closing /></Chapter>
+    </>
+  ), [])
 
   // Hash routing means the browser never scrolls to a fragment itself -- the
   // whole path already lives in the hash. Anyone arriving from the app sidebar
@@ -64,27 +91,26 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
   return (
     <div className="relative min-h-dvh bg-bg">
       <Atmosphere />
-      <Header />
+      <Header accent={chapters.section.accent} />
       {/* The ids are the anchors the companion rail jumps to, and they live
           here rather than inside each scene so the order of the page and the
           order of the rail are the same list. FounderScene carries its own id
           already -- it is linked to from the app sidebar. */}
-      <div id="top"><Hero /></div>
-      <div id="schools"><SchoolsScene /></div>
-      <div id="glance"><ZoomScene /></div>
-      <div id="pipeline"><PipelineScene /></div>
-      <div id="import"><ImportScene /></div>
-      <div id="more"><StackScene /></div>
-      <div id="numbers"><NumbersScene /></div>
-      <div id="questions"><QuestionScene /></div>
-      <div id="world"><WorldScene /></div>
-      <div id="privacy"><ProofScene /></div>
-      <FounderScene />
-      <div id="start"><Closing /></div>
+      {page}
       <Footer />
-      <ScrollCompanion />
+      <ScrollCompanion
+        active={chapters.active}
+        accent={chapters.section.accent}
+        ready={chapters.ready}
+        goTo={chapters.goTo}
+      />
     </div>
   )
+}
+
+/** The chapter list is the single source for a section's colour. */
+function accentOf(id: string) {
+  return LANDING_SECTIONS.find((s) => s.id === id)?.accent ?? 'indigo'
 }
 
 /** Signed in, or exploring the preview -- either way, not a prospect. */
@@ -94,7 +120,7 @@ function useSignedIn() {
   return Boolean(session || preview.active)
 }
 
-function Header() {
+function Header({ accent }: { accent: string }) {
   const [scrolled, setScrolled] = useState(false)
   const signedIn = useSignedIn()
   const reduce = useReducedMotion()
@@ -113,30 +139,39 @@ function Header() {
   }, [])
 
   return (
+    // The accent is set here rather than on the page wrapper. It was on the
+    // wrapper first, so that the header and the companion could inherit the
+    // colour of whatever chapter was being read -- and changing an inherited
+    // custom property on an ancestor of the whole document forces a style
+    // recalculation of every element under it. Twelve chapters, twelve full
+    // recalcs, and the harness measured exactly that: nine to twelve frames
+    // over 100ms per traversal on every viewport, reduced motion included.
+    // Two small subtrees each carrying their own copy costs nothing.
     <header
+      data-accent={accent}
       className={
         'sticky top-0 z-40 transition-[background-color,border-color,backdrop-filter] duration-300 '
         + (scrolled
-          ? 'border-b border-border bg-bg/95 backdrop-blur-md'
+          ? 'border-b border-border bg-bg/85 backdrop-blur-xl'
           : 'border-b border-transparent')
       }
     >
-      {/* How far through, at a glance, in the one bar of chrome that is always
-          on screen. It reads position, not time. The companion rail says which
-          chapter and offers a way back; this says how much is left, which is
-          the question a reader has before they have a name for the section. */}
+      {/* How far through, in the one bar of chrome that is always on screen.
+          It takes the colour of the chapter being read, so it is a readout of
+          where you are as well as how far -- the only element that can be,
+          since it is the only one present in all twelve. */}
       <motion.span
         aria-hidden
         style={{ scaleX: readProgress }}
-        className="absolute inset-x-0 bottom-0 h-px origin-left bg-brand"
+        className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-accent transition-colors duration-700"
       />
-      <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between px-5 sm:px-8">
         <Brand size="sm" to="/" />
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link
             to={signedIn ? '/dashboard' : '/sign-in'}
-            className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
+            className="inline-flex h-9 items-center rounded-lg bg-text px-4 text-[13.5px] font-medium text-bg no-underline transition-opacity duration-150 hover:opacity-85"
           >
             {signedIn ? 'Back to dashboard' : 'Sign in'}
           </Link>
@@ -146,147 +181,183 @@ function Header() {
   )
 }
 
+/**
+ * The first screen.
+ *
+ * Two changes from the version this replaces, and the second is the one that
+ * matters. The type is now the page's own display scale rather than three
+ * hand-picked pixel sizes, so it interpolates with the window instead of
+ * jumping at a breakpoint. And the hero has an exit: it used to sit still
+ * while the page scrolled away underneath it, which on a page built entirely
+ * out of scroll-driven scenes is the one screen that says nothing happens when
+ * you scroll. The headline now rises and clears, the stack tilts back and
+ * parts, and the whole thing hands over rather than being left behind.
+ */
+const HEADLINE = ['Everything you', 'need for school,', 'in one place.']
+
 function Hero() {
   const reduce = useReducedMotion()
   const signedIn = useSignedIn()
   const { scrollY } = useScroll()
-  // A small parallax on the card stack. Disabled entirely for reduced motion.
-  const cardY = useTransform(scrollY, [0, 600], [0, reduce ? 0 : -40])
+
+  const exit = useTransform(scrollY, [0, 700], [0, 1], { clamp: true })
+  const copyY = useTransform(exit, [0, 1], [0, reduce ? 0 : -110])
+  const copyFade = useTransform(exit, [0, 0.75], [1, reduce ? 1 : 0])
+  const stackY = useTransform(exit, [0, 1], [0, reduce ? 0 : -180])
+  const stackTilt = useTransform(exit, [0, 1], [0, reduce ? 0 : 9])
+
 
   return (
-    <section className="relative z-10 overflow-hidden px-5 pb-14 pt-12 sm:px-8 sm:pb-20 sm:pt-16">
-      {/* Ambient calendar grid, drawn rather than an image. */}
-      {/* A field that turns toward the cursor, behind everything and very faint.
-          It is the first thing the page does in response to a person. */}
-      <div aria-hidden className="pointer-events-none absolute -right-[8%] top-[6%] hidden opacity-[0.16] lg:block">
-        <MagnetLines
-          rows={9}
-          columns={9}
-          containerSize="34vmin"
-          lineColor="var(--text-subtle)"
-          lineWidth="0.5vmin"
-          lineHeight="3vmin"
-        />
-      </div>
+    <section className="relative z-10 overflow-hidden px-5 pb-20 pt-14 sm:px-8 sm:pb-28 sm:pt-20">
+      {/* An accent-coloured light behind the headline: the first thing that
+          says this page has a colour at all, in the same colour the header
+          rail is carrying at that moment.
+
+          Deliberately static. The first cut scaled it as the hero left, which
+          measured at nine frames over 100ms on a phone -- a 990px element
+          under a 110px blur has to be re-blurred on every frame it changes,
+          and scaling it changes it on all of them. It is painted once and
+          composited now, and it is capped to the viewport so it is not a
+          thousand pixels wide inside a 390px window. */}
+
 
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        className="pointer-events-none absolute -top-[18%] left-1/2 h-[min(30rem,90vw)] w-[min(30rem,90vw)] -translate-x-1/2 rounded-full bg-accent opacity-[0.13] blur-[90px] sm:-top-[26%] sm:h-[42rem] sm:w-[42rem]"
+      />
+
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.05]"
         style={{
-          maskImage: 'linear-gradient(to bottom, black 55%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 55%, transparent 100%)',
+          maskImage: 'radial-gradient(70% 55% at 50% 30%, black, transparent)',
+          WebkitMaskImage: 'radial-gradient(70% 55% at 50% 30%, black, transparent)',
         }}
       >
         <svg width="100%" height="100%">
           <defs>
-            <pattern id="hero-grid" width="76" height="76" patternUnits="userSpaceOnUse">
-              <path d="M76 0H0V76" fill="none" stroke="currentColor" strokeWidth="1" />
+            <pattern id="hero-grid" width="72" height="72" patternUnits="userSpaceOnUse">
+              <path d="M72 0H0V72" fill="none" stroke="currentColor" strokeWidth="1" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#hero-grid)" />
         </svg>
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1120px] items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
-        <div>
-          {/* Rendered at rest, not waiting on a scroll observer -- this is the
-              first thing anyone sees. */}
+      <div className="relative mx-auto w-full max-w-[1240px]">
+        <motion.div style={{ y: copyY, opacity: copyFade }}>
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="label-caps"
+            className="label-caps text-accent"
           >
             For students and parents
           </motion.p>
 
-          {/* Each line rises out from behind its own edge rather than fading
-              in as a block. It is the one place on the page where the type
-              itself is the moving thing, which is worth spending here: it is
-              the first sentence anybody reads. */}
-          <h1 className="mt-4 font-display text-[40px] font-medium leading-[1.05] tracking-tight sm:text-[56px]">
-            {['Everything you need', 'for school, in one place.'].map((line, i) => (
-              <span key={line} className="block overflow-hidden pb-[0.06em]">
+          {/* The headline gets the full width rather than half of a split.
+              At this size a two-column hero breaks "Everything you need" over
+              four arbitrary lines; given the page it breaks over three chosen
+              ones, and the sentence is the loudest thing on the screen, which
+              on a first screen is correct. */}
+          {/* The label is built from the same array as the lines. Three block
+              spans with no whitespace between them concatenate into
+              "Everything youneed for school," for anything reading the
+              accessible name -- a screen reader, and the test that guards this
+              page's identity. */}
+          <h1
+            aria-label={HEADLINE.join(' ')}
+            className="mt-6 font-display text-display font-medium leading-[0.98] tracking-[-0.025em] lg:text-display-lg"
+          >
+            {HEADLINE.map((line, i) => (
+              <span key={line} className="block overflow-hidden pb-[0.09em]">
                 <motion.span
                   className="block"
-                  initial={reduce ? false : { y: '108%' }}
+                  initial={reduce ? false : { y: '110%' }}
                   animate={{ y: '0%' }}
-                  transition={{ duration: 0.85, delay: 0.05 + i * 0.09, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.95, delay: 0.05 + i * 0.09, ease: [0.16, 1, 0.3, 1] }}
                 >
                   {line}
                 </motion.span>
               </span>
             ))}
           </h1>
+        </motion.div>
 
-          <motion.p
-            initial={reduce ? false : { opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 max-w-[52ch] text-[16.5px] leading-relaxed text-text-muted"
-          >
-            PA days, exams and assemblies. Your own calendar. Google Calendar. Class notes,
-            assignments and deadlines. Calenda holds all of it, and tells you what actually
-            matters today.
-          </motion.p>
-
-          <motion.div
-            initial={reduce ? false : { opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-8 flex flex-wrap items-center gap-3"
-          >
-            {/* Someone reading this from inside the app has already done both
-                of these; the only useful button is the way back. */}
-            <Link
-              to={signedIn ? '/dashboard' : '/sign-up'}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-5 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
+        <div className="mt-12 grid items-start gap-12 lg:mt-16 lg:grid-cols-[0.92fr_1fr] lg:gap-16">
+          <motion.div style={{ y: copyY, opacity: copyFade }}>
+            <motion.p
+              initial={reduce ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="max-w-[46ch] text-lg leading-relaxed text-text-muted sm:text-xl"
             >
-              {signedIn ? 'Back to dashboard' : 'Create an account'}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-            {!signedIn && (
+              PA days, exams and assemblies. Your own calendar. Google Calendar. Class notes,
+              assignments and deadlines. Calenda holds all of it, and tells you what actually
+              matters today.
+            </motion.p>
+
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-8 flex flex-wrap items-center gap-3"
+            >
+              {/* Someone reading this from inside the app has already done both
+                  of these; the only useful button is the way back. */}
               <Link
-                to="/sign-in"
-                className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-[14.5px] font-medium text-text no-underline transition-colors duration-150 hover:bg-surface-2"
+                to={signedIn ? '/dashboard' : '/sign-up'}
+                className="group inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-6 text-[15px] font-medium text-accent-contrast no-underline shadow-md transition-transform duration-200 hover:-translate-y-0.5"
               >
-                Sign in
+                {signedIn ? 'Back to dashboard' : 'Create an account'}
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
               </Link>
-            )}
+              {!signedIn && (
+                <Link
+                  to="/sign-in"
+                  className="inline-flex h-12 items-center rounded-xl border border-border px-5 text-[15px] font-medium text-text no-underline transition-colors duration-150 hover:border-accent-border hover:bg-accent-subtle"
+                >
+                  Sign in
+                </Link>
+              )}
+            </motion.div>
+
+            {/* Concrete and checkable, rather than adjectives. */}
+            <motion.ul
+              initial={reduce ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-8 flex flex-col gap-2.5"
+            >
+              {[
+                'Free, with nothing to install',
+                'Works on your phone and laptop',
+                'Your notes stay private',
+              ].map((line) => (
+                <li key={line} className="flex items-center gap-2 text-[15px] text-text-muted">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                  {line}
+                </li>
+              ))}
+            </motion.ul>
           </motion.div>
 
-          {/* Concrete and checkable, rather than adjectives. */}
-          <motion.ul
-            initial={reduce ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 flex flex-wrap gap-x-6 gap-y-2"
+          <motion.div
+            style={{ y: stackY, rotateX: stackTilt, transformPerspective: 1400 }}
+            className="relative origin-top"
           >
-            {[
-              'Free, with nothing to install',
-              'Works on your phone and laptop',
-              'Your notes stay private',
-            ].map((line) => (
-              <li key={line} className="flex items-center gap-1.5 text-[13px] text-text-muted">
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
-                {line}
-              </li>
-            ))}
-          </motion.ul>
+            <HeroStack />
+            <motion.p
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-4 text-center text-sm text-text-subtle"
+            >
+              A sample of what a term looks like once your classes are in. The
+              school's own dates arrive already imported.
+            </motion.p>
+          </motion.div>
         </div>
-
-        <motion.div style={{ y: cardY }} className="relative">
-          <HeroStack />
-          <motion.p
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-3 text-center text-[12.5px] text-text-subtle"
-          >
-            A sample of what a term looks like once your classes are in. The
-            school's own dates arrive already imported.
-          </motion.p>
-        </motion.div>
       </div>
 
       <ScrollCue />
@@ -313,11 +384,11 @@ function ScrollCue() {
     <motion.div
       style={{ opacity }}
       aria-hidden
-      className="pointer-events-none mx-auto mt-14 hidden w-full max-w-[1120px] items-center gap-3 px-5 sm:px-8 lg:flex"
+      className="pointer-events-none mx-auto mt-16 hidden w-full max-w-[1240px] items-center gap-3 px-5 sm:px-8 lg:flex"
     >
-      <span className="label-caps">Keep going</span>
+      <span className="label-caps text-accent">Keep going</span>
       <motion.span
-        className="h-px w-16 origin-left bg-border-strong"
+        className="h-px w-20 origin-left bg-accent-border"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.9, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
@@ -332,57 +403,54 @@ function Closing() {
   return (
     // The last thing on a page that has spent nine thousand pixels showing
     // rather than telling, so it does the opposite: no demo, no motion beyond
-    // the reveal, one sentence and a door. A closing card that competes with
-    // the scenes above it just delays the click it exists to collect.
-    <section className="relative z-10 overflow-hidden border-t border-border bg-surface px-5 py-24 sm:px-8 sm:py-32">
-      {/* A light that follows the cursor over the last screen, where somebody
-          is either about to click or about to leave. */}
-      <Spotlight className="bg-brand/[0.07] blur-[80px]" size={420} />
-      <Reveal className="mx-auto max-w-[1120px]">
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-end">
-            <div>
-              <p className="label-caps">Ready when you are</p>
-              <h2 className="mt-4 max-w-[17ch] font-display text-[38px] font-medium leading-[1.04] tracking-tight sm:text-[58px]">
-                Start the year knowing what's coming.
-              </h2>
-              <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted">
-                {signedIn
-                  ? 'All three are already done on your account. This page is here so you can show someone what Calenda is.'
-                  : 'Sign up and the school calendar is already there. Add your classes and everything else follows from them.'}
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+    // the reveal, one sentence and a door.
+    <section className="relative z-10 overflow-hidden border-t border-border bg-surface px-5 py-28 sm:px-8 sm:py-36">
+      <Spotlight className="bg-accent/[0.10] blur-[90px]" size={460} />
+      <Reveal className="mx-auto max-w-[1240px]">
+        <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-end">
+          <div>
+            <p className="label-caps text-accent">Ready when you are</p>
+            <h2 className="mt-4 max-w-[16ch] font-display text-display font-medium leading-[1.02] tracking-[-0.02em] lg:text-display-lg">
+              Start the year knowing what's coming.
+            </h2>
+            <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-text-muted">
+              {signedIn
+                ? 'All three are already done on your account. This page is here so you can show someone what Calenda is.'
+                : 'Sign up and the school calendar is already there. Add your classes and everything else follows from them.'}
+            </p>
+            <div className="mt-9 flex flex-wrap items-center gap-4">
+              <Link
+                to={signedIn ? '/dashboard' : '/sign-up'}
+                className="group inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-7 text-[15px] font-medium text-accent-contrast no-underline shadow-md transition-transform duration-200 hover:-translate-y-0.5"
+              >
+                {signedIn ? 'Back to dashboard' : 'Create an account'}
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
+              </Link>
+              {!signedIn && (
                 <Link
-                  to={signedIn ? '/dashboard' : '/sign-up'}
-                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-6 text-[14.5px] font-medium text-brand-contrast no-underline transition-colors duration-150 hover:bg-brand-hover"
+                  to="/sign-in"
+                  className="text-[15px] text-text-muted underline-offset-4 hover:text-text hover:underline"
                 >
-                  {signedIn ? 'Back to dashboard' : 'Create an account'}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
+                  or sign in
                 </Link>
-                {!signedIn && (
-                  <Link
-                    to="/sign-in"
-                    className="text-[14px] text-text-muted underline-offset-2 hover:text-text hover:underline"
-                  >
-                    or sign in
-                  </Link>
-                )}
-              </div>
+              )}
             </div>
+          </div>
 
-            {/* What actually happens, in order, so the first minute holds no
-                surprises. */}
-            <ol className="flex flex-col divide-y divide-border border-y border-border">
-              {[
-                'Sign in with Google, GitHub or Discord',
-                'The school calendar is already imported',
-                'Add your classes, and deadlines follow',
-              ].map((step, i) => (
-                <li key={step} className="flex items-baseline gap-4 py-3.5">
-                  <span className="label-caps tabular shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="text-[14px] leading-snug text-text">{step}</span>
-                </li>
-              ))}
-            </ol>
+          {/* What actually happens, in order, so the first minute holds no
+              surprises. */}
+          <ol className="flex flex-col divide-y divide-border border-y border-border">
+            {[
+              'Sign in with Google, GitHub or Discord',
+              'The school calendar is already imported',
+              'Add your classes, and deadlines follow',
+            ].map((step, i) => (
+              <li key={step} className="flex items-baseline gap-5 py-4">
+                <span className="label-caps tabular shrink-0 text-accent">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-[15px] leading-snug text-text">{step}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </Reveal>
     </section>
@@ -394,19 +462,19 @@ function Footer() {
   // bottom of the window on anything narrower than xl. Without it the last line
   // of the disclaimer ends up underneath the control.
   return (
-    <footer className="relative z-10 border-t border-border px-5 pb-24 pt-10 sm:px-8 xl:pb-10">
-      <div className="mx-auto flex max-w-[1120px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <footer className="relative z-10 border-t border-border px-5 pb-24 pt-12 sm:px-8 xl:pb-12">
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Brand size="sm" showMark={false} />
         <div className="flex flex-col gap-3 sm:items-end">
           {/* The header is for getting into the product. This belongs at the
               end, where somebody who has read the whole page is the one asking. */}
           <a
             href="#founder"
-            className="text-[13px] font-medium text-text-muted no-underline underline-offset-2 transition-colors duration-150 hover:text-text hover:underline"
+            className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
           >
             About the founder
           </a>
-          <p className="max-w-[60ch] text-[12px] leading-relaxed text-text-subtle">
+          <p className="max-w-[60ch] text-xs leading-relaxed text-text-subtle">
             A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
             official product of any school.
           </p>

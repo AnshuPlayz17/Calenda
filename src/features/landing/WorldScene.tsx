@@ -119,12 +119,12 @@ export function WorldScene() {
 function Copy() {
   return (
     <>
-      <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
+      <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent-subtle text-accent">
         <Globe className="h-5 w-5" aria-hidden />
       </span>
       <h2
         id="world-heading"
-        className="mt-5 max-w-[16ch] font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[34px] lg:text-[40px]"
+        className="mt-5 max-w-[16ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
       >
         One date. Every timezone.
       </h2>
@@ -178,7 +178,7 @@ function Map({
 
       <g
         fill="currentColor"
-        className="text-brand"
+        className="text-accent"
         clipPath={revealR ? 'url(#world-reveal)' : undefined}
       >
         {dots.map(([c, row]) => (
@@ -232,12 +232,12 @@ function Marker({
       <motion.span
         aria-hidden
         style={{ scale: ringScale, opacity: ringOpacity }}
-        className="absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand"
+        className="absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent"
       />
       <motion.span
         aria-hidden
         style={{ scale: dotScale, opacity: dotOpacity }}
-        className="absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand ring-2 ring-surface"
+        className="absolute left-0 top-0 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent ring-2 ring-surface"
       />
       <motion.span
         style={{ opacity: labelOpacity }}

@@ -31,12 +31,12 @@ export function ProofScene() {
 
   const copy = (
     <>
-      <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-subtle text-brand">
+      <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent-subtle text-accent">
         <ShieldCheck className="h-5 w-5" aria-hidden />
       </span>
       <h2
         id="proof-heading"
-        className="mt-5 max-w-[15ch] font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[34px] lg:text-[40px]"
+        className="mt-5 max-w-[15ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
       >
         Six ways in. All six close.
       </h2>

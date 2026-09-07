@@ -223,10 +223,10 @@ export function SchoolsScene() {
           fixed to the bottom of the window there. */}
       <div className="sticky top-0 flex h-svh flex-col overflow-hidden px-5 pb-16 pt-20 sm:px-8 xl:pb-6">
         <div className="mx-auto w-full max-w-[1120px] shrink-0 text-center">
-          <p className="label-caps">The schools</p>
+          <p className="label-caps text-accent">The schools</p>
           <h2
             id="schools-heading"
-            className="mx-auto mt-2.5 max-w-[24ch] font-display text-[24px] font-medium leading-tight tracking-tight sm:text-[30px]"
+            className="mx-auto mt-2.5 max-w-[24ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
           >
             Fifteen independent schools across the GTA.
           </h2>
@@ -242,7 +242,7 @@ export function SchoolsScene() {
           <motion.p
             aria-hidden
             style={{ opacity: lineIn, y: lineY }}
-            className="pointer-events-none absolute inset-x-0 top-[44%] text-center font-display text-[34px] font-medium leading-[1.1] tracking-tight text-text sm:text-[54px] lg:text-[68px]"
+            className="pointer-events-none absolute inset-x-0 top-[44%] text-center font-display text-display font-medium leading-[1.0] tracking-[-0.02em] text-text lg:text-display-lg"
           >
             <span className="italic">Calenda</span> works with all of them.
           </motion.p>
@@ -376,7 +376,7 @@ function Card({
           >
             <span
               style={{ borderRadius: 'calc(var(--tile, 56px) * 0.26)' }}
-              className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+              className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-accent-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
             >
               <Crest school={school} />
               <ArrowUpRight
@@ -461,7 +461,7 @@ function Crest({ school }: { school: School }) {
         marginRight: `-${tracking}em`,
         transform: 'translateY(0.03em)',
       }}
-      className="select-none font-display font-medium leading-none text-text transition-colors duration-200 group-hover:text-brand"
+      className="select-none font-display font-medium leading-none text-text transition-colors duration-200 group-hover:text-accent"
     >
       {school.monogram}
     </span>
@@ -485,10 +485,10 @@ function StaticSchools() {
       aria-labelledby="schools-heading"
     >
       <div className="mx-auto w-full max-w-[1120px]">
-        <p className="label-caps">The schools</p>
+        <p className="label-caps text-accent">The schools</p>
         <h2
           id="schools-heading"
-          className="mt-2.5 max-w-[24ch] font-display text-[26px] font-medium leading-tight tracking-tight sm:text-[32px]"
+          className="mt-2.5 max-w-[24ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
         >
           Fifteen independent schools across the GTA.
         </h2>
@@ -507,7 +507,7 @@ function StaticSchools() {
                     ['--tile' as string]: 'clamp(52px, 7.5vw, 96px)',
                     borderRadius: 'calc(var(--tile) * 0.26)',
                   }}
-                  className="grid h-[var(--tile)] w-[var(--tile)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
+                  className="grid h-[var(--tile)] w-[var(--tile)] place-items-center border border-border bg-gradient-to-b from-surface to-bg transition-colors duration-200 group-hover:border-accent-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]"
                 >
                   <Crest school={school} />
                 </span>
@@ -524,7 +524,7 @@ function StaticSchools() {
           ))}
         </ul>
 
-        <p className="mt-10 font-display text-[30px] font-medium leading-[1.1] tracking-tight sm:text-[44px]">
+        <p className="mt-10 font-display text-display font-medium leading-[1.0] tracking-[-0.02em]">
           <span className="italic">Calenda</span> works with all of them.
         </p>
 

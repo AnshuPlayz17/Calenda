@@ -101,7 +101,7 @@ export function WheelCarousel({
         <span
           aria-hidden
           style={{ top: `${apex * 100}%` }}
-          className="absolute left-3 h-2 w-2 -translate-y-1/2 rounded-full bg-brand"
+          className="absolute left-3 h-2 w-2 -translate-y-1/2 rounded-full bg-accent"
         />
         {items.map((it, i) => {
           const offset = i - active
