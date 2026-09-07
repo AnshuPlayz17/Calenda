@@ -16,26 +16,34 @@
  * link survives hash routing, which was the open question `recoveryToken.ts`
  * was written to close and which nothing in the dev container could answer.
  *
- * WHAT IS STILL TRUE AND MATTERS
+ * THE SENDER, AND THE THREE LIMITS THAT MATTER
  *
- * The built-in sender is rate limited to roughly two messages an hour and
- * comes from a shared Supabase domain, which is fine for one user and a few
- * testers and is not fine for a school. Before this goes to more people, add
- * SMTP credentials under Authentication -> Emails -> Custom SMTP. Brevo is the
- * free option that does not need a domain -- it verifies a single sender
- * address, so a personal address works. Resend is the other free tier but
- * wants DNS records on a domain you own.
+ * Mail now goes through Brevo over custom SMTP, not Supabase's built-in
+ * sender. The From address is on a subdomain Brevo owns and has SPF and DKIM
+ * for, which is better than the alternative that was considered: sending
+ * "from" a personal Gmail address through a third party fails DMARC alignment
+ * and gets filtered, because the mail is signed by Brevo while claiming to be
+ * from Google.
  *
- * The redirect URL must stay on the allow list under Authentication -> URL
- * Configuration:
+ * Three limits stack, and they interact:
  *
- *     https://anshuplayz17.github.io/Calenda/#/reset-password
+ *   1. Supabase enforces a minimum gap between emails to one address,
+ *      server-side. Unbypassable, and the reason "you can only request this
+ *      after N seconds" exists.
+ *   2. Supabase's project-wide "Emails per hour" under Authentication ->
+ *      Rate Limits. Call it N; the most that can leave in a day is 24N.
+ *   3. Brevo's free plan: 300 emails a day.
  *
- * The `#` is load-bearing. This app is hash-routed, and an entry without it
- * sends the recovery link to the landing page with the token attached to the
- * wrong route. Supabase does not fail in that case -- it silently substitutes
- * the Site URL, which is how a correctly configured project still delivers a
- * link that goes nowhere useful.
+ * So N must be 12 or lower for it to be arithmetically impossible to exhaust
+ * the daily quota -- 24 x 12 = 288. At 30 an hour a determined stranger could
+ * burn 720 in a day, and the cost lands on the wrong person: the quota is gone
+ * and somebody who genuinely cannot get in cannot reset their password either.
+ * Twelve an hour is far beyond what a handful of testers need. Keep it there.
+ *
+ * `features/auth/emailCooldown.ts` adds a per-address countdown in the browser
+ * on top of that. It is a courtesy for the person who presses the button twice,
+ * never a control -- clearing site data defeats it -- and it must not be
+ * described as one.
  *
  * Turning this back off is one line, and is the right move if delivery ever
  * stops being reliable. A reset that silently drops an address is worse than

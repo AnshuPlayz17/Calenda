@@ -65,7 +65,7 @@ export function ProviderButtons({
 /** A rule with a word in it. */
 export function Separator({ children }: { children: ReactNode }) {
   return (
-    <div className="my-3 flex items-center gap-3">
+    <div className="my-2 flex items-center gap-3">
       <hr className="flex-1 border-border" />
       <span className="label-caps">{children}</span>
       <hr className="flex-1 border-border" />

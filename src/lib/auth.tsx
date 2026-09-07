@@ -52,9 +52,17 @@ function friendlyError(message: string): string {
     // Same reasoning: do not confirm that an address exists.
     return 'Check your email to finish setting up your account.'
   }
-  if (m.includes('rate limit') || m.includes('too many')) {
-    return 'Too many attempts. Please wait a minute and try again.'
+  // Supabase enforces its own gap between emails to one address and reports it
+  // as "For security purposes, you can only request this after 47 seconds",
+  // which reads like an accusation for what is almost always someone pressing
+  // a button twice. Same number, said plainly.
+  const wait = /after (\d+) seconds?/.exec(message)
+  if (wait) return `One is already on the way. You can ask again in ${wait[1]} seconds.`
+
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('email rate')) {
+    return 'Too many requests just now. Please wait a minute and try again.'
   }
+
   if (m.includes('not enabled') || m.includes('unsupported provider')) {
     return 'That sign-in method is not available yet.'
   }
@@ -132,8 +140,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signInWithMagicLink(email) {
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: redirectTo },
+          options: {
+            emailRedirectTo: redirectTo,
+            // Never create an account from a sign-in form. Otherwise a typo in
+            // an address silently registers a new empty account and the link
+            // that arrives signs someone into it -- which looks like working
+            // and is the opposite of what they asked for.
+            shouldCreateUser: false,
+          },
         })
+        // An address with no account is reported as a refusal, and passing it
+        // on would answer the question "is this person registered here?" to
+        // anyone who asked -- the same disclosure the uniform credentials
+        // error exists to prevent. From the caller's side the right behaviour
+        // is identical to success: say a link is on its way, and send nothing.
+        if (error && /signups not allowed|user not found/i.test(error.message)) {
+          return { error: null }
+        }
         return { error: error ? friendlyError(error.message) : null }
       },
 

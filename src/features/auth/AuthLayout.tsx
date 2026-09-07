@@ -81,13 +81,13 @@ export function AuthLayout({
           initial={reduce ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto my-auto w-full max-w-[380px] py-4"
+          className="mx-auto my-auto w-full max-w-[380px] py-3"
         >
           <div className="lg:hidden">
             <Brand size="md" to="/" />
           </div>
 
-          <h1 className="mt-6 font-display text-title-sm font-medium tracking-tight text-text lg:mt-0">
+          <h1 className="mt-5 font-display text-title-sm font-medium tracking-tight text-text lg:mt-0">
             {title}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-text-muted">{subtitle}</p>
