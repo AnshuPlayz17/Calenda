@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion, useScroll, useSpring } from 'motion/react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { LANDING_SECTIONS } from './sections'
@@ -6,6 +5,10 @@ import { cn } from '@/lib/cn'
 
 /**
  * The one control that is on screen for the whole page.
+ *
+ * It no longer works out where the reader is -- the route does, because the
+ * page wrapper needs the same answer to carry the chapter's accent into the
+ * header. One scroll listener, two consumers.
  *
  * Until now the only thing present in every scene was a hairline in the header
  * filling left to right. It answers "how far through am I" and nothing else,
@@ -25,73 +28,25 @@ import { cn } from '@/lib/cn'
  * a navigation control.
  */
 
-/** Where in the viewport a section counts as "the one being read". */
-const READ_LINE = 0.35
 
-export function ScrollCompanion() {
+export function ScrollCompanion({
+  active, accent, ready, goTo,
+}: {
+  active: number
+  /** The chapter being read, carried here rather than inherited from the page:
+   *  changing a custom property on an ancestor of the whole document restyles
+   *  the whole document. */
+  accent: string
+  ready: boolean
+  goTo: (index: number) => void
+}) {
   const reduce = useReducedMotion()
-  const [active, setActive] = useState(0)
-  const [ready, setReady] = useState(false)
-  const tops = useRef<number[]>([])
 
   const { scrollYProgress } = useScroll()
   // Sprung on the fill only, and only when motion is wanted: the readout is
   // useful either way, the easing is what somebody asked not to be shown.
   const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 })
   const fill = reduce ? scrollYProgress : smooth
-
-  // Section offsets are measured once and cached, not read per scroll frame.
-  // Eleven getBoundingClientRect calls inside a scroll handler is eleven forced
-  // layouts per frame, which is exactly the kind of thing that turns a 6 ms
-  // frame into a 40 ms one on the pinned scenes.
-  const measure = useCallback(() => {
-    tops.current = LANDING_SECTIONS.map(({ id }) => {
-      const el = document.getElementById(id)
-      return el ? el.getBoundingClientRect().top + window.scrollY : Number.POSITIVE_INFINITY
-    })
-    setReady(true)
-  }, [])
-
-  useEffect(() => {
-    measure()
-    // Bundled fonts land after first paint and change every offset below the
-    // fold, so measure again once the page has settled.
-    const settle = window.setTimeout(measure, 400)
-    window.addEventListener('resize', measure)
-
-    let frame = 0
-    const onScroll = () => {
-      if (frame) return
-      frame = window.requestAnimationFrame(() => {
-        frame = 0
-        const line = window.scrollY + window.innerHeight * READ_LINE
-        let next = 0
-        for (let i = 0; i < tops.current.length; i += 1) {
-          if (tops.current[i]! <= line) next = i
-        }
-        setActive((prev) => (prev === next ? prev : next))
-      })
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-
-    return () => {
-      window.clearTimeout(settle)
-      window.removeEventListener('resize', measure)
-      window.removeEventListener('scroll', onScroll)
-      if (frame) window.cancelAnimationFrame(frame)
-    }
-  }, [measure])
-
-  const goTo = useCallback((index: number) => {
-    const clamped = Math.min(LANDING_SECTIONS.length - 1, Math.max(0, index))
-    const el = document.getElementById(LANDING_SECTIONS[clamped]!.id)
-    if (!el) return
-    // A hair past the top, so the header does not sit over the first line and
-    // so a pinned scene starts at progress zero rather than just before it.
-    const top = el.getBoundingClientRect().top + window.scrollY
-    window.scrollTo({ top: clamped === 0 ? 0 : top + 2, behavior: reduce ? 'auto' : 'smooth' })
-  }, [reduce])
 
   if (!ready) return null
 
@@ -105,6 +60,7 @@ export function ScrollCompanion() {
           Below lg the margins are gone, so it becomes the bar below instead. */}
       <nav
         aria-label="Page sections"
+        data-accent={accent}
         className="pointer-events-none fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 xl:block"
       >
         {/* No panel around it. A bordered card floating in the right margin
@@ -142,13 +98,16 @@ export function ScrollCompanion() {
               >
                 {section.label}
               </span>
+              {/* Each tick carries its own chapter's colour, so the rail is a
+                  legend for the page as well as a position in it. */}
               <span
                 aria-hidden
+                data-accent={section.accent}
                 className={cn(
                   'block h-px shrink-0 transition-all duration-300',
                   i === active
-                    ? 'w-6 bg-brand'
-                    : 'w-3 bg-border-strong group-hover:w-5 group-hover:bg-text-subtle',
+                    ? 'w-7 bg-accent'
+                    : 'w-3 bg-border-strong group-hover:w-5 group-hover:bg-accent',
                 )}
               />
             </button>
@@ -170,6 +129,7 @@ export function ScrollCompanion() {
           top of scenes whose whole job is to be looked at. */}
       <nav
         aria-label="Page sections"
+        data-accent={accent}
         className="pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-4 xl:hidden"
       >
         <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full border border-border bg-bg/85 py-1 pl-1 pr-1 shadow-sm backdrop-blur-md">
@@ -182,7 +142,7 @@ export function ScrollCompanion() {
               {current.label}
             </span>
             <span aria-hidden className="block h-px w-full min-w-[84px] overflow-hidden bg-border">
-              <motion.span style={{ scaleX: fill }} className="block h-px w-full origin-left bg-brand" />
+              <motion.span style={{ scaleX: fill }} className="block h-px w-full origin-left bg-accent" />
             </span>
           </span>
 

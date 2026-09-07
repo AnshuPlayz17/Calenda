@@ -73,8 +73,8 @@ export function StackScene() {
   return (
     <section ref={ref} className="relative z-10 px-5 pb-24 pt-16 sm:px-8 sm:pb-32 sm:pt-24">
       <div className="mx-auto max-w-[1120px]">
-        <p className="label-caps">What else it does</p>
-        <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[38px]">
+        <p className="label-caps text-accent">What else it does</p>
+        <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
           Three more things, and none of them ask you twice.
         </h2>
 
@@ -113,11 +113,11 @@ function Card({
     >
       <div className="grid items-center gap-8 p-6 sm:p-9 lg:grid-cols-[0.9fr_1fr] lg:gap-12">
         <div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-border bg-brand-subtle px-3 py-1 text-[12px] font-medium text-brand">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent-border bg-accent-subtle px-3 py-1 text-[12px] font-medium text-accent">
             <Icon className="h-3.5 w-3.5" aria-hidden />
             {eyebrow}
           </span>
-          <h3 className="mt-5 max-w-[16ch] font-display text-[26px] font-medium leading-[1.14] tracking-tight text-text sm:text-[32px]">
+          <h3 className="mt-5 max-w-[16ch] font-display text-title-sm font-medium leading-[1.1] tracking-tight text-text sm:text-title">
             {title}
           </h3>
           <p className="mt-4 max-w-[44ch] text-[14.5px] leading-relaxed text-text-muted sm:text-[15px]">

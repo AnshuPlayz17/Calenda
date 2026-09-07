@@ -269,6 +269,139 @@
 
 /* Expose the semantic layer to Tailwind so utilities follow the theme.
    `inline` keeps the var reference live instead of resolving it at build. */
+/* ---------------------------------------------------------------------------
+   Chapter accents.
+
+   The landing page is twelve chapters long and every one of them was the same
+   navy, which is the main reason it read as one very long section rather than
+   as a journey. Each chapter now carries a hue, and everything inside it --
+   the eyebrow, the icon chip, the rules, the active states, the progress rail
+   in the header and the companion's ticks -- reads `--accent` rather than the
+   brand. Scrolling the page therefore moves its colour temperature, which is
+   the one thing a scroll-driven page can do that a static one cannot.
+
+   The sequence is chosen, not swept: cool through the explanatory middle,
+   warm where the page starts asking questions, green again at the privacy
+   chapter because that is where "Refused" is already green, rose for the one
+   chapter about a person, and home to indigo at both ends.
+
+   Only `--accent` and its contrast are declared per hue. The tinted ground and
+   the border are mixed from the accent and the page's own background, so they
+   are correct in all three themes without three sets of numbers to keep in
+   step -- and a theme that changes its background gets correct accents for
+   free.
+
+   Lightness is held constant across the twelve so they read as one family and
+   so contrast is a property of the system rather than of each colour: L 0.52
+   on the light ground, 0.76 on the dark one, where the ratios land above 4.5:1
+   for the small text these are used on. */
+
+[data-accent] {
+  --accent-subtle:  color-mix(in oklab, var(--accent) 10%, var(--bg));
+  --accent-border:  color-mix(in oklab, var(--accent) 34%, var(--bg));
+  --accent-strong:  color-mix(in oklab, var(--accent) 82%, var(--text));
+  --accent-contrast: #ffffff;
+}
+
+[data-accent='indigo'] { --accent: oklch(0.52 0.148 265); }
+[data-accent='violet'] { --accent: oklch(0.52 0.148 292); }
+[data-accent='blue']   { --accent: oklch(0.52 0.148 240); }
+[data-accent='azure']  { --accent: oklch(0.52 0.128 205); }
+[data-accent='cyan']   { --accent: oklch(0.52 0.108 195); }
+[data-accent='teal']   { --accent: oklch(0.52 0.108 175); }
+[data-accent='green']  { --accent: oklch(0.52 0.118 150); }
+[data-accent='moss']   { --accent: oklch(0.52 0.108 130); }
+[data-accent='gold']   { --accent: oklch(0.52 0.108 80); }
+[data-accent='amber']  { --accent: oklch(0.52 0.128 55); }
+[data-accent='rose']   { --accent: oklch(0.52 0.148 350); }
+
+/* Dark: the same hues, lifted off a dark ground rather than dropped onto a
+   light one. Chroma comes down a little because saturated colour at high
+   lightness on near-black vibrates. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='vivid']) {
+    [data-accent='indigo'] { --accent: oklch(0.78 0.115 265); }
+    [data-accent='violet'] { --accent: oklch(0.78 0.115 292); }
+    [data-accent='blue']   { --accent: oklch(0.78 0.115 240); }
+    [data-accent='azure']  { --accent: oklch(0.78 0.100 205); }
+    [data-accent='cyan']   { --accent: oklch(0.80 0.090 195); }
+    [data-accent='teal']   { --accent: oklch(0.80 0.090 175); }
+    [data-accent='green']  { --accent: oklch(0.80 0.100 150); }
+    [data-accent='moss']   { --accent: oklch(0.80 0.095 130); }
+    [data-accent='gold']   { --accent: oklch(0.82 0.100 80); }
+    [data-accent='amber']  { --accent: oklch(0.80 0.110 55); }
+    [data-accent='rose']   { --accent: oklch(0.78 0.115 350); }
+    [data-accent] { --accent-contrast: oklch(0.18 0.03 265); }
+  }
+}
+
+:root[data-theme='dark'] {
+  [data-accent='indigo'] { --accent: oklch(0.78 0.115 265); }
+  [data-accent='violet'] { --accent: oklch(0.78 0.115 292); }
+  [data-accent='blue']   { --accent: oklch(0.78 0.115 240); }
+  [data-accent='azure']  { --accent: oklch(0.78 0.100 205); }
+  [data-accent='cyan']   { --accent: oklch(0.80 0.090 195); }
+  [data-accent='teal']   { --accent: oklch(0.80 0.090 175); }
+  [data-accent='green']  { --accent: oklch(0.80 0.100 150); }
+  [data-accent='moss']   { --accent: oklch(0.80 0.095 130); }
+  [data-accent='gold']   { --accent: oklch(0.82 0.100 80); }
+  [data-accent='amber']  { --accent: oklch(0.80 0.110 55); }
+  [data-accent='rose']   { --accent: oklch(0.78 0.115 350); }
+  [data-accent] { --accent-contrast: oklch(0.18 0.03 265); }
+}
+
+/* Vivid is the theme that was asked to be colourful, so it is the one that
+   spends chroma. Same lightness, so the same contrast guarantees hold. */
+:root[data-theme='vivid'] {
+  [data-accent='indigo'] { --accent: oklch(0.53 0.215 275); }
+  [data-accent='violet'] { --accent: oklch(0.53 0.235 300); }
+  [data-accent='blue']   { --accent: oklch(0.53 0.205 250); }
+  [data-accent='azure']  { --accent: oklch(0.55 0.170 218); }
+  [data-accent='cyan']   { --accent: oklch(0.56 0.145 200); }
+  [data-accent='teal']   { --accent: oklch(0.56 0.140 178); }
+  [data-accent='green']  { --accent: oklch(0.55 0.165 152); }
+  [data-accent='moss']   { --accent: oklch(0.55 0.155 132); }
+  [data-accent='gold']   { --accent: oklch(0.58 0.150 78); }
+  [data-accent='amber']  { --accent: oklch(0.57 0.185 50); }
+  [data-accent='rose']   { --accent: oklch(0.54 0.220 355); }
+}
+
+/* ---------------------------------------------------------------------------
+   Type scale.
+
+   Every heading on the landing page used to carry its own three-breakpoint
+   arbitrary size -- text-[28px] sm:text-[34px] lg:text-[40px] and eleven
+   variations on it -- which is how twelve chapters end up at twelve slightly
+   different sizes that nobody chose. These are one fluid scale: each step
+   interpolates with the viewport instead of stepping at a breakpoint, so there
+   is no width at which a headline is momentarily the wrong size.
+
+   The ratio is 1.25 at the small end and opens up through the display sizes,
+   because a scale that is comfortable for body text is far too tight for a
+   headline that has to carry a whole screen. */
+
+@theme inline {
+  /* Only new steps. Overriding text-sm or text-base here would resize every
+     screen in the app, not the landing page -- and 15px body text is below the
+     floor this project holds itself to anyway. */
+  --text-2xs: 0.6875rem;
+
+  --text-title-sm: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --text-title:    clamp(1.5rem, 1.25rem + 1.15vw, 2.125rem);
+  --text-display-sm: clamp(1.875rem, 1.4rem + 2.2vw, 2.875rem);
+  --text-display:    clamp(2.25rem, 1.5rem + 3.4vw, 3.75rem);
+  --text-display-lg: clamp(2.5rem, 1.5rem + 4.6vw, 4.75rem);
+
+  --color-accent:          var(--accent);
+  --color-accent-subtle:   var(--accent-subtle);
+  --color-accent-border:   var(--accent-border);
+  --color-accent-strong:   var(--accent-strong);
+  --color-accent-contrast: var(--accent-contrast);
+
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+}
+
 @theme inline {
   --color-bg:        var(--bg);
   --color-surface:   var(--surface);

@@ -58,10 +58,10 @@ export function ZoomScene() {
 function Heading() {
   return (
     <>
-      <p className="label-caps">One row, opened</p>
+      <p className="label-caps text-accent">One row, opened</p>
       <h2
         id="zoom-heading"
-        className="mt-3 max-w-[20ch] font-display text-[28px] font-medium leading-[1.12] tracking-tight sm:text-[36px]"
+        className="mt-3 max-w-[20ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm"
       >
         Every date carries the things that hang off it.
       </h2>
@@ -135,7 +135,7 @@ function Summary() {
             key={e.title}
             className={
               'flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 '
-              + (i === 0 ? 'bg-brand-subtle/50' : '')
+              + (i === 0 ? 'bg-accent-subtle/50' : '')
             }
           >
             <span
@@ -172,7 +172,7 @@ function Detail() {
           style={{ background: `var(--cat-${EVENT.category})` }}
         />
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[22px] font-medium leading-tight tracking-tight text-text sm:text-[26px]">
+          <p className="font-display text-title-sm font-medium leading-[1.12] tracking-tight text-text sm:text-title">
             {EVENT.title}
           </p>
           <p className="tabular mt-1.5 text-[13px] text-text-muted">

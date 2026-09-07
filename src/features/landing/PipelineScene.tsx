@@ -69,8 +69,8 @@ export function PipelineScene() {
   return (
     <section ref={ref} className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto max-w-[1000px]">
-        <p className="label-caps">From the school's PDF to your lock screen</p>
-        <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
+        <p className="label-caps text-accent">From the school's PDF to your lock screen</p>
+        <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
           Six steps, and you do one of them.
         </h2>
         <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-text-muted">
@@ -102,7 +102,7 @@ function Spine({ progress, reduce }: { progress: MotionValue<number>; reduce: bo
     <span aria-hidden className="absolute bottom-2 left-[9px] top-2 w-px bg-border sm:left-[13px]">
       <motion.span
         style={reduce ? { transformOrigin: 'top' } : { scaleY, transformOrigin: 'top' }}
-        className="absolute inset-0 block bg-brand"
+        className="absolute inset-0 block bg-accent"
       />
     </span>
   )
@@ -129,7 +129,7 @@ function Stage({
       <motion.span
         aria-hidden
         style={reduce ? undefined : { scale: dot }}
-        className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border-2 border-bg bg-brand sm:-left-12"
+        className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border-2 border-bg bg-accent sm:-left-12"
       />
       <p className="label-caps tabular">{stage.n}</p>
       <h3 className="mt-1.5 max-w-[34ch] text-[16.5px] font-medium leading-snug text-text sm:text-[18px]">

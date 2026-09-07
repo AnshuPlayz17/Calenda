@@ -68,6 +68,16 @@ npm run build`.
   green; it fails when the function is first called. Adding a defaulted
   parameter does not preserve old call sites — it makes them ambiguous. Drop the
   old overload.
+- **The landing route renders every scene, so it must not re-render.** The
+  active-chapter state lives in `useChapters` and is read by the header and the
+  companion rail. When the route also rendered the twelve scenes inline, every
+  chapter boundary re-rendered all of them — the import's 51 chips and the
+  world map's 1,307 dots included — for nine to twelve frames over 100ms per
+  traversal, on every viewport and under reduced motion. The scene tree is
+  `useMemo`'d with an empty dependency list. Keep it that way.
+- **Scaling a large blurred element is re-blurring it every frame.** The hero's
+  accent glow is 670px under a 90px blur; animating its scale on scroll cost
+  nine frames over 100ms on a phone. It is painted once and composited.
 - **Fonts are bundled, not fetched from Google.** See `src/styles/fonts.ts`. Do
   not reintroduce the CDN link.
 
@@ -88,6 +98,33 @@ npm run build`.
   `git`, `npm` and `curl` go in his terminal.
 - The live site (github.io) is also unreachable from here. Real-device checks
   are the owner's.
+
+## The design system
+
+Three layers, all in `src/styles/index.css`.
+
+- **Neutrals and brand.** Unchanged: navy `#1E3765` with a generated 50–950
+  ramp, both themes authored rather than inverted. This is the app's colour.
+- **Chapter accents.** The landing page's twelve chapters each carry a hue,
+  set as `data-accent` on the section, and everything inside reads `--accent`
+  instead of the brand — eyebrows, icon chips, rules, active states, the
+  header's progress hairline, the companion's ticks. Scrolling the page moves
+  its colour temperature, which is the one thing a scroll-driven page can do
+  that a static one cannot. Only `--accent` is declared per hue; the tinted
+  ground, the border and the strong variant are `color-mix()`ed from it and the
+  page's own background, so all three themes are correct without three sets of
+  numbers. Lightness is held constant across the twelve (0.52 light, ~0.78
+  dark) so contrast is a property of the system rather than of each colour.
+  **Vivid is the theme that spends chroma** — same lightness, more saturation.
+- **One type scale.** `--text-title-sm` through `--text-display-lg`, fluid
+  `clamp()` so a headline interpolates with the window instead of stepping at a
+  breakpoint. Do not add another `text-[28px] sm:text-[34px]`; that is what the
+  scale replaced. The default Tailwind steps are deliberately **not** overridden
+  — doing so would resize every screen in the app, not the landing page.
+
+`src/features/landing/Chapter.tsx` holds what every chapter has: the wrapper
+that sets the id and the accent and draws the wash, `ChapterHeading`, and the
+pinned/static frames. Use them rather than re-typing the classes.
 
 ## The landing page
 

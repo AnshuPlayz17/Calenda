@@ -85,8 +85,8 @@ function Lid({ progress }: { progress: MotionValue<number> }) {
 function Panel() {
   return (
     <>
-      <p className="label-caps">Created by</p>
-      <h2 className="mt-4 font-display text-[42px] font-medium leading-[1.02] tracking-tight sm:text-[64px]">
+      <p className="label-caps text-accent">Created by</p>
+      <h2 className="mt-4 font-display text-display font-medium leading-[1.0] tracking-[-0.02em]">
         Anshu Arunav
       </h2>
       <p className="mt-6 max-w-[46ch] text-[17px] leading-relaxed text-text sm:text-[19px]">
@@ -101,7 +101,7 @@ function Panel() {
       <dl className="mt-10 flex flex-wrap gap-x-12 gap-y-6 border-t border-border pt-8">
         {NUMBERS.map((n) => (
           <div key={n.label}>
-            <dt className="font-display text-[32px] font-medium leading-none tracking-tight text-text sm:text-[38px]">
+            <dt className="font-display text-display-sm font-medium leading-none tracking-tight text-text">
               <CountUp to={n.value} />
             </dt>
             <dd className="mt-2 text-[12px] leading-snug text-text-subtle">{n.label}</dd>

@@ -119,10 +119,10 @@ function BeatBlock({
       className="absolute inset-0 flex flex-col justify-center"
       aria-hidden={!first}
     >
-      <p className="label-caps">{beat.eyebrow}</p>
+      <p className="label-caps text-accent">{beat.eyebrow}</p>
       <h2
         id={first ? 'import-heading' : undefined}
-        className="mt-2.5 max-w-[15ch] font-display text-[28px] font-medium leading-[1.12] tracking-tight text-text sm:text-[34px] lg:text-[42px]"
+        className="mt-2.5 max-w-[15ch] font-display text-title font-medium leading-[1.06] tracking-tight text-text sm:text-display-sm"
       >
         {beat.title}
       </h2>
@@ -149,7 +149,7 @@ function Stage({ progress, light }: { progress: MotionValue<number>; light: bool
         className="absolute inset-x-[14%] inset-y-[6%] rounded-lg border border-border bg-surface p-5 shadow-md"
         aria-hidden
       >
-        <p className="label-caps">Important Dates — sample</p>
+        <p className="label-caps text-accent">Important Dates — sample</p>
         <div className="mt-4 flex flex-col gap-2">
           {Array.from({ length: 9 }, (_, i) => (
             <span
@@ -273,10 +273,10 @@ function StaticImport() {
     <section className="bg-bg px-6 py-20" aria-labelledby="import-heading">
       <div className="mx-auto grid max-w-[1180px] items-center gap-10 lg:grid-cols-[0.85fr_1fr]">
         <div>
-          <p className="label-caps">{BEATS[2]!.eyebrow}</p>
+          <p className="label-caps text-accent">{BEATS[2]!.eyebrow}</p>
           <h2
             id="import-heading"
-            className="mt-2.5 max-w-[16ch] font-display text-[30px] font-medium leading-[1.12] tracking-tight text-text sm:text-[38px]"
+            className="mt-2.5 max-w-[16ch] font-display text-title font-medium leading-[1.06] tracking-tight text-text sm:text-display-sm"
           >
             {BEATS[2]!.title}
           </h2>

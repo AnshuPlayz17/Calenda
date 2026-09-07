@@ -70,8 +70,8 @@ export function NumbersScene() {
     <section className="relative z-10 border-y border-border bg-surface px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto max-w-[1120px]">
         <Reveal>
-          <p className="label-caps">A sample year, counted</p>
-          <h2 className="mt-3 max-w-[22ch] font-display text-[30px] font-medium leading-tight tracking-tight sm:text-[40px]">
+          <p className="label-caps text-accent">A sample year, counted</p>
+          <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
             This is the shape of a school year.
           </h2>
           <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed text-text-muted">
@@ -107,7 +107,7 @@ export function NumbersScene() {
 function Stat({ value, label, detail }: { value: number; label: string; detail: string }) {
   return (
     <Reveal>
-      <p className="font-display text-[52px] font-medium leading-none tracking-tight text-text sm:text-[64px]">
+      <p className="font-display text-display font-medium leading-none tracking-[-0.02em] text-text">
         <AnimatedNumber value={value} />
       </p>
       <p className="mt-2 text-[14px] font-medium text-text">{label}</p>
@@ -152,7 +152,7 @@ function MonthChart({ months }: { months: ReturnType<typeof byMonth> }) {
                   height: `${(m.count / max) * 100}%`,
                   transformOrigin: 'bottom',
                   // One hue; strength tracks magnitude rather than identity.
-                  background: `color-mix(in oklab, var(--brand) ${45 + (m.count / max) * 55}%, var(--surface-3))`,
+                  background: `color-mix(in oklab, var(--accent) ${45 + (m.count / max) * 55}%, var(--surface-3))`,
                 }}
                 className="block w-full rounded-t-[4px]"
               />
@@ -211,7 +211,7 @@ function CategoryChart({ cats, total }: { cats: ReturnType<typeof byCategory>; t
                   style={{
                     width: `${(c.count / max) * 100}%`,
                     transformOrigin: 'left',
-                    background: `color-mix(in oklab, var(--brand) ${40 + (c.count / max) * 60}%, var(--surface-3))`,
+                    background: `color-mix(in oklab, var(--accent) ${40 + (c.count / max) * 60}%, var(--surface-3))`,
                   }}
                   className="block h-full rounded-full"
                 />
