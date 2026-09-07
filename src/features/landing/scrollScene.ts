@@ -63,7 +63,17 @@ export function stops(values: number[]): number[] {
  * So every scroll-linked range on this page is declared across the full scene,
  * with the terminal values stated rather than inferred.
  */
-export function held(range: number[], values: number[]): [number[], number[]] {
+export function held(range: number[], values: number[]): [number[], number[]]
+export function held(range: number[], values: string[]): [number[], string[]]
+/**
+ * Overloaded rather than generic. A generic infers the literal type of an array
+ * like [0, 120] as (0 | 120)[], which then will not accept the widened number
+ * a MotionValue setter hands back.
+ */
+export function held(
+  range: number[],
+  values: Array<number | string>,
+): [number[], Array<number | string>] {
   const r = stops(range)
   const v = [...values]
   if (r[0]! > 0) { r.unshift(0); v.unshift(v[0]!) }
