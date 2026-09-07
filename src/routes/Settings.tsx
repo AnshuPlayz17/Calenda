@@ -4,11 +4,10 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { GoogleImport } from '@/features/google/GoogleImport'
 import { ParentsSection } from '@/features/parents/ParentsSection'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
-import { useAuth } from '@/lib/auth'
+import { AccountCard } from '@/features/settings/AccountCard'
 import { agendaLabel } from '@/lib/datetime'
 
 export function SettingsPage() {
-  const { profile, user } = useAuth()
   const { current, years, setCurrent } = useSchoolYear()
   const reduce = useReducedMotion()
 
@@ -92,31 +91,7 @@ export function SettingsPage() {
       </motion.section>
 
       <motion.section {...rise(5)}>
-        <Card>
-          <CardHeader title="Account" />
-          <dl className="grid gap-x-8 gap-y-3 px-5 pb-5 sm:grid-cols-2">
-            <div>
-              <dt className="label-caps">Name</dt>
-              <dd className="mt-0.5 text-[13.5px] text-text">
-                {profile?.full_name ?? <span className="text-text-subtle">Not set</span>}
-              </dd>
-            </div>
-            <div>
-              <dt className="label-caps">Email</dt>
-              <dd className="mt-0.5 truncate text-[13.5px] text-text">{user?.email ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="label-caps">Role</dt>
-              <dd className="mt-0.5 text-[13.5px] capitalize text-text">
-                {profile?.role ?? 'student'}
-              </dd>
-            </div>
-            <div>
-              <dt className="label-caps">Time zone</dt>
-              <dd className="mt-0.5 text-[13.5px] text-text">{profile?.timezone ?? '—'}</dd>
-            </div>
-          </dl>
-        </Card>
+        <AccountCard />
       </motion.section>
     </div>
   )

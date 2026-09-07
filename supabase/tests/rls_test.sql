@@ -222,4 +222,97 @@ begin
     0::bigint);
 end $$;
 
+-- (7) A user cannot promote themselves to admin -------------------------------
+--
+-- The hole this covers was open for the project's whole life and none of the
+-- six tests above would have failed while it was: they set role = 'admin' as
+-- fixture setup, then check what an admin cannot read. Nobody attacked the
+-- setting of it. is_admin() gates nineteen policies, so this single update was
+-- the key to all of them.
+do $$
+declare escalated text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+
+  -- The policy refuses the row rather than raising, so this updates nothing.
+  update profiles set role = 'admin'
+    where id = '00000000-0000-0000-0000-0000000000a1';
+
+  reset role;
+
+  select role::text into escalated from profiles
+    where id = '00000000-0000-0000-0000-0000000000a1';
+
+  perform expect(
+    'a student CANNOT make themselves an admin',
+    escalated, 'student');
+end $$;
+
+-- Nor may they promote somebody else, which the row check already forbids but
+-- is worth stating: a hole here would be the same hole with an extra step.
+do $$
+declare other text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+
+  update profiles set role = 'admin'
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  reset role;
+
+  select role::text into other from profiles
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  perform expect(
+    'a student CANNOT make somebody else an admin',
+    other, 'student');
+end $$;
+
+-- (8) ...but self-service of the honest fields still works --------------------
+--
+-- The fix must not go so far that the sign-up form cannot do its job. A person
+-- declaring themselves a parent is not a privilege claim; it changes what the
+-- app shows them and nothing about what they may reach.
+do $$
+declare declared text; named text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a4', true);
+  set local role authenticated;
+
+  update profiles set role = 'parent', full_name = 'Stranger Danger'
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  reset role;
+
+  select role::text, full_name into declared, named from profiles
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  perform expect('a user CAN declare themselves a parent', declared, 'parent');
+  perform expect('a user CAN set their own name', named, 'Stranger Danger');
+end $$;
+
+-- (9) An admin may still grant admin, or the role becomes unassignable --------
+do $$
+declare granted text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a3', true);
+  set local role authenticated;
+
+  update profiles set role = 'admin'
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  reset role;
+
+  select role::text into granted from profiles
+    where id = '00000000-0000-0000-0000-0000000000a4';
+
+  perform expect('an admin CAN grant admin', granted, 'admin');
+end $$;
+
 select tests_reset();
