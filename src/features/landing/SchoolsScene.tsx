@@ -6,6 +6,7 @@ import type { MotionValue } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
 import { SCHOOLS } from '@/data/schools'
 import type { School } from '@/data/schools'
+import { PushThrough } from './Chapter'
 import { useScrollScene, held, paced } from './scrollScene'
 
 /**
@@ -150,22 +151,28 @@ export function SchoolsScene() {
   // needs its own layout read.
   const rect = useRef({ left: 0, width: 0 })
 
+  // offsetWidth and offsetHeight, not getBoundingClientRect. The chapter is now
+  // dollied through a perspective on the way in and out, and a rect measured
+  // under that is the projected size rather than the laid-out one -- at mount,
+  // where the stage is four hundred units back, every card would be placed
+  // against a stage two thirds of its real width. Offsets are layout numbers
+  // and no ancestor transform touches them.
   const measure = useCallback(() => {
     const el = stageRef.current
     if (!el) return
-    const r = el.getBoundingClientRect()
-    rect.current = { left: r.left, width: r.width }
-    el.style.setProperty('--stage-w', `${r.width}px`)
-    el.style.setProperty('--stage-h', `${r.height}px`)
-    const nextCols = columnsFor(r.width)
+    const width = el.offsetWidth
+    const height = el.offsetHeight
+    el.style.setProperty('--stage-w', `${width}px`)
+    el.style.setProperty('--stage-h', `${height}px`)
+    const nextCols = columnsFor(width)
     setCols((prev) => (prev === nextCols ? prev : nextCols))
-    const natural = GRID_NATURAL_WIDTH[nextCols] ?? r.width
-    const nextSpread = r.width > 0 ? Math.min(1, natural / r.width) : 1
+    const natural = GRID_NATURAL_WIDTH[nextCols] ?? width
+    const nextSpread = width > 0 ? Math.min(1, natural / width) : 1
     setSpread((prev) => (Math.abs(prev - nextSpread) < 0.01 ? prev : nextSpread))
 
     const tile = tileSize(window.innerWidth)
     el.style.setProperty('--tile', `${tile}px`)
-    const nextDock = dockMetrics(r.width, tile)
+    const nextDock = dockMetrics(width, tile)
     // Every field, not just the two that look like the interesting ones. The
     // first cut compared dockTile and width alone, and at 375px those two
     // happen to come out identical to the pre-measurement placeholder -- so
@@ -222,6 +229,7 @@ export function SchoolsScene() {
       {/* The extra bottom padding below xl is for the companion pill, which is
           fixed to the bottom of the window there. */}
       <div className="sticky top-0 flex h-svh flex-col overflow-hidden px-5 pb-16 pt-20 sm:px-8 xl:pb-6">
+        <PushThrough progress={progress} depth={520}>
         <div className="mx-auto w-full max-w-[1120px] shrink-0 text-center">
           <p className="label-caps text-accent">The schools</p>
           <h2
@@ -234,6 +242,18 @@ export function SchoolsScene() {
 
         <div
           ref={stageRef}
+          // The dock's frame of reference is read once, when the pointer
+          // arrives. It cannot be measured on mount any more -- the chapter is
+          // four hundred units back then, so the rect is the projected one --
+          // and reading it per pointer move would be eighty forced layouts a
+          // second. By the time anyone can hover a dock tile the chapter is at
+          // z 0 and the projection is the identity.
+          onPointerEnter={() => {
+            const el = stageRef.current
+            if (!el) return
+            const r = el.getBoundingClientRect()
+            rect.current = { left: r.left, width: r.width }
+          }}
           onPointerMove={(e) => { if (e.pointerType === 'mouse') pointerX.set(e.clientX) }}
           onPointerLeave={() => pointerX.set(Number.POSITIVE_INFINITY)}
           className="relative mx-auto mt-5 w-full max-w-[1120px] flex-1"
@@ -292,6 +312,7 @@ export function SchoolsScene() {
           involvement in it. No school's crest is used — each tile is initials set in
           Calenda's own type — and every one links to that school's site.
         </p>
+        </PushThrough>
       </div>
     </section>
   )

@@ -121,7 +121,7 @@ export function NumbersScene() {
 
   return (
     <section ref={ref} className="relative z-10 border-y border-border bg-surface" style={{ height }}>
-      <PinnedFrame progress={progress}>
+      <PinnedFrame progress={progress} depth={340}>
         <Measure className="grid items-center gap-10 lg:grid-cols-[0.78fr_1fr] lg:gap-16">
           <div>
             {heading}

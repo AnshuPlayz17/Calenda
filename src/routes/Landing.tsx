@@ -4,7 +4,6 @@ import { motion, useReducedMotion, useScroll, useSpring } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { Reveal } from '@/components/Reveal'
 import { Atmosphere } from '@/features/landing/Atmosphere'
 import { NumbersScene } from '@/features/landing/NumbersScene'
 import { QuestionScene } from '@/features/landing/QuestionScene'
@@ -18,7 +17,7 @@ import { ProofScene } from '@/features/landing/ProofScene'
 import { OpeningScene } from '@/features/landing/OpeningScene'
 import { SchoolsScene } from '@/features/landing/SchoolsScene'
 import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
-import { Chapter } from '@/features/landing/Chapter'
+import { Approach, Chapter } from '@/features/landing/Chapter'
 import { useChapters } from '@/features/landing/useChapters'
 import { LANDING_SECTIONS } from '@/features/landing/sections'
 import { useAuth } from '@/lib/auth'
@@ -216,7 +215,12 @@ function Closing() {
     // the reveal, one sentence and a door.
     <section className="relative z-10 overflow-hidden border-t border-border bg-surface px-5 py-28 sm:px-8 sm:py-36">
       <Spotlight className="bg-accent/[0.10] blur-[90px]" size={460} />
-      <Reveal className="mx-auto max-w-[1240px]">
+      {/* Arrived at the way every other chapter is -- out of depth, on the
+          reader's own scroll. It was a timed reveal, which is the one entrance
+          on the page that happens *to* the reader rather than because of them,
+          and after ten chapters of travelling into things a fade on a timer
+          reads as the page having stopped listening. */}
+      <Approach className="mx-auto max-w-[1240px]" depth={200}>
         <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-end">
           <div>
             <p className="label-caps text-accent">Ready when you are</p>
@@ -272,7 +276,7 @@ function Closing() {
             ))}
           </ol>
         </div>
-      </Reveal>
+      </Approach>
     </section>
   )
 }

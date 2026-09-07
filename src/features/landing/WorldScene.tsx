@@ -105,7 +105,7 @@ export function WorldScene() {
       aria-labelledby="world-heading"
     >
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden px-5 pb-20 pt-16 sm:px-8">
-        <PushThrough progress={progress}>
+        <PushThrough progress={progress} depth={520}>
         <div className="mx-auto grid w-full max-w-[1240px] items-center gap-8 lg:grid-cols-[0.62fr_1fr] lg:gap-12">
           <div><Copy /></div>
 

@@ -1,5 +1,6 @@
-import { motion, useReducedMotion, useTransform } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
+import { useRef } from 'react'
 import { held } from './scrollScene'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -129,12 +130,14 @@ export function ChapterHeading({
  * classes, drifting by a few pixels of padding each time. The bottom padding
  * below xl is for the companion pill, which is fixed to the window there.
  */
-export function PinnedFrame({ children, className, progress }: {
+export function PinnedFrame({ children, className, progress, depth }: {
   children: React.ReactNode
   className?: string
   /** The scene's own progress. Given it, the chapter is entered and left
    *  rather than arrived at and scrolled past -- see below. */
   progress?: MotionValue<number>
+  /** How far back this chapter starts. See PushThrough. */
+  depth?: number
 }) {
   return (
     <div
@@ -144,50 +147,114 @@ export function PinnedFrame({ children, className, progress }: {
         className,
       )}
     >
-      {progress ? <PushThrough progress={progress}>{children}</PushThrough> : children}
+      {progress ? <PushThrough progress={progress} depth={depth}>{children}</PushThrough> : children}
     </div>
   )
 }
 
 /**
- * A chapter grows in as you enter it and pushes past the camera as you leave.
+ * A chapter is travelled into and travelled past.
  *
- * This is the difference between a page of sections and a page you travel
- * through. A section that slides up from below is a new thing arriving; a
- * chapter that grows out of the middle of the screen while the last one
- * expands past the edges is the same journey continuing forward. The opening
- * chapter makes that literal -- you scroll into the card in the hero and it
- * opens -- and this carries the same reading to the other ten.
+ * This was a scale, and a scale is not a camera. Growing an element from 0.9 to
+ * 1 is the same picture at two sizes: nothing about it says the viewer moved,
+ * because a real approach also changes what the perspective does to the shape.
+ * This translates the chapter along Z under a perspective instead, which is an
+ * actual dolly -- the chapter arrives out of depth, passes the camera, and the
+ * geometry does the work rather than a number being interpolated.
  *
- * Six per cent of the scene at each end, which at these scene lengths is about
- * a fifth of a screen: long enough to read as a move, short enough that no
- * chapter spends real scroll being invisible.
+ * `depth` is how far back a chapter starts, in the same units as the
+ * perspective, and it is set per chapter rather than once. A chapter that is
+ * mostly one object takes more of it, because there is a single thing to
+ * arrive and the arrival is the point: the schools grid, the import's fifty-one
+ * chips and the world map are all at 520. A chapter that is a column of text
+ * takes less -- the questions rail and the panels at 320, the founder's panel
+ * at 300 -- because text swinging through perspective is text that is briefly
+ * hard to read, and the numbers sit between at 340 since the figures are read
+ * but the bars are watched.
+ *
+ * The two chapters that do not pin are not pushed past at all; see `Approach`.
+ *
+ * The numbers are chosen against the harness rather than by eye: at
+ * perspective 1200, leaving at z = 250 magnifies by 1200 / 950, or 1.26 -- just
+ * inside the 1.3 the width check allows for a deliberate push-through, and well
+ * outside anything a layout bug produces.
  *
  * It goes on the content inside the sticky frame, never on the chapter wrapper.
- * A transform on the wrapper would move the sticky element with it, which is
- * the one thing that unpins a pinned scene.
- *
- * Not used by the schools chapter. That one measures its own stage with
- * getBoundingClientRect to place fifteen cards and to find the pointer's
- * distance from each dock tile, and a scaled ancestor makes those measurements
- * the scaled numbers rather than the real ones -- at mount, when the scale is
- * 0.9, every card would be placed against a stage nine tenths of its actual
- * width. It enters by having fifteen cards arrive one at a time and leaves by
- * becoming a dock, which is enough of an entrance without this.
+ * A transform on the wrapper moves the sticky element with it, which is the one
+ * thing that unpins a pinned scene.
  */
-export function PushThrough({ progress, children }: {
+export const PERSPECTIVE = 1200
+export const EXIT_Z = 250
+
+export function PushThrough({ progress, children, depth = 420, className }: {
   progress: MotionValue<number>
   children: React.ReactNode
+  /** How far back the chapter starts. Larger is a longer approach. */
+  depth?: number
+  className?: string
 }) {
-  const [sR, sV] = held([0, 0.06, 0.94, 1], [0.9, 1, 1, 1.14])
-  const [oR, oV] = held([0, 0.05, 0.95, 1], [0, 1, 1, 0])
-  const scale = useTransform(progress, sR, sV)
+  const reduce = useReducedMotion()
+
+  const [zR, zV] = held([0, 0.08, 0.92, 1], [-depth, 0, 0, EXIT_Z])
+  const [oR, oV] = held([0, 0.06, 0.94, 1], [0, 1, 1, 0])
+  const z = useTransform(progress, zR, zV)
   const opacity = useTransform(progress, oR, oV)
 
+  if (reduce) return <>{children}</>
+
   return (
-    <motion.div style={{ scale, opacity }} className="flex flex-1 flex-col justify-center">
+    <motion.div
+      style={{ z, opacity, transformPerspective: PERSPECTIVE }}
+      className={cn('flex flex-1 flex-col justify-center', className)}
+    >
       {children}
     </motion.div>
+  )
+}
+
+/**
+ * The same arrival, for a chapter that does not pin.
+ *
+ * A pinned chapter owns the window for its whole scroll, so it can be entered
+ * and left again -- PushThrough does both. A tall section that simply scrolls
+ * cannot: pushing it past the camera would take its opening lines out of the
+ * frame while its closing ones were still being read. So this is the first half
+ * only. The section comes out of depth as its top clears the fold, reaches the
+ * camera by the time a reader is level with it, and then stays there and
+ * behaves like a page.
+ *
+ * The window is deliberately short -- from just below the fold to a little
+ * above the middle. Spread wider it becomes a section that is never quite at
+ * rest, which is the failure mode of scroll-linked entrances.
+ */
+export function Approach({ children, depth = 260, className }: {
+  children: React.ReactNode
+  /** How far back the section starts, in the same units as the perspective. */
+  depth?: number
+  className?: string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const reduce = useReducedMotion()
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.98', 'start 0.42'] })
+
+  const [zR, zV] = held([0, 1], [-depth, 0])
+  const [oR, oV] = held([0, 0.55], [0, 1])
+  const z = useTransform(scrollYProgress, zR, zV)
+  const opacity = useTransform(scrollYProgress, oR, oV)
+
+  // The ref is on the outer element and the transform on the inner one, and
+  // that split is not cosmetic. useScroll measures its target with
+  // getBoundingClientRect, which is the *projected* box -- so a target that
+  // moves itself in Z feeds its own output back into its own input. Measured
+  // element still, moved element inside it.
+  if (reduce) return <div className={className}>{children}</div>
+
+  return (
+    <div ref={ref} className={className}>
+      <motion.div style={{ z, opacity, transformPerspective: PERSPECTIVE }}>
+        {children}
+      </motion.div>
+    </div>
   )
 }
 
