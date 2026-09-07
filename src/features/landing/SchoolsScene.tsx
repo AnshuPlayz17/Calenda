@@ -4,7 +4,7 @@ import {
 } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
-import { SCHOOLS, SCHOOL_COLS, SCHOOL_ROWS } from '@/data/schools'
+import { SCHOOLS } from '@/data/schools'
 import type { School } from '@/data/schools'
 import { useScrollScene, held } from './scrollScene'
 
@@ -33,21 +33,39 @@ import { useScrollScene, held } from './scrollScene'
  * squeezed toward its centre by `spread` -- one number, recomputed when the
  * stage is resized, rather than two containers that have to be kept in step.
  */
-function gridSlot(i: number, spread: number) {
-  const col = (i % SCHOOL_COLS + 0.5) / SCHOOL_COLS
+function gridSlot(i: number, cols: number, spread: number) {
+  const rows = Math.ceil(SCHOOLS.length / cols)
+  const col = ((i % cols) + 0.5) / cols
   return {
     x: 0.5 + (col - 0.5) * spread,
     // The grid gets the whole stage height. It never shares it with the
     // dock -- by the time the dock exists the grid has become it.
-    y: ((Math.floor(i / SCHOOL_COLS) + 0.5) / SCHOOL_ROWS) * 0.94 + 0.01,
+    y: ((Math.floor(i / cols) + 0.5) / rows) * 0.94 + 0.01,
   }
+}
+
+/**
+ * Five across on anything with the room, three across on a phone.
+ *
+ * Fifteen divides both ways, which is the only reason this is a choice rather
+ * than a compromise: five columns by three rows on a laptop and three by five
+ * on a phone are the same fifteen cards, each shaped to the window it is in.
+ * Five columns on a 390px screen would be 78px per card, which is narrower
+ * than the names.
+ */
+function columnsFor(stageWidth: number) {
+  return stageWidth >= 720 ? 5 : 3
 }
 function dockSlot(i: number) {
   return { x: (i + 0.5) / SCHOOLS.length, y: 0.86 }
 }
 
-/** Below this the stage is narrow enough that the grid wants all of it. */
-const GRID_NATURAL_WIDTH = 560
+/**
+ * How wide the grid wants to be, by column count. Beyond this the columns are
+ * pulled back toward the centre rather than drifting further apart -- three
+ * columns spread across eleven hundred pixels stop reading as a group.
+ */
+const GRID_NATURAL_WIDTH: Record<number, number> = { 3: 560, 5: 960 }
 
 /**
  * The tile, sized here rather than in a Tailwind clamp.
@@ -58,7 +76,7 @@ const GRID_NATURAL_WIDTH = 560
  * variable that the class then uses, which keeps one number in one place.
  */
 function tileSize(viewportWidth: number) {
-  return Math.round(Math.min(60, Math.max(40, viewportWidth * 0.05)))
+  return Math.round(Math.min(96, Math.max(44, viewportWidth * 0.075)))
 }
 
 /** Of the space each dock tile is allotted, how much the tile itself takes. */
@@ -75,6 +93,7 @@ export function SchoolsScene() {
   const { ref, reduce, progress, height } = useScrollScene(4)
 
   const stageRef = useRef<HTMLDivElement>(null)
+  const [cols, setCols] = useState(3)
   const [spread, setSpread] = useState(1)
   const [dockScale, setDockScale] = useState(0.5)
   // The stage's own pixel size, published as CSS variables. Measured once and
@@ -90,7 +109,10 @@ export function SchoolsScene() {
     rect.current = { left: r.left, width: r.width }
     el.style.setProperty('--stage-w', `${r.width}px`)
     el.style.setProperty('--stage-h', `${r.height}px`)
-    const next = r.width > 0 ? Math.min(1, GRID_NATURAL_WIDTH / r.width) : 1
+    const nextCols = columnsFor(r.width)
+    setCols((prev) => (prev === nextCols ? prev : nextCols))
+    const natural = GRID_NATURAL_WIDTH[nextCols] ?? r.width
+    const next = r.width > 0 ? Math.min(1, natural / r.width) : 1
     setSpread((prev) => (Math.abs(prev - next) < 0.01 ? prev : next))
 
     const tile = tileSize(window.innerWidth)
@@ -166,7 +188,7 @@ export function SchoolsScene() {
             style={{ opacity: lineIn, y: lineY }}
             className="pointer-events-none absolute inset-x-0 top-[46%] text-center font-display text-[34px] font-medium leading-[1.1] tracking-tight text-text sm:text-[54px] lg:text-[68px]"
           >
-            Works with <span className="italic">all of them.</span>
+            <span className="italic">Calenda</span> works with all of them.
           </motion.p>
 
           {SCHOOLS.map((school, i) => (
@@ -175,6 +197,7 @@ export function SchoolsScene() {
               school={school}
               index={i}
               progress={progress}
+              cols={cols}
               spread={spread}
               dockScale={dockScale}
               docked={docked}
@@ -204,18 +227,19 @@ export function SchoolsScene() {
  * depends on which library wrote it last.
  */
 function Card({
-  school, index, progress, spread, dockScale, docked, pointerX, rect,
+  school, index, progress, cols, spread, dockScale, docked, pointerX, rect,
 }: {
   school: School
   index: number
   progress: MotionValue<number>
+  cols: number
   spread: number
   dockScale: number
   docked: MotionValue<number>
   pointerX: MotionValue<number>
   rect: React.RefObject<{ left: number; width: number }>
 }) {
-  const g = gridSlot(index, spread)
+  const g = gridSlot(index, cols, spread)
   const d = dockSlot(index)
   const at = APPEAR_FROM + index * STEP
 
@@ -273,9 +297,9 @@ function Card({
 
             <motion.span
               style={{ opacity: caption }}
-              className="pointer-events-none absolute left-1/2 top-[calc(100%+7px)] block w-[clamp(92px,15vw,170px)] -translate-x-1/2 text-center"
+              className="pointer-events-none absolute left-1/2 top-[calc(100%+7px)] block w-[clamp(96px,13vw,190px)] -translate-x-1/2 text-center"
             >
-              <span className="block text-[10.5px] font-medium leading-[1.2] text-text sm:text-[11.5px]">
+              <span className="block text-[11px] font-medium leading-[1.2] text-text sm:text-[13px]">
                 {school.name}
               </span>
               {school.acronym && (
@@ -349,7 +373,7 @@ function StaticSchools() {
           Fifteen independent schools across the GTA.
         </h2>
 
-        <ul className="mt-8 grid grid-cols-3 gap-x-4 gap-y-7">
+        <ul className="mt-8 grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-5">
           {SCHOOLS.map((school) => (
             <li key={school.name}>
               <a
@@ -358,7 +382,7 @@ function StaticSchools() {
                 rel="noopener noreferrer"
                 className="group flex flex-col items-center gap-2.5 no-underline outline-none"
               >
-                <span className="grid h-[clamp(44px,6vw,64px)] w-[clamp(44px,6vw,64px)] place-items-center overflow-hidden rounded-2xl border border-border bg-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]">
+                <span className="grid h-[clamp(48px,7.5vw,96px)] w-[clamp(48px,7.5vw,96px)] place-items-center overflow-hidden rounded-2xl border border-border bg-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]">
                   <Crest school={school} />
                 </span>
                 <span className="text-center">
@@ -375,7 +399,7 @@ function StaticSchools() {
         </ul>
 
         <p className="mt-10 font-display text-[30px] font-medium leading-[1.1] tracking-tight sm:text-[44px]">
-          Works with <span className="italic">all of them.</span>
+          <span className="italic">Calenda</span> works with all of them.
         </p>
 
         <p className="mt-5 max-w-[70ch] text-[11.5px] leading-relaxed text-text-subtle">

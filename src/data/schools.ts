@@ -36,8 +36,8 @@ export type School = {
 }
 
 export const SCHOOLS: School[] = [
-  { name: 'Upper Canada College', acronym: 'UCC', site: 'https://www.ucc.on.ca/', monogram: 'UCC' },
   { name: 'University of Toronto Schools', acronym: 'UTS', site: 'https://www.utschools.ca/', monogram: 'UTS' },
+  { name: 'Upper Canada College', acronym: 'UCC', site: 'https://www.ucc.on.ca/', monogram: 'UCC' },
   { name: 'Havergal College', acronym: 'HC', site: 'https://www.havergal.on.ca/', monogram: 'HC' },
   { name: 'Branksome Hall', acronym: 'BH', site: 'https://branksome.on.ca/', monogram: 'BH' },
   { name: 'The Bishop Strachan School', acronym: 'BSS', site: 'https://www.bss.on.ca/', monogram: 'BSS' },
@@ -52,7 +52,3 @@ export const SCHOOLS: School[] = [
   { name: 'St. Andrew’s College', acronym: 'SAC', site: 'https://www.sac.on.ca/', monogram: 'SAC' },
   { name: 'De La Salle College', site: 'https://www.delasalle.ca/', monogram: 'DLS' },
 ]
-
-/** Three across, five down — the grid the scene opens in. */
-export const SCHOOL_COLS = 3
-export const SCHOOL_ROWS = Math.ceil(SCHOOLS.length / SCHOOL_COLS)
