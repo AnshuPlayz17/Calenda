@@ -209,7 +209,17 @@ function Ticks({ index, running, onPick }: {
           aria-current={i === index}
           className="group h-5 flex-1 cursor-pointer border-0 bg-transparent p-0"
         >
-          <span className="block h-[3px] w-full overflow-hidden rounded-full bg-white/15 transition-colors duration-200 group-hover:bg-white/25">
+          {/* The track is brighter on the current scene, and that is not
+              decoration. The fill is paused whenever a pointer is over the
+              panel -- so picking a tick leaves its fill at zero width, and
+              without this the scene you just chose is the one tick that looks
+              like nothing is happening to it. */}
+          <span
+            className={
+              'block h-[3px] w-full overflow-hidden rounded-full transition-colors duration-200 group-hover:bg-white/30 '
+              + (i === index ? 'bg-white/30' : 'bg-white/15')
+            }
+          >
             {i === index && (
               <span
                 // A CSS animation rather than a Motion one, for the pause. A
