@@ -58,6 +58,11 @@ function trackedTextFiles(): string[] {
   return projectFiles()
     .filter((f) => TEXT.test(f))
     .filter((f) => !f.endsWith('noSchoolName.test.ts'))
+    // The landing page names fifteen schools. They live in exactly one file so
+    // that this guard can keep its teeth everywhere else: a school named in a
+    // disclaimer, a headline, a component or a doc still fails, which is where
+    // the claim of ownership would actually be made.
+    .filter((f) => f !== 'src/data/schools.ts')
     .filter((f) => f !== 'package-lock.json')
 }
 

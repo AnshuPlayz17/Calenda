@@ -18,6 +18,7 @@ import { HeroStack } from '@/features/landing/HeroStack'
 import { ImportScene } from '@/features/landing/ImportScene'
 import { StackScene } from '@/features/landing/StackScene'
 import { ProofScene } from '@/features/landing/ProofScene'
+import { SchoolsScene } from '@/features/landing/SchoolsScene'
 import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
@@ -69,6 +70,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
           order of the rail are the same list. FounderScene carries its own id
           already -- it is linked to from the app sidebar. */}
       <div id="top"><Hero /></div>
+      <div id="schools"><SchoolsScene /></div>
       <div id="glance"><ZoomScene /></div>
       <div id="pipeline"><PipelineScene /></div>
       <div id="import"><ImportScene /></div>
