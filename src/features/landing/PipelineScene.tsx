@@ -95,16 +95,73 @@ export function PipelineScene() {
   )
 }
 
+/**
+ * What the date *is* at each point on the line.
+ *
+ * The spine used to draw itself and the stages used to fade in beside it,
+ * which shows that there are six steps and nothing about what travels through
+ * them. This is the thing travelling: one chip riding the line, renaming
+ * itself at each stage, so the reader watches a line of text in a PDF turn
+ * into a notification on a phone rather than reading that it does.
+ */
+const FORMS = ['a line of text', 'a staged row', 'a decision', 'one calendar', 'an event', 'a reminder']
+
 /** The line the stages hang from, drawn as you read down it. */
 function Spine({ progress, reduce }: { progress: MotionValue<number>; reduce: boolean | null }) {
   const scaleY = useTransform(progress, [0, 0.92], [0, 1])
+  // `top` rather than a transform: a percentage translate would be a
+  // percentage of the chip's own height, and the distance it has to cover is
+  // the spine's. One absolutely-positioned element laying itself out costs
+  // nothing measurable; measuring the spine on every resize would cost more.
+  const top = useTransform(progress, [0, 0.92], ['0%', '100%'])
+
   return (
     <span aria-hidden className="absolute bottom-2 left-[9px] top-2 w-px bg-border sm:left-[13px]">
       <motion.span
         style={reduce ? { transformOrigin: 'top' } : { scaleY, transformOrigin: 'top' }}
         className="absolute inset-0 block bg-accent"
       />
+      {!reduce && (
+        <motion.span
+          style={{ top }}
+          className="absolute left-0 grid -translate-x-1/2 -translate-y-1/2 place-items-center"
+        >
+          <span className="relative grid place-items-center">
+            <span className="absolute h-6 w-6 rounded-full bg-accent/15" />
+            <span className="relative block h-2 w-2 rounded-full bg-accent" />
+            <span className="absolute left-4 whitespace-nowrap rounded-md border border-accent-border bg-bg px-2 py-1 text-2xs font-medium text-accent shadow-sm">
+              {FORMS.map((form, i) => (
+                <Form key={form} form={form} index={i} progress={progress} />
+              ))}
+            </span>
+          </span>
+        </motion.span>
+      )}
     </span>
+  )
+}
+
+/**
+ * One of the chip's names, on for its own stretch of the line.
+ *
+ * They are stacked rather than swapped, so the chip's width is the widest of
+ * the six at all times and never reflows underneath the reader mid-travel.
+ */
+function Form({ form, index, progress }: { form: string; index: number; progress: MotionValue<number> }) {
+  const step = 0.92 / FORMS.length
+  const at = index * step
+  const [r, v] = index === FORMS.length - 1
+    ? held([at, at + step * 0.3], [0, 1])
+    : held([at, at + step * 0.3, at + step * 0.9, at + step * 1.2], [0, 1, 1, 0])
+  const opacity = useTransform(progress, r, v)
+
+  return (
+    <motion.span
+      style={{ opacity }}
+      className={index === 0 ? 'block' : 'absolute inset-0 grid place-items-center'}
+    >
+      {form}
+    </motion.span>
   )
 }
 
