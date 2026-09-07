@@ -5,10 +5,16 @@
  * password reset, a confirmation -- and none of it is worth putting on a page
  * unless a message genuinely arrives. This was off until one did.
  *
- * It has now been verified, on 2026-09-07, against the live site: a recovery
- * mail sent from Authentication -> Users landed in the inbox rather than in
- * spam, from Supabase's built-in sender. That is the whole test this flag
- * exists for, and it passed.
+ * Verified on 2026-09-07, twice, and the second one is the one that counts.
+ *
+ * First: a recovery mail sent from Authentication -> Users landed in the inbox
+ * rather than in spam, from Supabase's built-in sender. That proved delivery.
+ *
+ * Then the whole thing, on the live site and through this app's own code --
+ * "Forgot your password?" on the sign-in page, the mail, the link, and a
+ * working "Set a new password" form at the other end. That is what proves the
+ * link survives hash routing, which was the open question `recoveryToken.ts`
+ * was written to close and which nothing in the dev container could answer.
  *
  * WHAT IS STILL TRUE AND MATTERS
  *
