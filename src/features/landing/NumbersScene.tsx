@@ -1,7 +1,7 @@
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 import { ChapterHeading, Measure, PinnedFrame } from './Chapter'
 
 /**
@@ -87,7 +87,7 @@ const busiest = months.find((m) => m.count === peak)
 const repeated = EVENTS.filter((e) => e.title === SAMPLE_REPEATED_TITLE).length
 
 export function NumbersScene() {
-  const { ref, reduce, progress, height } = useScrollScene(3)
+  const { ref, reduce, progress, height } = useScrollScene(paced(3))
 
   const heading = (
     <ChapterHeading

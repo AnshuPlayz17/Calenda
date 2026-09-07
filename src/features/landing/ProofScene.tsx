@@ -1,7 +1,7 @@
 import { motion, useMotionTemplate, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { Lock, ShieldCheck } from 'lucide-react'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 import { ChapterHeading, Measure, PinnedFrame } from './Chapter'
 
 /**
@@ -38,7 +38,7 @@ const SPAN = 0.72
 const STEP = SPAN / ATTEMPTS.length
 
 export function ProofScene() {
-  const { ref, reduce, progress, height } = useScrollScene(4)
+  const { ref, reduce, progress, height } = useScrollScene(paced(4))
 
   const heading = (
     <ChapterHeading

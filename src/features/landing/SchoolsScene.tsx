@@ -6,7 +6,7 @@ import type { MotionValue } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
 import { SCHOOLS } from '@/data/schools'
 import type { School } from '@/data/schools'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 
 /**
  * Fifteen schools, arriving one at a time and then settling into a dock.
@@ -134,7 +134,7 @@ const STEP = (APPEAR_TO - APPEAR_FROM) / SCHOOLS.length
 const MOVE_FROM = 0.62
 const MOVE_TO = 0.86
 export function SchoolsScene() {
-  const { ref, reduce, progress, height } = useScrollScene(4)
+  const { ref, reduce, progress, height } = useScrollScene(paced(4))
 
   const stageRef = useRef<HTMLDivElement>(null)
   const [cols, setCols] = useState(3)

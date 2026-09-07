@@ -161,6 +161,19 @@ array, so the page and its navigation cannot drift apart.
 11. **Founder** — a panel hinged at its bottom edge, swinging open
 12. **Closing** — deliberately still
 
+**The page's length is one constant.** `PACE` in `src/features/landing/scrollScene.ts`
+scales every pinned scene together; each scene declares how many screens it wants
+relative to the others and `paced()` multiplies. It is currently 5.6, which puts
+the page at about 155 screens — roughly 139,000px on a 1440x900 desktop, and a
+50-second traversal at a brisk flick. That is a deliberate choice and a real cost;
+change the one number to change all of it. Every beat inside every scene is a
+fraction of its own scene, so raising it slows everything down proportionally
+rather than leaving animations finishing early and then sitting still.
+
+Reduced motion is unaffected by `PACE` — pinned scenes render their static
+composition and consume no scroll budget at all, so that path stays at about
+11,500px however long the animated one gets.
+
 Two things are on screen the whole way down. A hairline in the sticky header
 fills as you read, which answers *how far through*. `ScrollCompanion` answers
 *through what*: a tick rail down the right margin above 1280px, a pill at the

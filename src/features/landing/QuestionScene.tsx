@@ -10,7 +10,7 @@ import { MoveRight } from 'lucide-react'
 import { WheelCarousel } from '@/components/motion/WheelCarousel'
 import type { WheelCarouselItem } from '@/components/motion/WheelCarousel'
 import { sampleSchoolYear, sampleRepeatedCount } from '@/data/sampleSchoolYear'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 import { cn } from '@/lib/cn'
 
 /**
@@ -101,7 +101,7 @@ const RAIL_VARS = {
 } as React.CSSProperties
 
 export function QuestionScene() {
-  const { ref, reduce, progress, height } = useScrollScene(4)
+  const { ref, reduce, progress, height } = useScrollScene(paced(4))
   const [active, setActive] = useState(0)
 
   // One value drives the whole rail. Declared across the full scene with its
