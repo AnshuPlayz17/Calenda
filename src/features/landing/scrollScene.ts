@@ -15,6 +15,29 @@ import type { MotionValue } from 'motion/react'
  * reduced motion the caller renders a static composition instead and this
  * progress value is never read.
  */
+/**
+ * How much scroll every pinned scene gets, relative to its natural pacing.
+ *
+ * One number for the whole page. Each scene declares how many screens it wants
+ * relative to the others -- the import and the schools are chapters and ask for
+ * four, the founder's hinge is a beat and asks for two -- and this scales all of
+ * them together, so their relative weights survive any change to the total.
+ *
+ * It is set high on purpose. Every beat inside every scene is expressed as a
+ * fraction of its own scene, so raising this does not leave an animation
+ * finishing in the first tenth and then sitting still: the whole thing slows
+ * down and each step gets room to be read rather than glimpsed.
+ *
+ * The cost is length, and it is a real cost -- the page is over a hundred
+ * screens of scroll. This constant is the dial.
+ */
+export const PACE = 5.6
+
+/** A scene's natural length, scaled by the page's pacing. */
+export function paced(screens: number) {
+  return screens * PACE
+}
+
 export function useScrollScene(screens: number) {
   const ref = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()

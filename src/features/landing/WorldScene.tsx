@@ -5,7 +5,7 @@ import { Globe } from 'lucide-react'
 import {
   WORLD_COLS, WORLD_ROWS, WORLD_LAT_MAX, WORLD_LAT_MIN, WORLD_DOTS,
 } from '@/data/worldMap'
-import { useScrollScene, held, prefersLightMotion } from './scrollScene'
+import { useScrollScene, held, prefersLightMotion, paced } from './scrollScene'
 
 /**
  * Where Calenda works, told as a map that lights up.
@@ -68,7 +68,7 @@ const SPAN = 0.74
 const STEP = SPAN / PLACES.length
 
 export function WorldScene() {
-  const { ref, reduce, progress, height } = useScrollScene(3.5)
+  const { ref, reduce, progress, height } = useScrollScene(paced(3.5))
   // Two and a half thousand circles is fine on a laptop and is exactly the
   // kind of thing that costs a mid-range Android its first paint. A
   // checkerboard halves the node count and still reads as a dotted map.

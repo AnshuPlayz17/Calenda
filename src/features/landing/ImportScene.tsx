@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { sampleSchoolYear, SAMPLE_REPEATED_TITLE } from '@/data/sampleSchoolYear'
-import { useScrollScene, useBeat, scatter, held, prefersLightMotion } from './scrollScene'
+import { useScrollScene, useBeat, scatter, held, prefersLightMotion, paced } from './scrollScene'
 import { cn } from '@/lib/cn'
 
 /**
@@ -58,7 +58,7 @@ const BEATS = [
 ]
 
 export function ImportScene() {
-  const { ref, reduce, progress, height } = useScrollScene(4)
+  const { ref, reduce, progress, height } = useScrollScene(paced(4))
   // Decided once on mount, never re-read: a scene that changes mechanism
   // halfway through a scroll is worse than either mechanism.
   const [light] = useState(prefersLightMotion)

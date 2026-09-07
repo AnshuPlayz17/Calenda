@@ -3,7 +3,7 @@ import type { MotionValue } from 'motion/react'
 import { Bell, CalendarDays, GraduationCap, Link2 } from 'lucide-react'
 import { sampleUpcoming } from '@/data/sampleEvents'
 import { agendaLabel } from '@/lib/datetime'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 
 /**
  * The calendar you land on, opened up.
@@ -24,7 +24,7 @@ import { useScrollScene, held } from './scrollScene'
 const EVENT = sampleUpcoming()[0]!
 
 export function ZoomScene() {
-  const { ref, reduce, progress, height } = useScrollScene(2)
+  const { ref, reduce, progress, height } = useScrollScene(paced(2))
 
   if (reduce) {
     return (

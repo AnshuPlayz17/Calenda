@@ -1,6 +1,6 @@
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
-import { useScrollScene, held } from './scrollScene'
+import { useScrollScene, held, paced } from './scrollScene'
 import { CountUp } from './CountUp'
 
 /**
@@ -26,7 +26,7 @@ const NUMBERS = [
 ]
 
 export function FounderScene() {
-  const { ref, reduce, progress, height } = useScrollScene(2)
+  const { ref, reduce, progress, height } = useScrollScene(paced(2))
 
   if (reduce) {
     return (
