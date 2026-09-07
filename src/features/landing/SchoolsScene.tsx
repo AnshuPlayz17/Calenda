@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  motion, useMotionTemplate, useMotionValue, useSpring, useTransform,
+  motion, useMotionTemplate, useMotionValue, useMotionValueEvent, useSpring, useTransform,
 } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
@@ -56,9 +56,21 @@ function gridSlot(i: number, cols: number, spread: number) {
 function columnsFor(stageWidth: number) {
   return stageWidth >= 720 ? 5 : 3
 }
-function dockSlot(i: number) {
-  return { x: (i + 0.5) / SCHOOLS.length, y: 0.86 }
+/**
+ * Where the dock puts card `i`, as a fraction of the stage.
+ *
+ * `span` is how much of the stage the row of fifteen actually occupies. The
+ * first version used all of it, which is why the dock read as fifteen boxes
+ * that happened to be in a line rather than as one object: seventy pixels of
+ * air between sixty-pixel tiles is not a dock, it is a scatter. The tiles now
+ * sit a few pixels apart inside a bar, and the bar is drawn to exactly the
+ * width they need.
+ */
+function dockSlot(i: number, span: number) {
+  return { x: 0.5 + ((i + 0.5) / SCHOOLS.length - 0.5) * span, y: DOCK_Y }
 }
+
+const DOCK_Y = 0.82
 
 /**
  * How wide the grid wants to be, by column count. Beyond this the columns are
@@ -79,10 +91,42 @@ function tileSize(viewportWidth: number) {
   return Math.round(Math.min(96, Math.max(44, viewportWidth * 0.075)))
 }
 
-/** Of the space each dock tile is allotted, how much the tile itself takes. */
-const DOCK_FILL = 0.84
-const DOCK_SCALE_MAX = 0.85
-const DOCK_SCALE_MIN = 0.4
+/** The biggest a docked tile gets, and the air between two of them. */
+const DOCK_TILE_MAX = 60
+const DOCK_TILE_MIN = 16
+
+/**
+ * The dock's measurements, derived from the stage and the tile.
+ *
+ * One function so the bar and the tiles cannot disagree: the bar is drawn from
+ * `width`, the tiles are placed from `span`, and both come from the same
+ * arithmetic. Two independent numbers here is a dock whose ends do not line up
+ * with its contents at some viewport nobody checked.
+ */
+export type DockMetrics = ReturnType<typeof dockMetrics>
+
+function sameDock(a: DockMetrics, b: DockMetrics) {
+  return a.dockTile === b.dockTile
+    && a.width === b.width
+    && a.pad === b.pad
+    && Math.abs(a.span - b.span) < 0.001
+    && Math.abs(a.scale - b.scale) < 0.001
+}
+
+function dockMetrics(stageWidth: number, tile: number) {
+  const gap = stageWidth >= 720 ? 8 : 4
+  const fits = Math.floor((stageWidth * 0.94) / SCHOOLS.length) - gap
+  const dockTile = Math.max(DOCK_TILE_MIN, Math.min(DOCK_TILE_MAX, fits))
+  const pitch = dockTile + gap
+  const width = pitch * SCHOOLS.length
+  return {
+    dockTile,
+    width,
+    pad: Math.round(dockTile * 0.3),
+    span: stageWidth > 0 ? width / stageWidth : 1,
+    scale: dockTile / tile,
+  }
+}
 
 const APPEAR_FROM = 0.03
 const APPEAR_TO = 0.55
@@ -95,7 +139,11 @@ export function SchoolsScene() {
   const stageRef = useRef<HTMLDivElement>(null)
   const [cols, setCols] = useState(3)
   const [spread, setSpread] = useState(1)
-  const [dockScale, setDockScale] = useState(0.5)
+  const [dock, setDock] = useState(() => dockMetrics(0, 1))
+  // True once the cards have finished becoming a dock. Gates the things that
+  // only make sense there -- the bar, the hover label, the lift -- with one
+  // state change at the boundary rather than a re-render per frame.
+  const [isDock, setIsDock] = useState(false)
   // The stage's own pixel size, published as CSS variables. Measured once and
   // on resize rather than per frame: every card's travel is expressed as
   // calc() against these, so the transforms stay compositor work and no card
@@ -112,17 +160,19 @@ export function SchoolsScene() {
     const nextCols = columnsFor(r.width)
     setCols((prev) => (prev === nextCols ? prev : nextCols))
     const natural = GRID_NATURAL_WIDTH[nextCols] ?? r.width
-    const next = r.width > 0 ? Math.min(1, natural / r.width) : 1
-    setSpread((prev) => (Math.abs(prev - next) < 0.01 ? prev : next))
+    const nextSpread = r.width > 0 ? Math.min(1, natural / r.width) : 1
+    setSpread((prev) => (Math.abs(prev - nextSpread) < 0.01 ? prev : nextSpread))
 
     const tile = tileSize(window.innerWidth)
     el.style.setProperty('--tile', `${tile}px`)
-    const pitch = r.width / SCHOOLS.length
-    const dock = Math.min(
-      DOCK_SCALE_MAX,
-      Math.max(DOCK_SCALE_MIN, (pitch * DOCK_FILL) / tile),
-    )
-    setDockScale((prev) => (Math.abs(prev - dock) < 0.01 ? prev : dock))
+    const nextDock = dockMetrics(r.width, tile)
+    // Every field, not just the two that look like the interesting ones. The
+    // first cut compared dockTile and width alone, and at 375px those two
+    // happen to come out identical to the pre-measurement placeholder -- so
+    // the update was skipped and the cards kept a scale of sixteen, which is
+    // a 704px tile in a 375px window. The harness caught it; a screenshot of
+    // any other width would not have.
+    setDock((prev) => (sameDock(prev, nextDock) ? prev : nextDock))
   }, [])
 
   useEffect(() => {
@@ -150,9 +200,15 @@ export function SchoolsScene() {
   const [dockRange, dockValues] = held([MOVE_FROM, MOVE_TO], [0, 1])
   const docked = useTransform(progress, dockRange, dockValues)
 
+  useMotionValueEvent(docked, 'change', (v) => {
+    const next = v > 0.92
+    setIsDock((prev) => (prev === next ? prev : next))
+  })
+
   const [lineRange, lineValues] = held([MOVE_FROM + 0.06, MOVE_TO], [0, 1])
   const lineIn = useTransform(progress, lineRange, lineValues)
   const lineY = useTransform(lineIn, [0, 1], [26, 0])
+  const barScale = useTransform(docked, [0, 1], [0.92, 1])
 
   if (reduce) return <StaticSchools />
 
@@ -186,10 +242,32 @@ export function SchoolsScene() {
           <motion.p
             aria-hidden
             style={{ opacity: lineIn, y: lineY }}
-            className="pointer-events-none absolute inset-x-0 top-[46%] text-center font-display text-[34px] font-medium leading-[1.1] tracking-tight text-text sm:text-[54px] lg:text-[68px]"
+            className="pointer-events-none absolute inset-x-0 top-[44%] text-center font-display text-[34px] font-medium leading-[1.1] tracking-tight text-text sm:text-[54px] lg:text-[68px]"
           >
             <span className="italic">Calenda</span> works with all of them.
           </motion.p>
+
+          {/* The tray. Drawn from the same arithmetic that places the tiles,
+              so its ends line up with them at every width. It arrives with
+              them rather than before: an empty bar waiting to be filled is a
+              loading state, and this is not one. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+            style={{ top: `calc(var(--stage-h) * ${DOCK_Y})` }}
+          >
+            <motion.div
+              style={{
+                opacity: docked,
+                scale: barScale,
+                y: '-50%',
+                width: dock.width + dock.pad * 2,
+                height: dock.dockTile + dock.pad * 2,
+                borderRadius: (dock.dockTile + dock.pad * 2) / 2.4,
+              }}
+              className="border border-border bg-surface-2/75 shadow-lg backdrop-blur-md"
+            />
+          </div>
 
           {SCHOOLS.map((school, i) => (
             <Card
@@ -199,7 +277,8 @@ export function SchoolsScene() {
               progress={progress}
               cols={cols}
               spread={spread}
-              dockScale={dockScale}
+              dock={dock}
+              isDock={isDock}
               docked={docked}
               pointerX={pointerX}
               rect={rect}
@@ -227,20 +306,21 @@ export function SchoolsScene() {
  * depends on which library wrote it last.
  */
 function Card({
-  school, index, progress, cols, spread, dockScale, docked, pointerX, rect,
+  school, index, progress, cols, spread, dock, isDock, docked, pointerX, rect,
 }: {
   school: School
   index: number
   progress: MotionValue<number>
   cols: number
   spread: number
-  dockScale: number
+  dock: DockMetrics
+  isDock: boolean
   docked: MotionValue<number>
   pointerX: MotionValue<number>
   rect: React.RefObject<{ left: number; width: number }>
 }) {
   const g = gridSlot(index, cols, spread)
-  const d = dockSlot(index)
+  const d = dockSlot(index, dock.span)
   const at = APPEAR_FROM + index * STEP
 
   // Arrival: a card rises the last few pixels into its slot rather than
@@ -257,35 +337,42 @@ function Card({
   const x = useMotionTemplate`calc(var(--stage-w) * ${fx})`
   const y = useMotionTemplate`calc(var(--stage-h) * ${fy})`
 
-  const shrink = useTransform(travel, [0, 1], [1, dockScale])
+  const shrink = useTransform(travel, [0, 1], [1, dock.scale])
   // The caption is gone before the card is small enough for it to be unreadable.
   const captionOut = useTransform(travel, [0, 0.45], [1, 0])
   const caption = useTransform([appear, captionOut], ([a, c]) => (a as number) * (c as number))
 
   // Pointer magnification, and only once docked. A card swelling while it is
   // still crossing the stage looks like a bug, because it is one.
-  const magnet = useTransform([pointerX, docked], ([px, dk]) => {
+  //
+  // The falloff is measured in dock tiles rather than in a fixed number of
+  // pixels, so the same three-or-so neighbours rise on a phone as on a laptop.
+  const falloff = useTransform([pointerX, docked], ([px, dk]) => {
     const p = px as number
-    if (!Number.isFinite(p) || (dk as number) < 0.6 || !rect.current) return 1
+    if (!Number.isFinite(p) || (dk as number) < 0.6 || !rect.current) return 0
     const centre = rect.current.left + rect.current.width * d.x
-    const distance = Math.abs(p - centre)
-    const falloff = Math.max(0, 1 - distance / 130)
-    return 1 + falloff * 0.55 * (dk as number)
+    const reach = dock.dockTile * 2.4
+    return Math.max(0, 1 - Math.abs(p - centre) / reach) * (dk as number)
   })
-  const magnetSpring = useSpring(magnet, { stiffness: 320, damping: 24, mass: 0.4 })
-  const scale = useTransform([shrink, magnetSpring], ([s, m]) => (s as number) * (m as number))
+  const near = useSpring(falloff, { stiffness: 320, damping: 26, mass: 0.4 })
+
+  const magnet = useTransform(near, (n) => 1 + n * 0.62)
+  // Lifting as well as swelling is what makes it read as a dock rather than a
+  // row that zooms. Divided by the card's own scale, because it is inside it.
+  const lift = useTransform(near, (n) => -n * 14 / Math.max(dock.scale, 0.2))
+  const cardY = useTransform([enterY, lift], ([e, l]) => (e as number) + (l as number))
 
   return (
     <motion.div style={{ x, y }} className="absolute left-0 top-0">
       <div className="-translate-x-1/2 -translate-y-1/2">
-        <motion.div style={{ scale, opacity: appear }} className="origin-center">
+        <motion.div style={{ scale: shrink, opacity: appear }} className="origin-center">
           <motion.a
             href={school.site}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`${school.name} — opens the school's website`}
-            style={{ y: enterY }}
-            className="group relative block outline-none"
+            style={{ y: cardY, scale: magnet }}
+            className="group relative block origin-bottom outline-none"
           >
             <span className="relative grid h-[var(--tile,56px)] w-[var(--tile,56px)] place-items-center overflow-hidden rounded-2xl border border-border bg-bg transition-colors duration-200 group-hover:border-brand-border group-focus-visible:ring-2 group-focus-visible:ring-[var(--ring)]">
               <Crest school={school} />
@@ -293,6 +380,21 @@ function Card({
                 aria-hidden
                 className="absolute right-1 top-1 h-3 w-3 text-text-subtle opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               />
+            </span>
+
+            {/* The name, once it is a dock and the pointer is on it. Scaled
+                back up by the inverse of the tile's own shrink, or it would
+                arrive at sixty per cent and be unreadable. */}
+            <span
+              className={
+                'pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 block origin-bottom '
+                + '-translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-bg px-2 py-1 '
+                + 'text-[12px] font-medium leading-none text-text shadow-sm transition-opacity duration-150 '
+                + (isDock ? 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100' : 'opacity-0')
+              }
+              style={{ scale: 1 / Math.max(dock.scale, 0.2) }}
+            >
+              {school.name}
             </span>
 
             <motion.span
@@ -327,14 +429,25 @@ function Crest({ school }: { school: School }) {
 
   if (!school.logo || failed) {
     return (
+      // Sized from the tile rather than in points, so the initials stay in
+      // proportion at every width -- and in the dock, where the tile is the
+      // same element at sixty per cent.
       <span
         aria-hidden
-        className="font-display text-[13px] font-medium tracking-tight text-text-muted sm:text-[15px]"
+        style={{ fontSize: 'calc(var(--tile, 56px) * 0.26)' }}
+        className="font-display font-medium leading-none tracking-tight text-text-muted"
       >
         {school.monogram}
       </span>
     )
   }
+
+  // Uncropped, the whole image is fitted inside the tile. Cropped, the tile
+  // fills with one edge of it -- which for a crest-and-wordmark lockup is the
+  // crest, and is why `crop` exists at all.
+  const fit = school.crop
+    ? 'h-full w-full object-cover'
+    : 'h-[74%] w-[74%] object-contain'
 
   return (
     <img
@@ -343,7 +456,8 @@ function Crest({ school }: { school: School }) {
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="h-[62%] w-[62%] object-contain"
+      style={school.crop ? { objectPosition: school.crop === 'top' ? 'center top' : 'left center' } : undefined}
+      className={fit}
     />
   )
 }
