@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
 import { AuthError } from '@/features/auth/AuthParts'
+import { SendEmailButton } from '@/features/auth/SendEmailButton'
+import { useEmailCooldown } from '@/features/auth/emailCooldown'
 import { useAuth } from '@/lib/auth'
 import { emailDelivery } from '@/lib/email'
 
@@ -22,17 +23,22 @@ export function ForgotPassword() {
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cooldown = useEmailCooldown(email)
 
   if (!emailDelivery) return <Navigate to="/sign-in" replace />
   if (session) return <Navigate to="/dashboard" replace />
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (cooldown.remaining > 0) return
     setBusy(true)
     setError(null)
     const { error } = await resetPassword(email)
     setBusy(false)
     if (error) return setError(error)
+    // Recorded only on a send that actually happened, so a failure does not
+    // lock somebody out of retrying for a minute for nothing.
+    cooldown.record()
     setSent(true)
   }
 
@@ -73,9 +79,7 @@ export function ForgotPassword() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" size="lg" fullWidth loading={busy}>
-            Send the link
-          </Button>
+          <SendEmailButton address={email} busy={busy} label="Send the link" />
         </form>
       )}
     </AuthLayout>

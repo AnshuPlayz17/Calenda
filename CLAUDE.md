@@ -174,10 +174,24 @@ password form carries one honest sentence pointing at the providers. Turn it
 back off the moment delivery stops being reliable; that path is kept working
 for exactly this reason.
 
-Still true: the built-in sender is about two messages an hour from a shared
-domain. Before this reaches more than a few testers, add SMTP under
-Authentication → Emails → Custom SMTP. **Brevo is the free option that does not
-need a domain** — it verifies a single sender address.
+**Mail goes through Brevo over custom SMTP**, from a subdomain Brevo owns and
+has SPF/DKIM for. Sending "from" a personal Gmail address through a third party
+was the alternative and is worse — it fails DMARC alignment and gets filtered,
+because the mail is signed by Brevo while claiming to be from Google.
+
+**Three limits stack, and the arithmetic decides one setting.** Supabase
+enforces a per-address gap server-side; Supabase's project-wide "Emails per
+hour" (call it N) caps everything at 24N a day; Brevo's free plan allows 300 a
+day. So **N must be 12 or lower** — 24 × 12 = 288 — or a determined stranger can
+burn the day's quota and the cost lands on somebody who genuinely cannot get in.
+`emailCooldown.ts` adds a per-address countdown in the browser on top of that;
+it is a courtesy for the person who presses the button twice, never a control,
+and must not be described as one.
+
+**One-time sign-in links are back**, gated on the same flag, with
+`shouldCreateUser: false` so a typo cannot silently register an account. An
+address with no account returns success and sends nothing — saying "no such
+account" would answer *is this person registered here* to anyone who asked.
 
 **The redirect URL must keep its `#`.** `…/Calenda/#/reset-password` on the
 allow list under Authentication → URL Configuration. Supabase does not fail on
