@@ -139,18 +139,25 @@ array, so the page and its navigation cannot drift apart.
    travel into a single row of fifteen while the line rises behind them. Read
    the wording rule below before touching its copy
 3. **A day** — pinned; a summary card cross-dissolving into its detail view
-4. **The path** — a drawn spine down six stages, not pinned
+4. **The path** — a drawn spine down six stages, not pinned, with a chip riding
+   the line and renaming itself at each one: a line of text becomes a staged
+   row becomes an event becomes a reminder
 5. **The import** — pinned; 51 invented dates fly into a 7-column grid, then the
    15 identical "Late Start" chips light up. Falls back to no flight below 768px
    or on <= 4 cores
 6. **What else** — a CSS-sticky deck, no pin
-7. **Numbers** — counted figures and two charts, all computed from the sample year
+7. **Numbers** — pinned; the figures count as you scroll and the bars grow as
+   you reach them, all computed from the sample year. It is the only chapter
+   where the number under your eye is a function of scroll position, which is
+   the claim it makes ("counted, not typed") performed rather than stated
 8. **Questions** — pinned, and the only scene that travels *sideways*: six
    answers on a horizontal rail, one step per stop
 9. **Anywhere** — pinned; a dotted world map lights up from a growing circle
    while ten cities land in turn, each showing its real local time. It is a
    map of *where it works*, never of users — see below
-10. **Privacy** — pinned; six adversarial RLS tests resolving to "Refused"
+10. **Privacy** — pinned; six adversarial RLS tests thrown at a wall and stopped
+   dead against it, notching it as they land. They used to resolve in place,
+   which showed refusal as a label rather than as an event
 11. **Founder** — a panel hinged at its bottom edge, swinging open
 12. **Closing** — deliberately still
 
