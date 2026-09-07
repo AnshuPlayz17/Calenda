@@ -27,6 +27,10 @@ type AuthContextValue = {
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
+  /** Sends a recovery link. Only reachable when `emailDelivery` is on. */
+  resetPassword: (email: string) => Promise<{ error: string | null }>
+  /** Sets a new password for whoever the current session belongs to. */
+  updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -130,6 +134,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email,
           options: { emailRedirectTo: redirectTo },
         })
+        return { error: error ? friendlyError(error.message) : null }
+      },
+
+      async resetPassword(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          // Hash-routed, so the recovery token has to land on the route that
+          // knows what to do with it rather than on the landing page.
+          redirectTo: `${env.baseUrl}#/reset-password`,
+        })
+        // Never distinguish a registered address from an unregistered one --
+        // the same reason sign-in errors are uniform. The caller shows the
+        // same confirmation either way.
+        return { error: error ? friendlyError(error.message) : null }
+      },
+
+      async updatePassword(password) {
+        const { error } = await supabase.auth.updateUser({ password })
         return { error: error ? friendlyError(error.message) : null }
       },
 

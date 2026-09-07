@@ -126,6 +126,53 @@ Three layers, all in `src/styles/index.css`.
 that sets the id and the accent and draws the wash, `ChapterHeading`, and the
 pinned/static frames. Use them rather than re-typing the classes.
 
+## The sign-in and sign-up pages
+
+`src/features/auth/` is the shell; `src/routes/SignIn.tsx`, `SignUp.tsx`,
+`ForgotPassword.tsx` and `ResetPassword.tsx` are the four pages inside it.
+
+**The primary action must be above the fold, and it was not.** At 1440x900 the
+sign-up page's own "Create account" button sat below the window behind three
+promises, three provider buttons and three inputs. Both pages now show the
+providers first with the email form behind one press, and `authcheck.mjs` beside
+the harness measures every control's distance past the fold at six viewports —
+reporting a button below it as a failure and a footnote link below it as a note,
+because those are not the same defect. Do not loosen that check to make
+something pass.
+
+**The panel beside the form is a reel, not a diagram.** `AuthReel.tsx` cycles
+four scenes on a six-second dwell — the imported year, a class workspace, the
+agenda, a reminder — each drawn from the same invented sample data the landing
+page counts from. It pauses on hover, on focus and when the tab is hidden, the
+ticks are buttons so a scene can be gone back to, and the fill is a CSS
+animation rather than a tweened one *because* it has to pause in place: a tween
+restarted on hover snaps to full at exactly the moment it has stopped.
+
+It is deliberately not a video file. A video cannot take the theme, cannot be
+read out, cannot be corrected without re-rendering, and would be the largest
+thing in the repository.
+
+Under `prefers-reduced-motion` it does not rotate at all — all four scenes
+render at once, which is more information than the animated version shows at
+any one moment, not less.
+
+**The panel carries its own tokens** (`.panel-dark` in `index.css`) because it
+stays dark in all three themes. That includes its own copy of the accent ramp
+at the dark lightness: in the light themes `--accent` is `oklch(0.52 …)`, chosen
+to sit *on* a light ground, and against near-black it is nearly invisible. Only
+`--accent` is redeclared — the subtle/border/strong variants mix with `--bg`,
+which inside the panel is the wrong ground, so nothing in there uses them.
+
+**Nothing that needs an inbox is offered, because no email has been proved to
+arrive.** `src/lib/email.ts` holds one flag, `emailDelivery`, currently `false`.
+While it is false the forgot-password link is not rendered, both recovery routes
+redirect to sign-in rather than showing a form that would silently do nothing,
+and the password form carries one honest sentence saying to use a provider. The
+code path is complete and dormant — the same rule the SMS adapter follows. The
+file lists exactly what to do in the Supabase dashboard to turn it on, and step
+three of that list is *send yourself one and confirm it arrives*. That step is
+the entire reason the flag exists; do not flip it without doing it.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
