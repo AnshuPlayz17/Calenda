@@ -181,14 +181,46 @@ Reduced motion is unaffected by `PACE` — pinned scenes render their static
 composition and consume no scroll budget at all, so that path stays at about
 11,500px however long the animated one gets.
 
-**The page is entered, not scrolled past.** Every pinned chapter grows in over
-the first 6% of its own scroll and pushes past the camera over the last 6%
-(`PushThrough` in `Chapter.tsx`), so a boundary reads as continuing forward
-rather than as a new section arriving from below. It goes on the content
-*inside* the sticky frame, never on the chapter wrapper — a transform on the
-wrapper moves the sticky element with it, which unpins the scene. The schools
-chapter is the one exception: it measures its own stage with
-`getBoundingClientRect`, and a scaled ancestor makes those the scaled numbers.
+**The page is entered, not scrolled past.** Every chapter is travelled into,
+and it is a real dolly rather than a scale — the content translates along Z
+under `transformPerspective: 1200`, so the geometry does the work. A scale was
+tried first and is the wrong verb: growing an element from 0.9 to 1 is the same
+picture at two sizes, and nothing about it says the viewer moved.
+
+- `PushThrough` (`Chapter.tsx`) is for the nine pinned chapters. They arrive out
+  of depth over the first 8% of their own scroll and pass the camera over the
+  last 8%, leaving at `z = 250` — a magnification of 1200/950, or 1.26, which is
+  deliberately inside the 1.3 the harness's width check allows for a push-through
+  and well outside anything a layout bug produces.
+- `depth` is per chapter, not one number. A chapter that is one object takes more
+  of it (schools, import, world: 520) because the arrival is the point; a column
+  of text takes less (questions and the panels: 320, founder: 300) because text
+  swinging through perspective is text that is briefly hard to read.
+- `Approach` is for the two chapters that do not pin. It is the first half only.
+  A tall section that simply scrolls cannot be pushed past — the camera carrying
+  on forward would take its opening lines out of the frame while its closing ones
+  were still being read.
+- The pipeline's six stages arrive out of depth individually, and the nodes on
+  the line deliberately do not: the line is fixed in the page, and staying put is
+  what the text is arriving *at*.
+
+Two rules the pass established. It goes on the content *inside* the sticky frame,
+never on the chapter wrapper — a transform on the wrapper moves the sticky
+element with it, which unpins the scene. And `useScroll` must never target an
+element that moves itself in Z: it measures with `getBoundingClientRect`, which
+is the projected box, so the target feeds its own output back into its own input.
+`Approach` puts the ref on a static outer element and the transform on an inner
+one for exactly this reason. The schools chapter is the same trap from the other
+side — it measures its own stage, so it reads `offsetWidth`/`offsetHeight`, which
+are layout numbers and unaffected by an ancestor transform.
+
+The verification for this is `dollycheck.mjs` beside the harness: it walks the
+page and reports, per chapter, the closest the content ever gets to `z = 0` and
+the widest it is ever projected. A chapter that never reaches the camera is
+permanently small and nothing else catches it. **Scroll it with
+`behavior: 'instant'`** — the page sets `scroll-behavior: smooth`, and a probe
+that uses a plain `scrollTo` measures a page that has barely moved and reports
+every late chapter as broken.
 
 Two things are on screen the whole way down. A hairline in the sticky header
 fills as you read, which answers *how far through*. `ScrollCompanion` answers

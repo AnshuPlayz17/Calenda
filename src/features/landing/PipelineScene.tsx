@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { MotionValue } from 'motion/react'
 import { useScroll, useReducedMotion } from 'motion/react'
 import { held } from './scrollScene'
+import { Approach } from './Chapter'
 import { DataPath } from './DataPath'
 
 /**
@@ -70,18 +71,25 @@ export function PipelineScene() {
   return (
     <section ref={ref} className="relative z-10 px-5 py-20 sm:px-8 sm:py-28">
       <div className="mx-auto max-w-[1000px]">
-        <p className="label-caps text-accent">From the school's PDF to your lock screen</p>
-        <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
-          Six steps, and you do one of them.
-        </h2>
-        <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-text-muted">
-          The only step that is yours is the fourth — adding your classes. Everything
-          before it has already happened, and everything after it follows.
-        </p>
+        {/* Entered out of depth like every pinned chapter, but not pushed past
+            one: this section is two and a half thousand pixels tall and scrolls
+            rather than pinning, so a camera that carried on forward would take
+            the heading out of the frame while stage five was still being read.
+            The approach only. */}
+        <Approach depth={220}>
+          <p className="label-caps text-accent">From the school's PDF to your lock screen</p>
+          <h2 className="mt-3 max-w-[22ch] font-display text-title font-medium leading-[1.06] tracking-tight sm:text-display-sm">
+            Six steps, and you do one of them.
+          </h2>
+          <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-text-muted">
+            The only step that is yours is the fourth — adding your classes. Everything
+            before it has already happened, and everything after it follows.
+          </p>
 
-        <div className="mt-10 max-w-[620px]">
-          <DataPath />
-        </div>
+          <div className="mt-10 max-w-[620px]">
+            <DataPath />
+          </div>
+        </Approach>
 
         {/* The stages are indented far enough that the chip, centred on the line,
             clears the text column. */}
@@ -226,14 +234,20 @@ function Stage({
   const [r, v] = held([at, at + 0.14], [0, 1])
   const t = useTransform(progress, r, v)
   const opacity = useTransform(t, [0, 1], [0.28, 1])
-  const x = useTransform(t, [0, 1], [10, 0])
+  // The stage's text arrives out of depth rather than sliding in from the
+  // right. It used to be a ten-pixel x -- the smallest gesture that reads as
+  // "this appeared", and on a page whose every other chapter is now travelled
+  // into, the one entrance that still moved sideways. The node and its ring are
+  // deliberately outside this: they belong to the line, which is fixed in the
+  // page, and the six of them staying put is what the text is arriving *at*.
+  const z = useTransform(t, [0, 1], [-160, 0])
   // The node fills in as its stage arrives, so the line reads as passing through.
   const dot = useTransform(t, [0.2, 0.8], [0.35, 1])
   const ring = useTransform(t, [0.15, 0.75], [0.6, 3.4])
   const ringFade = useTransform(t, [0.15, 0.4, 0.8], [0, 0.55, 0])
 
   return (
-    <motion.li style={reduce ? undefined : { opacity, x }} className="relative">
+    <motion.li style={reduce ? undefined : { opacity }} className="relative">
       {/* A ring that opens out of the node as the line reaches it, then goes.
           Six of them down the page make the head's arrival at each stage an
           event rather than a dot quietly changing size. */}
@@ -249,11 +263,15 @@ function Stage({
         style={reduce ? undefined : { scale: dot }}
         className="absolute -left-8 top-[5px] h-[11px] w-[11px] rounded-full border-2 border-bg bg-accent sm:-left-16"
       />
-      <p className="label-caps tabular">{stage.n}</p>
-      <h3 className="mt-1.5 max-w-[34ch] text-[16.5px] font-medium leading-snug text-text sm:text-[18px]">
-        {stage.term}
-      </h3>
-      <p className="mt-2 max-w-[58ch] text-[14px] leading-relaxed text-text-muted">{stage.detail}</p>
+      <motion.div
+        style={reduce ? undefined : { z, transformPerspective: 900, originX: 0 }}
+      >
+        <p className="label-caps tabular">{stage.n}</p>
+        <h3 className="mt-1.5 max-w-[34ch] text-[16.5px] font-medium leading-snug text-text sm:text-[18px]">
+          {stage.term}
+        </h3>
+        <p className="mt-2 max-w-[58ch] text-[14px] leading-relaxed text-text-muted">{stage.detail}</p>
+      </motion.div>
     </motion.li>
   )
 }

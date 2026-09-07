@@ -6,6 +6,7 @@ import { sampleUpcoming } from '@/data/sampleEvents'
 import { agendaLabel } from '@/lib/datetime'
 import { HeroStack } from './HeroStack'
 import { useScrollScene, held, paced, useRoomy } from './scrollScene'
+import { EXIT_Z, PERSPECTIVE } from './Chapter'
 
 /**
  * The first screen, and the one you scroll into.
@@ -76,9 +77,16 @@ export function OpeningScene({ signedIn }: { signedIn: boolean }) {
 
   // The hand-off. The whole chapter pushes past the camera and the next one
   // grows in behind it, so the boundary is a continuation rather than a cut.
-  const [exR, exV] = held([0.9, 1], [1, 1.16])
+  //
+  // This was a scale to 1.16 and it was the wrong verb for a chapter whose
+  // whole argument is that you are travelling into the page. A scale is the
+  // same picture drawn larger; a translate along Z under a perspective is the
+  // camera actually passing the thing, and the difference shows in the corners,
+  // which spread rather than sliding straight out. Same units and the same exit
+  // depth as every other chapter, so eleven boundaries read as one motion.
+  const [exR, exV] = held([0.9, 1], [0, EXIT_Z])
   const [efR, efV] = held([0.93, 1], [1, 0])
-  const exitScale = useTransform(progress, exR, exV)
+  const exitZ = useTransform(progress, exR, exV)
   const exitOpacity = useTransform(progress, efR, efV)
 
   if (reduce) return <StaticOpening signedIn={signedIn} />
@@ -90,7 +98,10 @@ export function OpeningScene({ signedIn }: { signedIn: boolean }) {
       <span id="glance" aria-hidden className="absolute left-0 top-[38%] block h-px w-px" />
 
       <div className="sticky top-0 h-svh overflow-hidden">
-        <motion.div style={{ scale: exitScale, opacity: exitOpacity }} className="relative h-full origin-center">
+        <motion.div
+          style={{ z: exitZ, opacity: exitOpacity, transformPerspective: PERSPECTIVE }}
+          className="relative h-full origin-center"
+        >
           {/* The copy, in the left half on a wide window and the whole of a
               narrow one. */}
           <motion.div

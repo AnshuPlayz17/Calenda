@@ -77,7 +77,7 @@ export function ProofScene() {
 
   return (
     <section ref={ref} className="relative z-10 border-y border-border bg-surface" style={{ height }}>
-      <PinnedFrame progress={progress}>
+      <PinnedFrame progress={progress} depth={460}>
         <Measure className="grid items-center gap-10 lg:grid-cols-[0.85fr_1fr] lg:gap-14">
           <div>{heading}</div>
 

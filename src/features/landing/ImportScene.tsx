@@ -69,7 +69,7 @@ export function ImportScene() {
   return (
     <section ref={ref} className="relative bg-bg" style={{ height }} aria-labelledby="import-heading">
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-8 pt-16">
-        <PushThrough progress={progress}>
+        <PushThrough progress={progress} depth={520}>
         <div className="mx-auto grid w-full max-w-[1180px] items-center gap-8 px-6 lg:grid-cols-[0.85fr_1fr] lg:gap-14">
           <BeatText progress={progress} />
           <Stage progress={progress} light={light} />

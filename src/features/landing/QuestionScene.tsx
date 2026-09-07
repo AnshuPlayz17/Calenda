@@ -154,7 +154,7 @@ export function QuestionScene() {
       aria-labelledby="questions-heading"
     >
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-20 pt-16">
-        <PushThrough progress={progress}>
+        <PushThrough progress={progress} depth={320}>
         <div className="mx-auto w-full max-w-[1120px] px-5 sm:px-8">
           {heading}
 
