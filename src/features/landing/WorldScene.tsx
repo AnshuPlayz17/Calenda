@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react'
 import {
   WORLD_COLS, WORLD_ROWS, WORLD_LAT_MAX, WORLD_LAT_MIN, WORLD_DOTS,
 } from '@/data/worldMap'
+import { PushThrough } from './Chapter'
 import { useScrollScene, held, prefersLightMotion, paced, useRoomy } from './scrollScene'
 
 /**
@@ -104,6 +105,7 @@ export function WorldScene() {
       aria-labelledby="world-heading"
     >
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden px-5 pb-20 pt-16 sm:px-8">
+        <PushThrough progress={progress}>
         <div className="mx-auto grid w-full max-w-[1240px] items-center gap-8 lg:grid-cols-[0.62fr_1fr] lg:gap-12">
           <div><Copy /></div>
 
@@ -128,6 +130,7 @@ export function WorldScene() {
           own timezone database rather than typed in. It is a map of where Calenda works,
           not a map of who uses it.
         </p>
+      </PushThrough>
       </div>
     </section>
   )

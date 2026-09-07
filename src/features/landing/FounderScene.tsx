@@ -1,5 +1,6 @@
 import { motion, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
+import { PushThrough } from './Chapter'
 import { useScrollScene, held, paced } from './scrollScene'
 import { CountUp } from './CountUp'
 
@@ -41,9 +42,11 @@ export function FounderScene() {
   return (
     <section id="founder" ref={ref} className="relative border-t border-border bg-bg" style={{ height }}>
       <div className="sticky top-0 flex h-svh items-center overflow-hidden px-5 pb-8 pt-16 sm:px-8">
+        <PushThrough progress={progress}>
         <div className="mx-auto w-full max-w-[1000px]" style={{ perspective: 1400 }}>
           <Lid progress={progress} />
         </div>
+      </PushThrough>
       </div>
     </section>
   )

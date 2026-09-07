@@ -34,8 +34,12 @@ export type LandingSection = {
 
 export const LANDING_SECTIONS: LandingSection[] = [
   { id: 'top', label: 'Opening', blurb: 'What Calenda is, in one screen', accent: 'indigo' },
+  // Not its own section any more: the opening travels into it, so it is a stop
+  // inside that chapter rather than a chapter after it. The rail still needs an
+  // id to jump to, and OpeningScene puts a marker where the card finishes
+  // centring.
+  { id: 'glance', label: 'A day', blurb: 'The same card, opened up', accent: 'indigo' },
   { id: 'schools', label: 'Schools', blurb: 'Fifteen independent schools across the GTA', accent: 'violet' },
-  { id: 'glance', label: 'A day', blurb: 'One event, close up and far away', accent: 'blue' },
   { id: 'pipeline', label: 'The path', blurb: 'Where a date comes from, end to end', accent: 'azure' },
   { id: 'import', label: 'The import', blurb: 'Fifty-one dates, fifteen of them identical', accent: 'cyan' },
   { id: 'more', label: 'What else', blurb: 'Classes, deadlines and reminders', accent: 'teal' },

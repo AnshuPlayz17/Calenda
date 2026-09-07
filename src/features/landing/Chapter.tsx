@@ -1,4 +1,6 @@
-import { motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion, useTransform } from 'motion/react'
+import type { MotionValue } from 'motion/react'
+import { held } from './scrollScene'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -127,7 +129,13 @@ export function ChapterHeading({
  * classes, drifting by a few pixels of padding each time. The bottom padding
  * below xl is for the companion pill, which is fixed to the window there.
  */
-export function PinnedFrame({ children, className }: { children: React.ReactNode; className?: string }) {
+export function PinnedFrame({ children, className, progress }: {
+  children: React.ReactNode
+  className?: string
+  /** The scene's own progress. Given it, the chapter is entered and left
+   *  rather than arrived at and scrolled past -- see below. */
+  progress?: MotionValue<number>
+}) {
   return (
     <div
       className={cn(
@@ -136,8 +144,50 @@ export function PinnedFrame({ children, className }: { children: React.ReactNode
         className,
       )}
     >
-      {children}
+      {progress ? <PushThrough progress={progress}>{children}</PushThrough> : children}
     </div>
+  )
+}
+
+/**
+ * A chapter grows in as you enter it and pushes past the camera as you leave.
+ *
+ * This is the difference between a page of sections and a page you travel
+ * through. A section that slides up from below is a new thing arriving; a
+ * chapter that grows out of the middle of the screen while the last one
+ * expands past the edges is the same journey continuing forward. The opening
+ * chapter makes that literal -- you scroll into the card in the hero and it
+ * opens -- and this carries the same reading to the other ten.
+ *
+ * Six per cent of the scene at each end, which at these scene lengths is about
+ * a fifth of a screen: long enough to read as a move, short enough that no
+ * chapter spends real scroll being invisible.
+ *
+ * It goes on the content inside the sticky frame, never on the chapter wrapper.
+ * A transform on the wrapper would move the sticky element with it, which is
+ * the one thing that unpins a pinned scene.
+ *
+ * Not used by the schools chapter. That one measures its own stage with
+ * getBoundingClientRect to place fifteen cards and to find the pointer's
+ * distance from each dock tile, and a scaled ancestor makes those measurements
+ * the scaled numbers rather than the real ones -- at mount, when the scale is
+ * 0.9, every card would be placed against a stage nine tenths of its actual
+ * width. It enters by having fifteen cards arrive one at a time and leaves by
+ * becoming a dock, which is enough of an entrance without this.
+ */
+export function PushThrough({ progress, children }: {
+  progress: MotionValue<number>
+  children: React.ReactNode
+}) {
+  const [sR, sV] = held([0, 0.06, 0.94, 1], [0.9, 1, 1, 1.14])
+  const [oR, oV] = held([0, 0.05, 0.95, 1], [0, 1, 1, 0])
+  const scale = useTransform(progress, sR, sV)
+  const opacity = useTransform(progress, oR, oV)
+
+  return (
+    <motion.div style={{ scale, opacity }} className="flex flex-1 flex-col justify-center">
+      {children}
+    </motion.div>
   )
 }
 
