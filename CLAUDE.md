@@ -134,10 +134,12 @@ load-bearing.** None of them has agreed to anything, so "partnered with",
 "trusted by" and "our schools" are all endorsement claims under fifteen
 trademarks — the easiest claims on the page for anyone to check, and one email
 from one communications office ends the section. "Works with" is a statement
-about software reading a published document, which is what this is. Crests are
-hotlinked from each school's own server (a crest cannot be bundled: it is that
-school's trademark) with a monogram standing in wherever the URL is missing or
-fails. The names live only in `src/data/schools.ts` — `noSchoolName.test.ts`
+about software reading a published document, which is what this is. **No
+school's crest appears** — each tile is that school's initials set in
+Newsreader, sized by how many letters there are. Crests were tried and dropped:
+each is a trademark, fifteen drawn by fifteen studios at fifteen aspect ratios
+never look like one row, and hotlinking them was the only third-party request
+on a site that bundles its own fonts. The names live only in `src/data/schools.ts` — `noSchoolName.test.ts`
 still fails on a school named anywhere else, which is where a claim of
 ownership would actually get made.
 

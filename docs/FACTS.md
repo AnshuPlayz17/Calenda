@@ -90,8 +90,9 @@ access as the wrong user and requires it to fail:
   official, or our schools.
 - One school's calendar has ever been imported. The section deliberately does not
   distinguish them, so no card may claim a live import either.
-- Crests are hotlinked from each school's own server and are that school's
-  trademark. A monogram stands in wherever a URL is absent or fails to load.
+- No school's crest is shown. Each tile is the school's initials, set in the
+  page's own typeface. A crest is that school's trademark; hotlinking one was
+  tried and removed.
 
 ## NOT BUILT — must not appear on the page
 - **A user base.** There is one user and a handful of testers. No map, counter
