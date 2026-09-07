@@ -164,9 +164,11 @@ to sit *on* a light ground, and against near-black it is nearly invisible. Only
 which inside the panel is the wrong ground, so nothing in there uses them.
 
 **Password recovery is on, and one flag turns it off again.** `src/lib/email.ts`
-holds `emailDelivery`, now `true` — a recovery mail was sent from the Supabase
-dashboard and landed in the inbox rather than spam, which is the test the flag
-exists for. While it is false the link is not rendered, both routes redirect to
+holds `emailDelivery`, now `true`. Verified twice on 2026-09-07: a mail sent
+from the Supabase dashboard landed in the inbox rather than spam, and then the
+whole flow ran on the live site through the app's own code — the link on the
+sign-in page, the mail, and a working form at the other end. The second one is
+the one that proves the link survives hash routing. While it is false the link is not rendered, both routes redirect to
 sign-in rather than showing a form that would silently drop an address, and the
 password form carries one honest sentence pointing at the providers. Turn it
 back off the moment delivery stops being reliable; that path is kept working
