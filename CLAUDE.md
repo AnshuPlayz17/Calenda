@@ -105,7 +105,7 @@ Three layers, all in `src/styles/index.css`.
 
 - **Neutrals and brand.** Unchanged: navy `#1E3765` with a generated 50–950
   ramp, both themes authored rather than inverted. This is the app's colour.
-- **Chapter accents.** The landing page's twelve chapters each carry a hue,
+- **Chapter accents.** The landing page's eleven chapters each carry a hue,
   set as `data-accent` on the section, and everything inside reads `--accent`
   instead of the brand — eyebrows, icon chips, rules, active states, the
   header's progress hairline, the companion's ticks. Scrolling the page moves
@@ -113,7 +113,7 @@ Three layers, all in `src/styles/index.css`.
   that a static one cannot. Only `--accent` is declared per hue; the tinted
   ground, the border and the strong variant are `color-mix()`ed from it and the
   page's own background, so all three themes are correct without three sets of
-  numbers. Lightness is held constant across the twelve (0.52 light, ~0.78
+  numbers. Lightness is held constant across them (0.52 light, ~0.78
   dark) so contrast is a property of the system rather than of each colour.
   **Vivid is the theme that spends chroma** — same lightness, more saturation.
 - **One type scale.** `--text-title-sm` through `--text-display-lg`, fluid
@@ -128,38 +128,42 @@ pinned/static frames. Use them rather than re-typing the classes.
 
 ## The landing page
 
-Twelve chapters, and the rule that governs them is that no two adjacent ones
+Eleven chapters, and the rule that governs them is that no two adjacent ones
 move the same way — a fourth identical pinned section is the failure mode of
 this genre. `src/features/landing/sections.ts` is the list, in order; the route
 wraps each scene with the matching id and the companion rail reads the same
 array, so the page and its navigation cannot drift apart.
 
-1. **Hero** — masked headline reveal, pointer tilt, a stack that parts on exit
-2. **Schools** — pinned; fifteen cards arrive one at a time in a 3×5 grid, then
-   travel into a single row of fifteen while the line rises behind them. Read
+1. **Opening** — the hero and "a day" as one move. The copy falls back while
+   the card travels from the right column into the middle of the window and
+   grows, and the thing it opens into is the row you were already looking at.
+   The rail has two stops in it (`top` and a marker at `glance`)
+2. **Schools** — pinned; fifteen cards arrive one at a time in a 5×3 grid (3×5
+   on a phone), then travel into a dock while the line rises behind them. Read
    the wording rule below before touching its copy
-3. **A day** — pinned; a summary card cross-dissolving into its detail view
-4. **The path** — a drawn spine down six stages, not pinned, with a chip riding
+3. **The path** — a drawn spine down six stages, not pinned, with a chip riding
    the line and renaming itself at each one: a line of text becomes a staged
    row becomes an event becomes a reminder
-5. **The import** — pinned; 51 invented dates fly into a 7-column grid, then the
+4. **The import** — pinned; 51 invented dates fly into a 7-column grid, then the
    15 identical "Late Start" chips light up. Falls back to no flight below 768px
    or on <= 4 cores
-6. **What else** — a CSS-sticky deck, no pin
-7. **Numbers** — pinned; the figures count as you scroll and the bars grow as
+5. **What else** — pinned; three full-width panels panned across sideways.
+   Deliberately not the questions chapter's sideways move: that is a rail of
+   discrete stops, this is a continuous pan along one surface
+6. **Numbers** — pinned; the figures count as you scroll and the bars grow as
    you reach them, all computed from the sample year. It is the only chapter
    where the number under your eye is a function of scroll position, which is
    the claim it makes ("counted, not typed") performed rather than stated
-8. **Questions** — pinned, and the only scene that travels *sideways*: six
-   answers on a horizontal rail, one step per stop
-9. **Anywhere** — pinned; a dotted world map lights up from a growing circle
+7. **Questions** — pinned; six answers on a horizontal rail, one discrete stop
+   at a time
+8. **Anywhere** — pinned; a dotted world map lights up from a growing circle
    while ten cities land in turn, each showing its real local time. It is a
    map of *where it works*, never of users — see below
-10. **Privacy** — pinned; six adversarial RLS tests thrown at a wall and stopped
+9. **Privacy** — pinned; six adversarial RLS tests thrown at a wall and stopped
    dead against it, notching it as they land. They used to resolve in place,
    which showed refusal as a label rather than as an event
-11. **Founder** — a panel hinged at its bottom edge, swinging open
-12. **Closing** — deliberately still
+10. **Founder** — a panel hinged at its bottom edge, swinging open
+11. **Closing** — deliberately still
 
 **The page's length is one constant.** `PACE` in `src/features/landing/scrollScene.ts`
 scales every pinned scene together; each scene declares how many screens it wants
@@ -176,6 +180,15 @@ at.
 Reduced motion is unaffected by `PACE` — pinned scenes render their static
 composition and consume no scroll budget at all, so that path stays at about
 11,500px however long the animated one gets.
+
+**The page is entered, not scrolled past.** Every pinned chapter grows in over
+the first 6% of its own scroll and pushes past the camera over the last 6%
+(`PushThrough` in `Chapter.tsx`), so a boundary reads as continuing forward
+rather than as a new section arriving from below. It goes on the content
+*inside* the sticky frame, never on the chapter wrapper — a transform on the
+wrapper moves the sticky element with it, which unpins the scene. The schools
+chapter is the one exception: it measures its own stage with
+`getBoundingClientRect`, and a scaled ancestor makes those the scaled numbers.
 
 Two things are on screen the whole way down. A hairline in the sticky header
 fills as you read, which answers *how far through*. `ScrollCompanion` answers

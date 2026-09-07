@@ -102,7 +102,7 @@ export function StackScene() {
 
   return (
     <section ref={ref} className="relative z-10" style={{ height }}>
-      <PinnedFrame>
+      <PinnedFrame progress={progress}>
         <Measure className="shrink-0">{heading}</Measure>
 
         {/* The track runs to both edges of the window: a panel arriving from

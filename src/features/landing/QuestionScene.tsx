@@ -10,6 +10,7 @@ import { MoveRight } from 'lucide-react'
 import { WheelCarousel } from '@/components/motion/WheelCarousel'
 import type { WheelCarouselItem } from '@/components/motion/WheelCarousel'
 import { sampleSchoolYear, sampleRepeatedCount } from '@/data/sampleSchoolYear'
+import { PushThrough } from './Chapter'
 import { useScrollScene, held, paced } from './scrollScene'
 import { cn } from '@/lib/cn'
 
@@ -153,6 +154,7 @@ export function QuestionScene() {
       aria-labelledby="questions-heading"
     >
       <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden pb-20 pt-16">
+        <PushThrough progress={progress}>
         <div className="mx-auto w-full max-w-[1120px] px-5 sm:px-8">
           {heading}
 
@@ -192,6 +194,7 @@ export function QuestionScene() {
             ))}
           </motion.ul>
         </div>
+      </PushThrough>
       </div>
     </section>
   )
