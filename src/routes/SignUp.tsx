@@ -20,6 +20,11 @@ const MIN_PASSWORD = 8
  * which is why the database refuses anything but these two from a signed-in
  * user. See supabase/migrations/20260907000100.
  */
+type Step = 'choose' | 'credentials' | 'name' | 'details'
+type Relation = 'mother' | 'father' | 'guardian' | 'other'
+
+const RELATIONS: Relation[] = ['mother', 'father', 'guardian', 'other']
+
 const ROLES = [
   { id: 'student' as const, label: "I'm a student", Icon: GraduationCap },
   { id: 'parent' as const, label: "I'm a parent", Icon: Users },
@@ -46,8 +51,14 @@ export function SignUp() {
   //
   // Nothing is created until the end. Making the account after step one would
   // leave a nameless account behind every abandoned sign-up.
-  const [step, setStep] = useState<'choose' | 'credentials' | 'about'>('choose')
-  const [fullName, setFullName] = useState('')
+  const [step, setStep] = useState<Step>('choose')
+  const [first, setFirst] = useState('')
+  const [middle, setMiddle] = useState('')
+  const [last, setLast] = useState('')
+  const [school, setSchool] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
+  const [heardFrom, setHeardFrom] = useState('')
+  const [relation, setRelation] = useState<Relation>('mother')
   const [role, setRole] = useState<'student' | 'parent'>('student')
   const [grade, setGrade] = useState('')
   const [email, setEmail] = useState('')
@@ -67,7 +78,13 @@ export function SignUp() {
     if (password.length < MIN_PASSWORD) {
       return setError(`Use at least ${MIN_PASSWORD} characters.`)
     }
-    setStep('about')
+    setStep('name')
+  }
+
+  function toDetails(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setStep('details')
   }
 
   async function withProvider(p: Provider) {
@@ -84,19 +101,32 @@ export function SignUp() {
     e.preventDefault()
     setError(null)
     setBusy('password')
-    const { error } = await signUpWithPassword(email, password, {
-      fullName: fullName.trim(),
+    const { error, warning } = await signUpWithPassword(email, password, {
+      // One name, assembled from three boxes. Storing the parts separately
+      // would need a migration and buy nothing the app uses -- it greets you by
+      // your first name and shows your name to a linked parent. Only the first
+      // is required: plenty of people have one name, and a required surname
+      // turns them away at the door.
+      fullName: [first, middle, last].map((p) => p.trim()).filter(Boolean).join(' '),
       role,
-      // A parent has no grade. Sending the field's last value because it was
-      // typed before the answer changed would file a parent in year eleven.
-      grade: role === 'student' ? grade.trim() : '',
+      // Neither of these is sent for the role it does not belong to. A parent
+      // has no grade, and passing a field's last value because it was typed
+      // before the answer changed would file a parent in year eleven.
+      grade: role === 'student' ? grade.trim() : undefined,
+      school: role === 'student' ? school.trim() : undefined,
+      inviteCode: role === 'parent' ? inviteCode.trim() : undefined,
+      relation: role === 'parent' ? relation : undefined,
+      // Asked of everybody, because how somebody arrived does not depend on
+      // which of the two they are.
+      heardFrom: heardFrom.trim(),
     })
     setBusy(null)
     if (error) return setError(error)
 
-    // Straight into the walkthrough. Email confirmation is off, so the account
-    // is usable immediately and a "check your inbox" screen would be a lie.
-    navigate('/welcome', { replace: true })
+    // The account exists at this point even if the invite code did not take,
+    // so this goes on rather than stopping -- but it is said out loud on the
+    // way, not swallowed.
+    navigate('/welcome', { replace: true, state: warning ? { warning } : undefined })
   }
 
   const mismatch = confirm.length > 0 && password !== confirm
@@ -175,36 +205,103 @@ export function SignUp() {
         </form>
       )}
 
-      {step === 'about' && (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+      {step === 'name' && (
+        <form onSubmit={toDetails} className="mt-6 flex flex-col gap-4">
           <StepMark at={2} />
           <Input
-            label="Your name"
-            autoComplete="name"
+            label="First name"
+            autoComplete="given-name"
             required
             autoFocus
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={first}
+            onChange={(e) => setFirst(e.target.value)}
+          />
+          <Input
+            label="Middle name"
+            autoComplete="additional-name"
+            value={middle}
+            onChange={(e) => setMiddle(e.target.value)}
+            hint="If you have one."
+          />
+          <Input
+            label="Last name"
+            autoComplete="family-name"
+            value={last}
+            onChange={(e) => setLast(e.target.value)}
           />
 
           <RolePicker value={role} onChange={setRole} />
 
-          {/* Only a student has one, and it is rendered conditionally rather
-              than disabled: a greyed-out field still occupies the fold and
-              still reads as something the reader has failed to fill in. */}
-          {role === 'student' && (
-            <Input
-              label="Grade"
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              hint="Optional. Only you and a parent you link with can see it."
-            />
+          <Button type="submit" size="lg" fullWidth>Continue</Button>
+          <BackLink onClick={() => { setStep('credentials'); setError(null) }}>
+            Back
+          </BackLink>
+        </form>
+      )}
+
+      {step === 'details' && (
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+          <StepMark at={3} />
+
+          {role === 'student' ? (
+            <>
+              <Input
+                label="Your school"
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                // The honest version. Calenda has no school entity yet -- a
+                // community event is visible to every account -- so a field
+                // that looked like it filed you under a school would be
+                // claiming something untrue. It is a text box rather than a
+                // list of names for the same reason: a picker reads as "these
+                // are supported".
+                hint="Optional. Recorded for later — it does not change what you see yet."
+              />
+              <Input
+                label="Grade"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                hint="Optional. Only you and a parent you link with can see it."
+              />
+            </>
+          ) : (
+            <>
+              <RelationPicker value={relation} onChange={setRelation} />
+              <Input
+                label="Your student's code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                // Eight characters, no 0/O/1/I, so it survives being read down
+                // a phone. Uppercased as it is typed because the function
+                // upper()s it anyway and a lowercase code that then works is
+                // confusing to have typed.
+                hint="Optional. They can make one in their settings, and you can add it any time."
+                autoCapitalize="characters"
+                spellCheck={false}
+              />
+            </>
           )}
+
+          {/* Last, and optional, because it is the only question here that is
+              for Calenda rather than for the person answering it. Free text
+              rather than a list: with a handful of users an actual sentence is
+              worth more than a bucket, and a list of five options is a guess at
+              the answers before any have been collected.
+
+              Only password sign-ups are ever asked -- somebody who signs up
+              with Google never sees this form -- so it is a partial sample and
+              should not be read as a count. */}
+          <Input
+            label="How did you hear about Calenda?"
+            value={heardFrom}
+            onChange={(e) => setHeardFrom(e.target.value)}
+            hint="Optional."
+          />
 
           <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
             Create account
           </Button>
-          <BackLink onClick={() => { setStep('credentials'); setError(null) }}>
+          <BackLink onClick={() => { setStep('name'); setError(null) }}>
             Back
           </BackLink>
         </form>
@@ -218,16 +315,58 @@ export function SignUp() {
 }
 
 /**
- * Which of the two steps this is.
+ * How a parent is related to their student.
+ *
+ * Four fixed answers rather than free text, because these are categories the
+ * app may group by later, and because "mum" and "Mother" and "mom" are the
+ * same answer typed three ways. Stored on the link rather than the profile:
+ * the same adult can be a mother to one student and a guardian to another.
+ */
+function RelationPicker({ value, onChange }: {
+  value: Relation
+  onChange: (v: Relation) => void
+}) {
+  return (
+    <fieldset>
+      <legend className="text-[13px] font-medium text-text">You are their</legend>
+      <div className="mt-1.5 grid grid-cols-2 gap-2">
+        {RELATIONS.map((r) => (
+          <label
+            key={r}
+            className={
+              'flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-[13.5px] capitalize transition-colors duration-150 '
+              + (value === r
+                ? 'border-brand bg-brand-subtle font-medium text-text'
+                : 'border-border text-text-muted hover:border-border-strong')
+            }
+          >
+            <input
+              type="radio"
+              name="relation"
+              value={r}
+              checked={value === r}
+              onChange={() => onChange(r)}
+              className="sr-only"
+            />
+            {r}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * Which of the three steps this is.
  *
  * Two marks rather than the words "Step 1 of 2", because the count is the
  * whole message and the sentence is four times the height of it on a window
  * that has none to spare.
  */
-function StepMark({ at }: { at: 1 | 2 }) {
+function StepMark({ at }: { at: 1 | 2 | 3 }) {
   return (
-    <div className="flex items-center gap-1.5" aria-label={`Step ${at} of 2`}>
-      {[1, 2].map((n) => (
+    <div className="flex items-center gap-1.5" aria-label={`Step ${at} of 3`}>
+      {[1, 2, 3].map((n) => (
         <span
           key={n}
           aria-hidden

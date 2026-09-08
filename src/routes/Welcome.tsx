@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import {
   ArrowDown, CalendarDays, ClipboardList, NotebookPen, Bell, Users, Check,
@@ -81,12 +81,29 @@ export function Welcome() {
     return () => clearTimeout(t)
   }, [reduce])
 
+  // Read before the early return below. A hook after a conditional return runs
+  // in a different order on the two paths, which is the one thing React cannot
+  // survive.
+  const warning = (useLocation().state as { warning?: string } | null)?.warning
+
   if (!session && !preview.active) return <Navigate to="/sign-in" replace />
 
   const firstName = profile?.full_name?.split(' ')[0]
 
   return (
     <div className="bg-bg">
+      {warning && (
+        <div className="mx-auto max-w-[46rem] px-6 pt-6">
+          <p
+            role="alert"
+            className="rounded-xl border border-warning-border bg-warning-subtle px-4 py-3 text-[13px] leading-relaxed text-text"
+          >
+            <span className="font-medium">Your account is ready.</span>{' '}
+            {warning}{' '}You can add the code any time from Settings.
+          </p>
+        </div>
+      )}
+
       {/* ---------------------------------------------------------- title -- */}
       <motion.section
         ref={heroRef}

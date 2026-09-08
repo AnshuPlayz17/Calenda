@@ -257,17 +257,66 @@ getting their "nine in the morning" at two in the afternoon, under a landing
 page with a whole chapter claiming otherwise. It is read from the device on
 every profile load now, which also catches every account that already exists.
 
-**The sign-up email path is two steps, and that is a measurement.** Six fields
-plus a submit button do not fit a 700px window: the harness found "Create
-account" 41px below the fold at 1280×700 and 123px at 375×667. Step two is the
-same shape the OAuth first-run screen will need.
+**The sign-up email path is three steps, and the length is a measurement.**
+Credentials, then name and role, then whichever details the role has. Six
+fields plus a submit button do not fit a 700px window — the harness found
+"Create account" 41px below the fold at 1280×700 and 123px at 375×667 — and the
+answer to a form that does not fit is fewer things per screen, not tighter
+padding. The last step branches, so a student sees school and grade and a
+parent sees relation and an invite code; neither ever sees the other's. Step
+two is the same shape the OAuth first-run screen will need.
+
+**The name is three boxes and one stored value.** Splitting `full_name` in the
+database would need a migration and buy nothing the app uses — it greets you by
+first name and shows your name to a linked parent. Only the first is required:
+plenty of people have one name, and a required surname turns them away at the
+door.
+
+**`profiles.school` is free text and nothing reads it.** There is no school
+entity, so a picker of the fifteen names would read as "these are supported"
+while a `community` event is still visible to every account. The field says
+plainly that it does not change what you see yet, and the names stay on the
+landing page where they were asked to stay.
+
+**A new column needs a new GRANT.** `rls.sql` revokes update on `profiles` and
+re-grants a named list; a column that is not in it makes Postgres refuse the
+*whole* statement, taking the other fields down with it, silently, because the
+result is not checked. That is exactly how one attempt at this shipped broken.
 
 **`authcheck.mjs` only ever measured the screen that offers the form, never the
 form.** It existed to catch a submit button below the fold and for its whole
 life measured a state where that button is not rendered — so every field added
-was unchecked. It now walks the choose screen, the form, and sign-up's second
-step: 34 configurations. Anything inside `[data-dev-only]` is skipped, because
-the not-connected card is absent whenever a Supabase project is configured.
+was unchecked. It now walks the choose screen, the form, and all three sign-up
+steps including both branches of the last one: 46 configurations. Anything
+inside `[data-dev-only]` is skipped, because the not-connected card is absent
+whenever a Supabase project is configured.
+
+**It launches a fresh browser per configuration, and that is not caution.**
+Reusing one browser across all forty-six made the frame numbers lie: later runs
+picked up single frames over 50ms while the same configuration measured alone
+was clean twelve times out of twelve. It was contention with the teardown of
+earlier pages *inside the harness*, and it cost several rounds of looking for a
+defect the page did not have. If a measurement disagrees with itself, suspect
+the instrument before the subject.
+
+**Parent invites were already the best-built thing in this area** and only
+needed calling: `create_parent_invite()` makes eight characters with no
+`0/O/1/I` so a code survives being read down a phone, and
+`redeem_parent_invite()` is a definer function so a parent never gains read
+access to the invites table. The relation is set *after* redemption rather than
+by adding a parameter to it — a defaulted parameter makes existing call sites
+ambiguous — and it lives on `parent_links`, not the profile, because one adult
+can be a mother to one student and a guardian to another.
+
+**`profiles.heard_from` is asked once and never shown back.** Free text rather
+than a list of five options, because with a handful of users a sentence is
+worth more than a bucket and a list is a guess at the answers before any have
+been collected. Only password sign-ups are asked — OAuth users never see the
+form — so it is a partial sample and not a count of anything.
+
+A bad invite code does not fail the sign-up. The account exists by then and
+refusing to sign somebody in over a typo in an optional field is the worse
+outcome — but it is carried to the welcome screen and said, not swallowed.
 
 **OAuth users never see the sign-up form.** They get a name from their provider
 and are still silently `student`. The fix is a first-run step, not a form field.
