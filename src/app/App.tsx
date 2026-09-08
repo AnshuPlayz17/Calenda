@@ -25,6 +25,7 @@ import { SignIn } from '@/routes/SignIn'
 import { SignUp } from '@/routes/SignUp'
 import { ForgotPassword } from '@/routes/ForgotPassword'
 import { ResetPassword } from '@/routes/ResetPassword'
+import { FirstRun } from '@/routes/FirstRun'
 import { AuthCallback } from '@/routes/AuthCallback'
 
 /* The founder page is a section of the landing page now, not a page of its own.
@@ -61,7 +62,7 @@ function FullPageLoader() {
 
 /** Waits for the first session check so a signed-in user never sees sign-in. */
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth()
+  const { session, profile, loading } = useAuth()
   const preview = usePreview()
   const location = useLocation()
   if (loading) return <FullPageLoader />
@@ -70,6 +71,28 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (!session && !preview.active) {
     return <Navigate to="/sign-in" replace state={{ from: location }} />
   }
+
+  // Somebody who arrived through Google, GitHub or Discord never saw the
+  // sign-up form, so nothing ever asked whether they are a student or a
+  // parent -- and they are most of the accounts. `onboarded_at` is the flag
+  // for "has answered", and until this it was read from the database on every
+  // profile load and used by nothing at all.
+  //
+  // Three conditions rather than one, and each is there to make it impossible
+  // to trap somebody:
+  //
+  //   - `profile` must have loaded. It is null for a moment after sign-in and
+  //     also whenever the row cannot be read, and redirecting on a value that
+  //     is merely not here yet would bounce people mid-load.
+  //   - preview is excluded, because it runs on sample data with no profile
+  //     row behind it and would otherwise be a first-run screen that can never
+  //     be completed.
+  //   - the screen itself is outside this gate, so there is no path where it
+  //     redirects to itself.
+  if (session && profile && !profile.onboarded_at) {
+    return <Navigate to="/first-run" replace />
+  }
+
   return <>{children}</>
 }
 
@@ -115,6 +138,10 @@ export function App() {
                   hand-typed URL never reaches a form that cannot work. */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Outside RequireAuth on purpose: the gate in it sends people
+                  here, so a route inside would redirect to itself forever. It
+                  does its own signed-in check instead. */}
+              <Route path="/first-run" element={<FirstRun />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route

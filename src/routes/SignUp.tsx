@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ArrowLeft, GraduationCap, Mail, Users } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
 import { AuthError, NotConnected, ProviderButtons, Separator } from '@/features/auth/AuthParts'
+import {
+  HeardFrom, ParentFields, RolePicker, StudentFields,
+} from '@/features/auth/aboutYou'
+import type { Relation, Role } from '@/features/auth/aboutYou'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
@@ -21,14 +25,6 @@ const MIN_PASSWORD = 8
  * user. See supabase/migrations/20260907000100.
  */
 type Step = 'choose' | 'credentials' | 'name' | 'details'
-type Relation = 'mother' | 'father' | 'guardian' | 'other'
-
-const RELATIONS: Relation[] = ['mother', 'father', 'guardian', 'other']
-
-const ROLES = [
-  { id: 'student' as const, label: "I'm a student", Icon: GraduationCap },
-  { id: 'parent' as const, label: "I'm a parent", Icon: Users },
-]
 
 export function SignUp() {
   const { session, signInWithProvider, signUpWithPassword } = useAuth()
@@ -59,7 +55,7 @@ export function SignUp() {
   const [inviteCode, setInviteCode] = useState('')
   const [heardFrom, setHeardFrom] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')
-  const [role, setRole] = useState<'student' | 'parent'>('student')
+  const [role, setRole] = useState<Role>('student')
   const [grade, setGrade] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -244,59 +240,24 @@ export function SignUp() {
           <StepMark at={3} />
 
           {role === 'student' ? (
-            <>
-              <Input
-                label="Your school"
-                value={school}
-                onChange={(e) => setSchool(e.target.value)}
-                // The honest version. Calenda has no school entity yet -- a
-                // community event is visible to every account -- so a field
-                // that looked like it filed you under a school would be
-                // claiming something untrue. It is a text box rather than a
-                // list of names for the same reason: a picker reads as "these
-                // are supported".
-                hint="Optional. Recorded for later — it does not change what you see yet."
-              />
-              <Input
-                label="Grade"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                hint="Optional. Only you and a parent you link with can see it."
-              />
-            </>
+            <StudentFields
+              school={school}
+              grade={grade}
+              onSchool={setSchool}
+              onGrade={setGrade}
+            />
           ) : (
-            <>
-              <RelationPicker value={relation} onChange={setRelation} />
-              <Input
-                label="Your student's code"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                // Eight characters, no 0/O/1/I, so it survives being read down
-                // a phone. Uppercased as it is typed because the function
-                // upper()s it anyway and a lowercase code that then works is
-                // confusing to have typed.
-                hint="Optional. They can make one in their settings, and you can add it any time."
-                autoCapitalize="characters"
-                spellCheck={false}
-              />
-            </>
+            <ParentFields
+              relation={relation}
+              code={inviteCode}
+              onRelation={setRelation}
+              onCode={setInviteCode}
+            />
           )}
 
           {/* Last, and optional, because it is the only question here that is
-              for Calenda rather than for the person answering it. Free text
-              rather than a list: with a handful of users an actual sentence is
-              worth more than a bucket, and a list of five options is a guess at
-              the answers before any have been collected.
-
-              Only password sign-ups are ever asked -- somebody who signs up
-              with Google never sees this form -- so it is a partial sample and
-              should not be read as a count. */}
-          <Input
-            label="How did you hear about Calenda?"
-            value={heardFrom}
-            onChange={(e) => setHeardFrom(e.target.value)}
-            hint="Optional."
-          />
+              for Calenda rather than for the person answering it. */}
+          <HeardFrom value={heardFrom} onChange={setHeardFrom} />
 
           <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
             Create account
@@ -314,47 +275,6 @@ export function SignUp() {
   )
 }
 
-/**
- * How a parent is related to their student.
- *
- * Four fixed answers rather than free text, because these are categories the
- * app may group by later, and because "mum" and "Mother" and "mom" are the
- * same answer typed three ways. Stored on the link rather than the profile:
- * the same adult can be a mother to one student and a guardian to another.
- */
-function RelationPicker({ value, onChange }: {
-  value: Relation
-  onChange: (v: Relation) => void
-}) {
-  return (
-    <fieldset>
-      <legend className="text-[13px] font-medium text-text">You are their</legend>
-      <div className="mt-1.5 grid grid-cols-2 gap-2">
-        {RELATIONS.map((r) => (
-          <label
-            key={r}
-            className={
-              'flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-[13.5px] capitalize transition-colors duration-150 '
-              + (value === r
-                ? 'border-brand bg-brand-subtle font-medium text-text'
-                : 'border-border text-text-muted hover:border-border-strong')
-            }
-          >
-            <input
-              type="radio"
-              name="relation"
-              value={r}
-              checked={value === r}
-              onChange={() => onChange(r)}
-              className="sr-only"
-            />
-            {r}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
 
 /**
  * Which of the three steps this is.
@@ -392,51 +312,3 @@ function BackLink({ onClick, children }: { onClick: () => void; children: React.
   )
 }
 
-/**
- * Two buttons rather than a select.
- *
- * There are exactly two answers and both fit on one line, so a dropdown would
- * hide half the question behind a tap and tell the reader nothing about what
- * the alternatives are. Radios in a group, so a keyboard moves between them
- * with the arrow keys and a screen reader announces it as one question.
- */
-function RolePicker({ value, onChange }: {
-  value: 'student' | 'parent'
-  onChange: (v: 'student' | 'parent') => void
-}) {
-  return (
-    <fieldset>
-      <legend className="text-[13px] font-medium text-text">You are</legend>
-      <div className="mt-1.5 grid grid-cols-2 gap-2">
-        {ROLES.map((r) => {
-          const on = value === r.id
-          return (
-            <label
-              key={r.id}
-              className={
-                'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-[13.5px] transition-colors duration-150 '
-                + (on
-                  ? 'border-brand bg-brand-subtle font-medium text-text'
-                  : 'border-border text-text-muted hover:border-border-strong')
-              }
-            >
-              <input
-                type="radio"
-                name="role"
-                value={r.id}
-                checked={on}
-                onChange={() => onChange(r.id)}
-                className="sr-only"
-              />
-              <r.Icon
-                className={'h-4 w-4 shrink-0 ' + (on ? 'text-brand' : 'text-text-subtle')}
-                aria-hidden
-              />
-              {r.label}
-            </label>
-          )
-        })}
-      </div>
-    </fieldset>
-  )
-}

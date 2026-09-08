@@ -16,6 +16,24 @@ export type Profile = {
   onboarded_at: string | null
 }
 
+/** Everything the sign-up form collects beyond an address and a password. */
+export type SignUpDetails = {
+  fullName: string
+  role: 'student' | 'parent'
+  /** Students only. A parent has no grade and none is sent for them. */
+  grade?: string
+  /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
+  school?: string
+  /** How they found Calenda. Asked once, never shown back, optional. */
+  heardFrom?: string
+  /** Parents only: a code from their student, and how they are related. */
+  inviteCode?: string
+  relation?: 'mother' | 'father' | 'guardian' | 'other'
+}
+
+/** The same answers, from the first-run screen rather than the sign-up form. */
+export type FirstRunAnswers = Omit<SignUpDetails, 'fullName'> & { fullName: string }
+
 type AuthContextValue = {
   session: Session | null
   user: User | null
@@ -40,24 +58,18 @@ type AuthContextValue = {
   resetPassword: (email: string) => Promise<{ error: string | null }>
   /** Sets a new password for whoever the current session belongs to. */
   updatePassword: (password: string) => Promise<{ error: string | null }>
+  /**
+   * Records the answers from the first-run screen and marks the account set up.
+   *
+   * The same writer the sign-up form uses, because the two screens must store
+   * the same answers the same way. Returns a warning rather than an error for
+   * an invite code that did not take: the account already exists either way.
+   */
+  completeFirstRun: (answers: FirstRunAnswers) => Promise<{ warning: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
-/** Everything the sign-up form collects beyond an address and a password. */
-export type SignUpDetails = {
-  fullName: string
-  role: 'student' | 'parent'
-  /** Students only. A parent has no grade and none is sent for them. */
-  grade?: string
-  /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
-  school?: string
-  /** How they found Calenda. Asked once, never shown back, optional. */
-  heardFrom?: string
-  /** Parents only: a code from their student, and how they are related. */
-  inviteCode?: string
-  relation?: 'mother' | 'father' | 'guardian' | 'other'
-}
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -146,6 +158,10 @@ async function applyDetails(userId: string, about: SignUpDetails): Promise<strin
       school: about.school?.trim() || null,
       heard_from: about.heardFrom?.trim() || null,
       timezone: deviceTimeZone(),
+      // Stamped here, which is what stops the first-run screen asking a person
+      // who has just answered all of this on the sign-up form. The column
+      // existed from the first migration and nothing had ever written it.
+      onboarded_at: new Date().toISOString(),
     })
     .eq('id', userId)
 
@@ -325,6 +341,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async updatePassword(password) {
         const { error } = await supabase.auth.updateUser({ password })
         return { error: error ? friendlyError(error.message) : null }
+      },
+
+      async completeFirstRun(answers) {
+        if (!session?.user) return { warning: null }
+        const warning = await applyDetails(session.user.id, answers)
+        await loadProfile(session.user.id)
+        return { warning }
       },
 
       async signOut() {
