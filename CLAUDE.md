@@ -141,7 +141,7 @@ because those are not the same defect. Do not loosen that check to make
 something pass.
 
 **The panel beside the form is a reel, not a diagram.** `AuthReel.tsx` cycles
-four scenes on a six-second dwell — the imported year, a class workspace, the
+five scenes on a four-and-a-half-second dwell — the imported year, a class workspace, the
 agenda, a reminder — each drawn from the same invented sample data the landing
 page counts from. It pauses on hover, on focus and when the tab is hidden, the
 ticks are buttons so a scene can be gone back to, and the fill is a CSS
@@ -152,9 +152,24 @@ It is deliberately not a video file. A video cannot take the theme, cannot be
 read out, cannot be corrected without re-rendering, and would be the largest
 thing in the repository.
 
-Under `prefers-reduced-motion` it does not rotate at all — all four scenes
+**It resumes rather than restarting.** The panel is mounted by the auth layout,
+so moving from sign-in to sign-up, or reloading, used to send somebody who had
+read three scenes back to the first. The index is in `sessionStorage`, which
+survives a reload and every move between the auth pages and does not survive
+closing the tab — somebody arriving next week starts at the beginning, which is
+right, because the scenes are an argument in order rather than a position in a
+film.
+
+Under `prefers-reduced-motion` it does not rotate at all — all five scenes
 render at once, which is more information than the animated version shows at
 any one moment, not less.
+
+**Do not use `scrollHeight` to ask whether the panel fits.** The accent wash is
+a 26rem blur positioned 160px below the reel and clipped by `overflow-hidden`,
+so it inflates `scrollHeight` by 78px while being invisible. A check built on
+it reported an overflow that did not exist and cost a round of trimming padding
+that did not need trimming. Measure whether readable elements fall outside the
+panel's box instead — `panelfit.mjs` beside the harness does.
 
 **The panel carries its own tokens** (`.panel-dark` in `index.css`) because it
 stays dark in all three themes. That includes its own copy of the accent ramp
