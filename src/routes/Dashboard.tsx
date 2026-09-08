@@ -131,8 +131,15 @@ export function Dashboard() {
         />
       </motion.div>
 
+      {/* min-w-0 on both columns, and it is load-bearing rather than tidy. A
+          grid item defaults to min-width: auto, so it refuses to shrink below
+          its content's minimum -- and something in this column has a wide one,
+          which made it 384px inside a 343px parent on a 375px phone. The whole
+          dashboard scrolled sideways and the Calendar and Classes links sat off
+          the right edge. min-w-0 is what lets the truncation inside actually
+          take effect. */}
       <div className="grid items-start gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <motion.div {...rise(2)}>
             <Card>
               <CardHeader
@@ -163,7 +170,9 @@ export function Dashboard() {
               )}
             </Card>
           </motion.div>
-          <div className="grid items-start gap-4 sm:grid-cols-2">
+          {/* Same reason, one level down: this becomes two columns at sm and
+              its children inherit the same min-width: auto. */}
+          <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
             <motion.div {...rise(4)}>
               <Card>
                 <CardHeader
@@ -249,7 +258,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <motion.div {...rise(3)}>
             <Card>
               <CardHeader title="Coming up" />

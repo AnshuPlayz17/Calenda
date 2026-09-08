@@ -364,6 +364,32 @@ it into three to display it would guess wrong and make the reader clean up a
 mess the app invented. Sign-up has nothing to split, so three boxes structure
 the question.
 
+## The app behind the front door
+
+Audited on 2026-09-08 with `appcheck.mjs` beside the harness: seven screens at
+six viewports plus reduced-motion and dark, entered through preview mode, which
+is the only way in from a container that cannot reach Supabase. **56
+configurations, p95 17 ms, no console errors, no unnamed controls.** That
+measures layout, motion and console health — not writes, and not empty states
+that preview happens to fill.
+
+**One real defect, on the first screen after signing in.** The dashboard
+scrolled sideways on phones — 10px at 390, 25px at 375 — with the Calendar and
+Classes links off the right edge. A grid item defaults to `min-width: auto`, so
+it refuses to shrink below its content's minimum: the left column measured 384px
+inside a 343px parent and every card inherited it. `min-w-0` on the grid
+children is what lets the truncation already in there take effect. **If a
+column will not shrink, it is `min-width: auto` before it is anything else.**
+
+**Preview ships one school's real calendar and says so.** `previewSource.ts`
+reads `schoolEvents2026_27`, generated from that school's PDF, and the banner
+reads "Showing the real 2026–27 school calendar as sample data." No school is
+named, so the name guard passes — but the landing page moved to invented data
+precisely because one school's dates are somebody else's dates. Flagged for the
+owner rather than changed: swapping it for `sampleSchoolYear` would make the
+preview consistent with the landing page, at the cost of the import fixtures
+that legitimately need the real document.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
