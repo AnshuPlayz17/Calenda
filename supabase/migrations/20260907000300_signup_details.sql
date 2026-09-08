@@ -1,5 +1,6 @@
 -- ============================================================================
--- What the sign-up form asks for: a school, and how a parent is related.
+-- What the sign-up form asks for: a school, how a parent is related, and how
+-- somebody found this at all.
 --
 -- TWO COLUMNS, AND ONE OF THEM DOES NOTHING YET
 --
@@ -32,22 +33,37 @@
 -- ============================================================================
 
 alter table profiles add column if not exists school text;
+alter table profiles add column if not exists heard_from text;
 
 comment on column profiles.school is
   'Free text, self-declared. Nothing reads it yet: there is no school entity '
   'and community events are visible to every account. Collected so the answers '
   'exist when the schema separates schools. See 20260907000300.';
 
--- The column list from rls.sql, plus school. Stated in full rather than as an
--- addition, because `grant` is additive and a partial list here would read as
--- though the others had been withdrawn.
+comment on column profiles.heard_from is
+  'How this person found Calenda, in their own words. Asked once at sign-up, '
+  'never shown back to them, and read by nobody but the owner looking at the '
+  'table. Only password sign-ups are asked -- OAuth users never see the form -- '
+  'so it is a partial sample and not a count of anything.';
+
+-- The column list from rls.sql, plus the two new ones. Stated in full rather
+-- than as an addition, because `grant` is additive and a partial list here
+-- would read as though the others had been withdrawn.
 revoke update on profiles from authenticated;
-grant  update (full_name, avatar_url, grade, school, timezone, onboarded_at)
+grant  update (full_name, avatar_url, grade, school, heard_from, timezone,
+               onboarded_at)
   on profiles to authenticated;
 
 -- ---------------------------------------------------------------------------
 
-create type parent_relation as enum ('mother', 'father', 'guardian', 'other');
+-- Guarded so the whole file can be run twice without failing halfway. Every
+-- other statement here is already idempotent; `create type` is the one that is
+-- not, and a migration that half-applies is worse than one that does nothing.
+do $$
+begin
+  create type parent_relation as enum ('mother', 'father', 'guardian', 'other');
+exception when duplicate_object then null;
+end $$;
 
 alter table parent_links add column if not exists relation parent_relation;
 

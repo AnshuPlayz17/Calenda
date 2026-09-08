@@ -52,6 +52,8 @@ export type SignUpDetails = {
   grade?: string
   /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
   school?: string
+  /** How they found Calenda. Asked once, never shown back, optional. */
+  heardFrom?: string
   /** Parents only: a code from their student, and how they are related. */
   inviteCode?: string
   relation?: 'mother' | 'father' | 'guardian' | 'other'
@@ -142,6 +144,7 @@ async function applyDetails(userId: string, about: SignUpDetails): Promise<strin
       full_name: about.fullName,
       grade: about.grade?.trim() || null,
       school: about.school?.trim() || null,
+      heard_from: about.heardFrom?.trim() || null,
       timezone: deviceTimeZone(),
     })
     .eq('id', userId)

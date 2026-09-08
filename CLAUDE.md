@@ -291,6 +291,14 @@ steps including both branches of the last one: 46 configurations. Anything
 inside `[data-dev-only]` is skipped, because the not-connected card is absent
 whenever a Supabase project is configured.
 
+**It launches a fresh browser per configuration, and that is not caution.**
+Reusing one browser across all forty-six made the frame numbers lie: later runs
+picked up single frames over 50ms while the same configuration measured alone
+was clean twelve times out of twelve. It was contention with the teardown of
+earlier pages *inside the harness*, and it cost several rounds of looking for a
+defect the page did not have. If a measurement disagrees with itself, suspect
+the instrument before the subject.
+
 **Parent invites were already the best-built thing in this area** and only
 needed calling: `create_parent_invite()` makes eight characters with no
 `0/O/1/I` so a code survives being read down a phone, and
@@ -299,6 +307,12 @@ access to the invites table. The relation is set *after* redemption rather than
 by adding a parameter to it — a defaulted parameter makes existing call sites
 ambiguous — and it lives on `parent_links`, not the profile, because one adult
 can be a mother to one student and a guardian to another.
+
+**`profiles.heard_from` is asked once and never shown back.** Free text rather
+than a list of five options, because with a handful of users a sentence is
+worth more than a bucket and a list is a guess at the answers before any have
+been collected. Only password sign-ups are asked — OAuth users never see the
+form — so it is a partial sample and not a count of anything.
 
 A bad invite code does not fail the sign-up. The account exists by then and
 refusing to sign somebody in over a typo in an optional field is the worse

@@ -57,6 +57,7 @@ export function SignUp() {
   const [last, setLast] = useState('')
   const [school, setSchool] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [heardFrom, setHeardFrom] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')
   const [role, setRole] = useState<'student' | 'parent'>('student')
   const [grade, setGrade] = useState('')
@@ -115,6 +116,9 @@ export function SignUp() {
       school: role === 'student' ? school.trim() : undefined,
       inviteCode: role === 'parent' ? inviteCode.trim() : undefined,
       relation: role === 'parent' ? relation : undefined,
+      // Asked of everybody, because how somebody arrived does not depend on
+      // which of the two they are.
+      heardFrom: heardFrom.trim(),
     })
     setBusy(null)
     if (error) return setError(error)
@@ -277,6 +281,22 @@ export function SignUp() {
               />
             </>
           )}
+
+          {/* Last, and optional, because it is the only question here that is
+              for Calenda rather than for the person answering it. Free text
+              rather than a list: with a handful of users an actual sentence is
+              worth more than a bucket, and a list of five options is a guess at
+              the answers before any have been collected.
+
+              Only password sign-ups are ever asked -- somebody who signs up
+              with Google never sees this form -- so it is a partial sample and
+              should not be read as a count. */}
+          <Input
+            label="How did you hear about Calenda?"
+            value={heardFrom}
+            onChange={(e) => setHeardFrom(e.target.value)}
+            hint="Optional."
+          />
 
           <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
             Create account
