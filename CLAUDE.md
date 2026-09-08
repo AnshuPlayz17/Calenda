@@ -291,13 +291,19 @@ steps including both branches of the last one: 46 configurations. Anything
 inside `[data-dev-only]` is skipped, because the not-connected card is absent
 whenever a Supabase project is configured.
 
-**It launches a fresh browser per configuration, and that is not caution.**
-Reusing one browser across all forty-six made the frame numbers lie: later runs
-picked up single frames over 50ms while the same configuration measured alone
-was clean twelve times out of twelve. It was contention with the teardown of
-earlier pages *inside the harness*, and it cost several rounds of looking for a
-defect the page did not have. If a measurement disagrees with itself, suspect
-the instrument before the subject.
+**It launches a fresh browser per configuration, which helps and does not
+cure.** Reusing one browser across all forty-six made later runs pick up single
+frames over 50ms while the same configuration measured alone was clean twelve
+times out of twelve — contention with the teardown of earlier pages inside the
+harness. Isolating them cut it sharply and produced one run of 46/46 clean, and
+that run was written up here as though it were settled. It is not: occasional
+single-frame stalls still appear in this container, on configurations whose p95
+is 17ms and whose isolated re-measurement is clean every time.
+
+So the standard for a frame failure is **repetition, not a single run**. One
+long frame in fifteen hundred, with p95 unchanged, is the container. Three
+consecutive runs failing the same configuration is the page. Do not spend a
+round on the former, and do not write off the latter.
 
 **Parent invites were already the best-built thing in this area** and only
 needed calling: `create_parent_invite()` makes eight characters with no
@@ -320,6 +326,28 @@ outcome — but it is carried to the welcome screen and said, not swallowed.
 
 **OAuth users never see the sign-up form.** They get a name from their provider
 and are still silently `student`. The fix is a first-run step, not a form field.
+
+**OAuth users never saw the sign-up form, and they are most of the accounts.**
+`handle_new_user()` copies a name out of the provider's metadata, so that much
+arrived; everything else did not, and every one of them was silently a
+`student`. `/first-run` asks them, gated on `onboarded_at` — a column that
+existed from the first migration and that nothing had ever written or read.
+
+The gate is in `RequireAuth` and runs for every signed-in person on every
+protected page, so each of its three conditions exists to prevent a specific
+trap: `profile` must have loaded (it is null both while loading and when the
+row cannot be read, so bouncing on it would fire mid-sign-in), preview is
+excluded (sample data, no profile row, a screen that could never be completed),
+and `/first-run` sits outside the gate or it redirects to itself. Seven tests
+cover exactly those shapes.
+
+**The questions live in `aboutYou.tsx`, asked in two places.** A copy in each is
+how a parent signing up one way ends up with a relation and the other way
+without one. The one deliberate difference: first-run shows the name in a
+single box because there is an existing value from the provider, and splitting
+it into three to display it would guess wrong and make the reader clean up a
+mess the app invented. Sign-up has nothing to split, so three boxes structure
+the question.
 
 ## The landing page
 
