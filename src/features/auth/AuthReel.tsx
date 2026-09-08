@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { Bell, CalendarDays, GraduationCap, Import } from 'lucide-react'
+import { Bell, CalendarDays, GraduationCap, Import, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { sampleSchoolYear } from '@/data/sampleSchoolYear'
+import { SAMPLE_REPEATED_TITLE, sampleRepeatedCount, sampleSchoolYear } from '@/data/sampleSchoolYear'
 import { sampleUpcoming } from '@/data/sampleEvents'
 import { agendaLabel, dayNumber, monthGrid, monthLabel, plain, WEEKDAY_LABELS } from '@/lib/datetime'
 
@@ -28,8 +28,51 @@ import { agendaLabel, dayNumber, monthGrid, monthLabel, plain, WEEKDAY_LABELS } 
  * content make it better than one animated one does.
  */
 
-/** How long each scene holds. Long enough to read the whole thing twice. */
-const DWELL = 6000
+/**
+ * How long each scene holds.
+ *
+ * Was six seconds, which is long enough to read a scene twice and then wait.
+ * Four and a half is long enough to read it once without hurrying, which is
+ * what it is for -- and with five scenes the loop is now shorter than the old
+ * four-scene one despite carrying more.
+ */
+const DWELL = 4500
+
+/**
+ * Which scene to come back to.
+ *
+ * The panel is mounted by the auth layout, so moving from sign-in to sign-up,
+ * or to the password form, or simply reloading, unmounted it and started the
+ * whole thing at scene one again -- somebody who read three of them and pressed
+ * "forgot password" was sent back to the beginning to watch them a second time.
+ *
+ * sessionStorage rather than localStorage on purpose. It survives a reload and
+ * every move between the auth pages, which is the complaint; it does not
+ * survive closing the tab, so somebody arriving next week starts at the
+ * beginning, which is right -- the four scenes are an argument in order, not a
+ * position in a film to be resumed.
+ */
+const RESUME_KEY = 'calenda.authReel.scene'
+
+function lastScene(count: number): number {
+  try {
+    const raw = window.sessionStorage.getItem(RESUME_KEY)
+    const n = raw === null ? 0 : Number(raw)
+    // A stored index from a build with more scenes than this one would point
+    // past the end, so it is range-checked rather than trusted.
+    return Number.isInteger(n) && n >= 0 && n < count ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function rememberScene(index: number) {
+  try {
+    window.sessionStorage.setItem(RESUME_KEY, String(index))
+  } catch {
+    /* A private window, or storage blocked. The reel is not worth failing over. */
+  }
+}
 
 type Scene = {
   id: string
@@ -38,6 +81,8 @@ type Scene = {
   title: string
   /** One line. The panel is not where the case gets made at length. */
   line: string
+  /** The mechanism, in a few words. What makes the line above true. */
+  detail: string
   Figure: () => React.ReactElement
 }
 
@@ -49,6 +94,8 @@ const SCENES: Scene[] = [
     title: 'The school year, already in it',
     line: `All ${sampleSchoolYear.length} dates read out of the calendar the school
            publishes, so the first thing you see is a year that is already full.`,
+    detail: `${sampleRepeatedCount} of them share the title "${SAMPLE_REPEATED_TITLE}" and stay
+             ${sampleRepeatedCount} separate days.`,
     Figure: MonthFigure,
   },
   {
@@ -58,6 +105,7 @@ const SCENES: Scene[] = [
     title: 'A workspace for every class',
     line: `Notes, assignments and deadlines filed under the class they belong to
            rather than in one pile.`,
+    detail: 'An assignment with a due date is on your calendar because it is due.',
     Figure: ClassesFigure,
   },
   {
@@ -67,6 +115,7 @@ const SCENES: Scene[] = [
     title: 'Your own calendar beside it',
     line: `Google Calendar comes in read-only, so nothing here can change
            anything there. Everything sits on one page.`,
+    detail: 'Read-only means read-only. Calenda has no permission to write.',
     Figure: AgendaFigure,
   },
   {
@@ -76,13 +125,27 @@ const SCENES: Scene[] = [
     title: 'And it reaches you first',
     line: `As far ahead as you asked, outside the hours you asked to be left
            alone, and never the same thing twice.`,
+    detail: 'Nine in the morning is nine in yours, read from your own timezone.',
     Figure: ReminderFigure,
+  },
+  {
+    id: 'parents',
+    accent: 'indigo',
+    Icon: Users,
+    title: 'A parent can follow along',
+    line: `They enter a code you make, and from then on they see what you have
+           chosen to share and nothing else.`,
+    // True as written, and enforced rather than promised: the RLS tests sign
+    // in as a linked parent and require an unshared event to be invisible.
+    detail: 'Being linked grants nothing on its own. Each thing is shared or it is not.',
+    Figure: ParentFigure,
   },
 ]
 
 export function AuthReel() {
   const reduce = useReducedMotion()
-  const [index, setIndex] = useState(0)
+  // Picked up where it was left, not restarted. See RESUME_KEY above.
+  const [index, setIndex] = useState(() => lastScene(SCENES.length))
   // Paused while a pointer is over the panel or something in it has focus --
   // a scene that advances out from under someone reading it is worse than one
   // that never advances at all.
@@ -90,7 +153,9 @@ export function AuthReel() {
   const [hidden, setHidden] = useState(false)
 
   const go = useCallback((next: number) => {
-    setIndex(((next % SCENES.length) + SCENES.length) % SCENES.length)
+    const at = ((next % SCENES.length) + SCENES.length) % SCENES.length
+    setIndex(at)
+    rememberScene(at)
   }, [])
 
   // A background tab still fires timers, so without this the reel spends the
@@ -171,14 +236,20 @@ function SceneBody({ scene }: { scene: Scene }) {
   return (
     <div>
       <Figure />
-      <div className="mt-7 flex items-center gap-2.5">
+      <div className="mt-5 flex items-center gap-2.5">
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/10 text-accent">
           <Icon className="h-3.5 w-3.5" aria-hidden />
         </span>
         <h2 className="text-title-sm font-medium leading-tight text-white">{scene.title}</h2>
       </div>
-      <p className="mt-2.5 max-w-[42ch] text-sm leading-relaxed text-panel-muted">
+      <p className="mt-2 max-w-[44ch] text-sm leading-relaxed text-panel-muted">
         {scene.line}
+      </p>
+      {/* The mechanism under the claim. Set quieter than the line above it, so
+          the scene still reads at a glance and rewards a second look rather
+          than demanding one. */}
+      <p className="mt-1.5 max-w-[46ch] text-[12.5px] leading-relaxed text-panel-subtle">
+        {scene.detail}
       </p>
     </div>
   )
@@ -199,7 +270,7 @@ function Ticks({ index, running, onPick }: {
   onPick: (i: number) => void
 }) {
   return (
-    <div className="mt-9 flex items-center gap-2">
+    <div className="mt-7 flex items-center gap-2">
       {SCENES.map((s, i) => (
         <button
           key={s.id}
@@ -402,6 +473,57 @@ function ReminderFigure() {
           </span>
         </Card>
       </motion.div>
+    </div>
+  )
+}
+
+/**
+ * A code, and the one row it unlocks.
+ *
+ * The code shape is real -- create_parent_invite() makes eight characters from
+ * an alphabet with no 0/O/1/I, so it survives being read down a phone. The
+ * shared and not-shared rows are real too: the RLS tests sign in as a linked
+ * parent and require an unshared event to be invisible.
+ */
+function ParentFigure() {
+  const events = sampleUpcoming().slice(0, 2)
+  return (
+    <div className="flex flex-col gap-2">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Card className="flex items-center justify-between gap-3 py-3">
+          <span className="text-[11.5px] text-panel-subtle">Their code</span>
+          <span className="font-mono text-[15px] font-semibold tracking-[0.18em] text-accent">
+            K7M4RXQP
+          </span>
+        </Card>
+      </motion.div>
+
+      {events.map((e, i) => (
+        <motion.div
+          key={e.title}
+          initial={{ opacity: 0, x: 14 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, delay: 0.18 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Card className="flex items-center gap-3 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-white">{e.title}</span>
+            <span
+              className={
+                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium '
+                + (i === 0
+                  ? 'bg-accent/25 text-accent'
+                  : 'bg-white/10 text-panel-subtle')
+              }
+            >
+              {i === 0 ? 'shared' : 'not shared'}
+            </span>
+          </Card>
+        </motion.div>
+      ))}
     </div>
   )
 }
