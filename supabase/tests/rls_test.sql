@@ -353,19 +353,19 @@ begin
     where id = '00000000-0000-0000-0000-0000000000c1';
 
   insert into grades (id, owner_id, class_id, title, score, out_of)
-  values ('00000000-0000-0000-0000-0000000000g1',
+  values ('00000000-0000-0000-0000-0000000000d1',
           '00000000-0000-0000-0000-0000000000a1',
           '00000000-0000-0000-0000-0000000000c1', 'Unit 3 test', 17, 20);
 
   insert into report_cards (id, owner_id, storage_path, original_name)
-  values ('00000000-0000-0000-0000-0000000000r1',
+  values ('00000000-0000-0000-0000-0000000000f1',
           '00000000-0000-0000-0000-0000000000a1',
           '00000000-0000-0000-0000-0000000000a1/report-cards/x.pdf',
           'term1.pdf');
 
   insert into report_card_lines (id, report_card_id, owner_id, course_name, mark, out_of)
-  values ('00000000-0000-0000-0000-0000000000r2',
-          '00000000-0000-0000-0000-0000000000r1',
+  values ('00000000-0000-0000-0000-0000000000f2',
+          '00000000-0000-0000-0000-0000000000f1',
           '00000000-0000-0000-0000-0000000000a1', 'Functions', 82, 100);
 end $$;
 
@@ -384,31 +384,31 @@ begin
   perform expect(
     'linked parent CANNOT see a mark inside that shared class',
     as_user_count('00000000-0000-0000-0000-0000000000a2',
-      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000d1'''),
     0::bigint);
 end $$;
 
 update grades set shared_with_parents = true
-  where id = '00000000-0000-0000-0000-0000000000g1';
+  where id = '00000000-0000-0000-0000-0000000000d1';
 
 do $$
 begin
   perform expect(
     'linked parent CAN see a mark once explicitly shared',
     as_user_count('00000000-0000-0000-0000-0000000000a2',
-      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000d1'''),
     1::bigint);
 
   perform expect(
     'stranger CANNOT see a shared mark',
     as_user_count('00000000-0000-0000-0000-0000000000a4',
-      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000d1'''),
     0::bigint);
 
   perform expect(
     'admin CANNOT see a shared mark',
     as_user_count('00000000-0000-0000-0000-0000000000a3',
-      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000d1'''),
     0::bigint);
 end $$;
 
@@ -421,19 +421,19 @@ begin
   perform expect(
     'linked parent CANNOT see a report card',
     as_user_count('00000000-0000-0000-0000-0000000000a2',
-      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000r1'''),
+      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000f1'''),
     0::bigint);
 
   perform expect(
     'linked parent CANNOT see a decoded report card line',
     as_user_count('00000000-0000-0000-0000-0000000000a2',
-      'select count(*) from report_card_lines where id = ''00000000-0000-0000-0000-0000000000r2'''),
+      'select count(*) from report_card_lines where id = ''00000000-0000-0000-0000-0000000000f2'''),
     0::bigint);
 
   perform expect(
     'admin CANNOT see a report card',
     as_user_count('00000000-0000-0000-0000-0000000000a3',
-      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000r1'''),
+      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000f1'''),
     0::bigint);
 end $$;
 
