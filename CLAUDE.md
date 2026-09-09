@@ -42,6 +42,18 @@ overflow, any element wider than the viewport, and console errors.
 The bar the landing page currently holds: **p95 17 ms, zero frames over 50 ms,
 all nine configurations clean.** Do not regress it.
 
+**A probe that reports everything as broken is usually the probe.** Three
+separate tools in one night measured something easy instead of something true:
+the sidebar check compared rects against a box and called every item in a
+scrolled list clipped; the keyboard check flagged the mobile header (not
+rendered), every labelled input (labelled correctly), and produced nine
+different "first tab stops" (because a hash change does not reset focus); and
+the skip-link check asked only whether focus reached the content, not whether
+the content was the right page. Two of the three reported the *same* numbers
+before and after a change, which is the tell. **Ask what a person could not
+do, not what a number is:** not "is it inside the box" but "can it be
+reached"; not "did focus move" but "did the route survive".
+
 Always run before pushing: `npm run typecheck && npm run lint && npm test &&
 npm run build`.
 
@@ -80,6 +92,32 @@ npm run build`.
   nine frames over 100ms on a phone. It is painted once and composited.
 - **Fonts are bundled, not fetched from Google.** See `src/styles/fonts.ts`. Do
   not reintroduce the CDN link.
+- **A skip link cannot be `<a href="#main">` in a hash-routed app.** The router
+  reads `#main` as the route `/main` and renders the 404. It is a button that
+  moves focus to `<main tabIndex={-1}>`. The probe said it worked, because the
+  next Tab did land in content — the content of the not-found page.
+- **`sr-only` clips an element; it does not remove it.** Anything with it stays
+  focusable, so a hidden file input is a stop in the tab order with no visible
+  shape and no name. Give it `tabIndex={-1}`; the button beside it is the
+  control.
+- **A child of a `display:none` parent still reports its own computed
+  `display`.** Checking `getComputedStyle(el).display` says nothing about
+  whether it is rendered. `el.checkVisibility()` is the question you meant.
+- **An `<input>` has no accessible name of its own and should not.** Its name
+  comes from `<label for>`, so an audit reading `textContent` or `aria-label`
+  flags every correctly-labelled field in the app. Read `el.labels`.
+- **Changing the hash is a same-document navigation, so focus does not reset.**
+  Any probe measuring "where does Tab go first" has to load each screen fresh
+  or it is reporting where the previous screen left off.
+- **`vi.advanceTimersByTime` cannot cross a React render.** Where one timer
+  sets state and an effect then schedules a second timer, a single large
+  advance fires the first, queues the render, and finishes — the second timer
+  does not exist yet. Advance in steps inside `act()`.
+- **Adding a value to the `shareable` enum is a migration with a trap; adding
+  one to the TypeScript `Shareable` union is not.** They share a name and are
+  not the same thing. The enum is for `shares` (per-person links); the union
+  only picks which table to flip `shared_with_parents` on. `grade` and `file`
+  are in the union deliberately and not in the enum.
 
 ## Working conventions
 
@@ -468,6 +506,92 @@ bundled, but it is in a public repo.
 That guard strips comments before searching, because `sampleSchoolYear`'s own
 doc comment names the real calendar to explain that it exists instead of it —
 the first version failed on exactly that.
+
+## What was added on 2026-09-09
+
+Six migrations, two Edge Functions, five features and two audits. All of the
+SQL is unrun — Supabase is unreachable from the dev container — and written to
+be safe to apply twice, because this project has a GitHub integration that
+applies migrations on merge *and* a habit of pasting SQL by hand.
+
+**The owner has to do four things** before any of it works: a Groq key and
+`MODEL_PROVIDER`/`MODEL_API_KEY` in Supabase Edge Function secrets; a private
+`attachments` bucket (or let `20260909000400` create it); `SUPABASE_ACCESS_TOKEN`
+and `SUPABASE_PROJECT_REF` as GitHub secrets so `functions.yml` can deploy;
+and `BREVO_API_KEY` + `MAIL_FROM` for reminders.
+
+**The timetable is a table, not columns and not events.** `class_meetings`
+holds one row per slot. Expanding a timetable into `events` would be about a
+thousand rows a student nobody asked for, each needing suppression on every
+holiday. Rotating Day 1..Day N schools get `cycle_day`; the honest limit is
+that counting weekdays drifts the first time a school closes unexpectedly, so
+the banner says which day it *believes* it is and offers a one-tap re-anchor.
+Deriving school days from the imported calendar sounds better and would be
+confidently wrong in a new way whenever that calendar was incomplete.
+
+**Marks are private by default and that default is the feature.** A student
+whose parent is linked can experience mark tracking as surveillance; defaulting
+to visible makes that choice for them. `score` and `out_of` stay separate so
+17/20 does not become 85, and `letter` exists because some report cards give
+only "Level 3" and inventing a number would be making data up. No average is
+stored: it is computed on read and shown with its working ("Weighted, from 5
+marks. 2 not counted"). An unmarked row is excluded, never counted as zero —
+an upcoming test is not a test you failed.
+
+**Report cards are the import pipeline again**, deliberately the same shape.
+The model produces a proposal; every line starts `pending` however confident it
+claimed to be; nothing reaches `grades` until a person accepts that line *and*
+picks a class. Owner-only with no parent arm anywhere: sharing one mark is a
+different act from handing over the document it came from, with its comments
+and every other mark on it. The model is told not to correct spelling, because
+a misread subject name is the signal telling a student not to trust that line.
+
+**The assistant reads as the user.** `calenda-chat` forwards the caller's JWT
+into its Supabase client, so every read goes through the same policies the app
+does. This is the opposite of `notify-dispatch`, which runs as the service role
+because it must reach everybody's reminders and accepts no input about whose. A
+service-role assistant is one prompt injection in one shared note away from
+reading every account; a JWT-scoped one cannot return anything its user could
+not already open in a tab. The quota is claimed *before* the model is asked,
+and it is a constant inside a definer function taking no arguments — a
+caller-supplied limit is not a limit.
+
+**The walkthrough ends on the student's own school, and there is no "x".**
+`<school> x Calenda` is the visual grammar of a partnership lockup, which would
+be an endorsement claim under a live trademark. Put to the owner; he chose this
+version. `schoolMark()` never derives initials — a school on the list gets its
+curated monogram, one typed into the "another school" box gets its own name.
+Two tests hold the line, one on invented initials and one on the separator.
+
+**Reminders had never sent anything, and FACTS.md said they had.** Two
+independent reasons: `reminders.yml` opened with `if [ -z
+"$SUPABASE_FUNCTION_URL" ]; then exit 0` and that secret was never set, so it
+ran hourly, printed one line and passed; and no Edge Function had ever been
+deployed. Sixty green checks a day for a feature that had never delivered
+anything, under a landing panel about reminders. The workflow now **fails**
+when unconfigured — a job that passes without doing its work is worse than one
+that fails, because nothing will ever prompt you to look. The sender moved off
+`onboarding@resend.dev`, which only ever reached the account owner.
+
+`docs/FACTS.md` line 48 read "Notifications (verified live end-to-end)". It now
+says delivery is not yet verified and explains how the claim came to be false.
+**Nothing on the marketing pages may claim reminders are delivered until one
+has been.** The landing page's Reminders panel is still written as though they
+are; that is the owner's call and it is flagged, not quietly rewritten.
+
+**The mobile drawer was lying about being a modal.** It has carried
+`role="dialog" aria-modal="true"` since it was written and never moved focus
+into itself or trapped it — so a screen reader was told a modal had opened
+while focus stayed behind it, and Tab walked out into a covered page.
+Announcing a trap that does not exist is worse than not announcing one.
+
+**Day one had never been looked at.** Preview seeds two classes, a year of
+events, a notebook, a timetable and a term of marks, so every audit ever run
+measured a full account. Emptied by building with the seeds off: every screen
+already had a decent empty state, except the dashboard, which said "you're all
+caught up" to somebody who had not started and then showed five cards each
+correctly reporting that it was empty. Day one now gets one card and three
+steps, gated on classes *and* events *and* assignments all being empty.
 
 ## The landing page
 
