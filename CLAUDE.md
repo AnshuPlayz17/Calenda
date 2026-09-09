@@ -84,6 +84,20 @@ the cycle-day slot in `MeetingsEditor`) sat unreachable because nothing could
 write `timetable_cycle_length`. **A column read in four places and written in
 none is a feature nobody can turn on** — grep for the write, not the read.
 
+**And a column in the type but not in the `select` is the same bug wearing a
+disguise.** `loadProfile` named seven columns while `Profile` had grown to
+twelve. A column left out of a select is `undefined` at runtime, and every
+reader takes it through `?? null` — which is the right thing to write and
+exactly what makes never-fetched indistinguishable from never-set. So
+`profile.school` read as no school and the walkthrough's closing monogram never
+appeared for anybody, and the rotating timetable looked like it saved and then
+forgot on reload, because `updateProfile` merges its patch into local state and
+only a reload asks the database. `data as Profile` asserts a shape rather than
+checking one, so nothing failed. `noProfileColumnDrift.test.ts` now holds the
+two together. **The select stays one inline literal** — supabase-js parses that
+string at the type level, so a `.join(', ')` widens it to `string` and takes
+the column checking with it.
+
 Always run before pushing: `npm run typecheck && npm run lint && npm test &&
 npm run build`.
 
