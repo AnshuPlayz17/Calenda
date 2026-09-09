@@ -42,6 +42,12 @@ overflow, any element wider than the viewport, and console errors.
 The bar the landing page currently holds: **p95 17 ms, zero frames over 50 ms,
 all nine configurations clean.** Do not regress it.
 
+**`pgrep -f "node appcheck"` matches the shell that is waiting for it.** A
+wait-loop whose own command line contains the pattern it greps for never exits,
+and the thing it was supposed to start never starts. Two audit runs were
+reported as "still running" for twenty minutes while nothing was running at
+all. Wait on the output file, or use a pattern that cannot match the waiter.
+
 **A probe that reports everything as broken is usually the probe.** Three
 separate tools in one night measured something easy instead of something true:
 the sidebar check compared rects against a box and called every item in a
