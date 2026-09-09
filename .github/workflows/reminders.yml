@@ -14,12 +14,49 @@ jobs:
     steps:
       # Nothing is sent from here. This only pokes the Edge Function, which
       # holds the credentials and does the work.
-      - name: Invoke the dispatcher
+      #
+      # THIS JOB USED TO LIE. It began with `if [ -z "$SUPABASE_FUNCTION_URL" ]
+      # then echo skipping; exit 0`, and that secret was never set -- so from
+      # the day it was written it ran every hour, printed one line, and passed.
+      # Sixty green checks a day for a feature that had never delivered
+      # anything, under a landing page with a whole panel about reminders and a
+      # FACTS.md line calling notifications "verified live end-to-end".
+      #
+      # A missing configuration is a broken feature, and a broken feature has to
+      # be red. The only thing worse than a job that fails is a job that passes
+      # without doing its work, because nothing will ever prompt you to look.
+      - name: Check configuration
+        env:
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          ANON: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "${{ secrets.SUPABASE_FUNCTION_URL }}" ]; then
-            echo "SUPABASE_FUNCTION_URL not set — skipping."
-            exit 0
+          missing=""
+          [ -z "$REF" ] && missing="$missing SUPABASE_PROJECT_REF (secret)"
+          [ -z "$ANON" ] && missing="$missing VITE_SUPABASE_ANON_KEY (variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::Reminders cannot be sent. Missing:$missing"
+            echo "Until this is set, no reminder is delivered to anybody."
+            exit 1
           fi
-          curl --fail --silent --show-error -X POST \
-            "${{ secrets.SUPABASE_FUNCTION_URL }}/notify-dispatch" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+
+      # The URL is built from the project ref rather than stored as a fourth
+      # secret. One less thing to set, and one less thing to set wrongly -- a
+      # mistyped URL would have failed the same silent way.
+      - name: Invoke the dispatcher
+        env:
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          ANON: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          response=$(curl --fail --silent --show-error -X POST \
+            "https://${REF}.supabase.co/functions/v1/notify-dispatch" \
+            -H "Authorization: Bearer ${ANON}")
+          echo "$response"
+          # The function answers {"sent":n,"failed":n,"skipped":n}. A run where
+          # everything failed is a passing curl and a broken feature, so it is
+          # read rather than assumed.
+          failed=$(printf '%s' "$response" | sed -n 's/.*"failed":\([0-9]*\).*/\1/p')
+          if [ -n "${failed:-}" ] && [ "$failed" -gt 0 ]; then
+            echo "::error::$failed reminder(s) failed to send."
+            exit 1
+          fi

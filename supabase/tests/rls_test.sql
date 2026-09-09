@@ -330,4 +330,217 @@ begin
   perform expect('a user CAN set their own timezone', zone, 'Europe/London');
 end $$;
 
+-- ============================================================================
+-- Tests for what was added on 2026-09-09: timetable, grades, report cards,
+-- chat. Same rule as everything above -- attempt the access as the wrong
+-- person and require it to fail.
+-- ============================================================================
+
+-- Fixtures for this block. A class owned by the student, so the nested rows
+-- have something legitimate to hang off.
+do $$
+declare y uuid;
+begin
+  select id into y from school_years where is_current limit 1;
+
+  insert into classes (id, owner_id, school_year_id, name, course_code)
+  values ('00000000-0000-0000-0000-0000000000c1',
+          '00000000-0000-0000-0000-0000000000a1', y, 'Functions', 'MCR3U');
+
+  -- Shared with parents, so the tests below prove that seeing the CLASS does
+  -- not carry seeing the marks or the report card inside it.
+  update classes set shared_with_parents = true
+    where id = '00000000-0000-0000-0000-0000000000c1';
+
+  insert into grades (id, owner_id, class_id, title, score, out_of)
+  values ('00000000-0000-0000-0000-0000000000g1',
+          '00000000-0000-0000-0000-0000000000a1',
+          '00000000-0000-0000-0000-0000000000c1', 'Unit 3 test', 17, 20);
+
+  insert into report_cards (id, owner_id, storage_path, original_name)
+  values ('00000000-0000-0000-0000-0000000000r1',
+          '00000000-0000-0000-0000-0000000000a1',
+          '00000000-0000-0000-0000-0000000000a1/report-cards/x.pdf',
+          'term1.pdf');
+
+  insert into report_card_lines (id, report_card_id, owner_id, course_name, mark, out_of)
+  values ('00000000-0000-0000-0000-0000000000r2',
+          '00000000-0000-0000-0000-0000000000r1',
+          '00000000-0000-0000-0000-0000000000a1', 'Functions', 82, 100);
+end $$;
+
+-- (10) A mark is private even when its class is shared ------------------------
+-- The default on grades.shared_with_parents is the feature, so it is the thing
+-- most worth a test: a parent who can see the class must not see the marks in
+-- it until the student says so, one row at a time.
+do $$
+begin
+  perform expect(
+    'linked parent CAN see the shared class',
+    as_user_count('00000000-0000-0000-0000-0000000000a2',
+      'select count(*) from classes where id = ''00000000-0000-0000-0000-0000000000c1'''),
+    1::bigint);
+
+  perform expect(
+    'linked parent CANNOT see a mark inside that shared class',
+    as_user_count('00000000-0000-0000-0000-0000000000a2',
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+    0::bigint);
+end $$;
+
+update grades set shared_with_parents = true
+  where id = '00000000-0000-0000-0000-0000000000g1';
+
+do $$
+begin
+  perform expect(
+    'linked parent CAN see a mark once explicitly shared',
+    as_user_count('00000000-0000-0000-0000-0000000000a2',
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+    1::bigint);
+
+  perform expect(
+    'stranger CANNOT see a shared mark',
+    as_user_count('00000000-0000-0000-0000-0000000000a4',
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+    0::bigint);
+
+  perform expect(
+    'admin CANNOT see a shared mark',
+    as_user_count('00000000-0000-0000-0000-0000000000a3',
+      'select count(*) from grades where id = ''00000000-0000-0000-0000-0000000000g1'''),
+    0::bigint);
+end $$;
+
+-- (11) Sharing a mark does not expose the document it came from ---------------
+-- A report card carries every other mark, the school, and a teacher's written
+-- comment about the person. The grade above is shared at this point in the
+-- file, which is exactly when this must still be zero.
+do $$
+begin
+  perform expect(
+    'linked parent CANNOT see a report card',
+    as_user_count('00000000-0000-0000-0000-0000000000a2',
+      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000r1'''),
+    0::bigint);
+
+  perform expect(
+    'linked parent CANNOT see a decoded report card line',
+    as_user_count('00000000-0000-0000-0000-0000000000a2',
+      'select count(*) from report_card_lines where id = ''00000000-0000-0000-0000-0000000000r2'''),
+    0::bigint);
+
+  perform expect(
+    'admin CANNOT see a report card',
+    as_user_count('00000000-0000-0000-0000-0000000000a3',
+      'select count(*) from report_cards where id = ''00000000-0000-0000-0000-0000000000r1'''),
+    0::bigint);
+end $$;
+
+-- (12) A meeting cannot be hung off somebody else's class ---------------------
+-- The insert policy has two halves and this attacks the second: the stranger
+-- honestly claims themselves as owner, and points at a class that is not
+-- theirs.
+do $$
+declare ok boolean := false;
+begin
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a4', true);
+    set local role authenticated;
+    insert into class_meetings (class_id, owner_id, day_of_week, starts_at, ends_at)
+    values ('00000000-0000-0000-0000-0000000000c1',
+            '00000000-0000-0000-0000-0000000000a4', 1, '09:00', '10:00');
+  exception when insufficient_privilege or check_violation then
+    ok := true;
+  end;
+  reset role;
+  perform expect('stranger CANNOT add a meeting to another user''s class', ok, true);
+end $$;
+
+-- ...and the other half: claiming the owner's id on a class you cannot touch.
+do $$
+declare ok boolean := false;
+begin
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a4', true);
+    set local role authenticated;
+    insert into class_meetings (class_id, owner_id, day_of_week, starts_at, ends_at)
+    values ('00000000-0000-0000-0000-0000000000c1',
+            '00000000-0000-0000-0000-0000000000a1', 1, '09:00', '10:00');
+  exception when insufficient_privilege or check_violation then
+    ok := true;
+  end;
+  reset role;
+  perform expect('stranger CANNOT insert a meeting owned by someone else', ok, true);
+end $$;
+
+-- (13) The chat quota is not advisory ----------------------------------------
+-- chat_usage is readable so the UI can say how many are left, and writable by
+-- nobody. If a client can update its own row it can set it to zero, and the
+-- daily limit protecting a shared free tier stops existing.
+do $$
+declare ok boolean := false;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+  perform claim_chat_message();
+  reset role;
+
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a1', true);
+    set local role authenticated;
+    update chat_usage set used = 0
+      where owner_id = '00000000-0000-0000-0000-0000000000a1';
+  exception when insufficient_privilege then
+    ok := true;
+  end;
+  reset role;
+  perform expect('user CANNOT reset their own chat quota', ok, true);
+end $$;
+
+do $$
+declare seen bigint;
+begin
+  select as_user_count('00000000-0000-0000-0000-0000000000a4',
+    'select count(*) from chat_usage where owner_id = ''00000000-0000-0000-0000-0000000000a1''')
+    into seen;
+  perform expect('stranger CANNOT read another user''s chat usage', seen, 0::bigint);
+end $$;
+
+-- (14) The new profile columns are actually writable --------------------------
+-- The counterpart to test (9), and the reason it exists. `rls.sql` revokes
+-- update on profiles and re-grants a named list; a column missing from that
+-- list makes Postgres refuse the WHOLE statement, taking every other field in
+-- it down too, silently. This fails loudly if 20260909000600 ever drops one.
+do $$
+declare len smallint; seen timestamptz; named text;
+begin
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000a1', true);
+  set local role authenticated;
+  update profiles
+     set timetable_cycle_length = 6,
+         timetable_cycle_anchor = date '2026-09-03',
+         timetable_cycle_anchor_day = 1,
+         walkthrough_seen_at = now(),
+         -- Deliberately in the same statement as the new columns. If any one of
+         -- them is missing from the grant, this name is not written either --
+         -- which is precisely the failure that shipped once already.
+         full_name = 'Sam Student'
+   where id = '00000000-0000-0000-0000-0000000000a1';
+  reset role;
+
+  select timetable_cycle_length, walkthrough_seen_at, full_name
+    into len, seen, named
+    from profiles where id = '00000000-0000-0000-0000-0000000000a1';
+
+  perform expect('a user CAN set their timetable cycle', len, 6::smallint);
+  perform expect('a user CAN record finishing the walkthrough', seen is not null, true);
+  perform expect('...and the rest of the same statement still landed', named, 'Sam Student');
+end $$;
+
 select tests_reset();
