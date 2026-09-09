@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowUp, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
 import {
-  useChatMessages, useChatQuota, useChatThreads, useCreateThread, useSendMessage,
+  useChatMessages, useChatQuota, useChatThreads, useCreateThread, useDeleteThread,
+  useSendMessage,
 } from './queries'
 import type { ChatMessage } from '@/lib/types'
 import { isPreview } from '@/data'
@@ -44,6 +46,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
   // nobody had opened.
   const { data: threads = [] } = useChatThreads(open)
   const createThread = useCreateThread()
+  const deleteThread = useDeleteThread()
   const send = useSendMessage()
   const { data: quota } = useChatQuota(open)
 
@@ -147,6 +150,22 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
                 <span className="text-[11.5px] tabular-nums text-text-subtle">
                   {Math.max(quota.limit - quota.used, 0)} left today
                 </span>
+              )}
+              {/* A conversation about your own marks and notes with no way to
+                  end it. Offered only once there is something to delete, so
+                  the header is not carrying a control for an empty panel.
+                  The next question starts a fresh one. */}
+              {threadId && messages.length > 0 && (
+                <ConfirmDelete
+                  what="this conversation"
+                  title="Delete this conversation?"
+                  detail="Everything asked and answered in it goes. Your marks, notes and calendar are untouched — the assistant only ever read them."
+                  pending={deleteThread.isPending}
+                  onConfirm={async () => {
+                    await deleteThread.mutateAsync(threadId)
+                    setThreadId(null)
+                  }}
+                />
               )}
               <button
                 onClick={onClose}

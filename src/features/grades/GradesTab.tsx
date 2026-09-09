@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { GraduationCap, Plus } from 'lucide-react'
+import { GraduationCap, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
@@ -9,9 +9,10 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ShareToggle } from '@/features/parents/ShareToggle'
 import {
-  useCreateGrade, useDeleteGrade, useGrades,
+  useCreateGrade, useDeleteGrade, useGrades, useUpdateGrade,
 } from '@/features/grades/queries'
 import { averageNote, averageOf, percentOf, scoreLabel } from './average'
+import type { Grade } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
 /**
@@ -25,6 +26,7 @@ import { cn } from '@/lib/cn'
 export function GradesTab({ classId }: { classId: string }) {
   const { data: grades = [], isLoading, isError, refetch, isFetching } = useGrades(classId)
   const create = useCreateGrade(classId)
+  const update = useUpdateGrade()
   const remove = useDeleteGrade()
 
   const [title, setTitle] = useState('')
@@ -34,14 +36,48 @@ export function GradesTab({ classId }: { classId: string }) {
   const [category, setCategory] = useState('')
   const [when, setWhen] = useState('')
   const [adding, setAdding] = useState(false)
+  /**
+   * The mark being corrected, or null while one is being added.
+   *
+   * One form for both. A mark typed wrong -- 84 for 48 -- was unfixable except
+   * by deleting the row and typing it again, which loses the date and the
+   * weight beside it and, if it was shared, silently unshares it. The fields
+   * are identical either way, so a second form would be the same six inputs
+   * kept in step by hand.
+   */
+  const [editing, setEditing] = useState<Grade | null>(null)
 
   const average = useMemo(() => averageOf(grades), [grades])
   const note = averageNote(average)
 
-  async function add(e: React.FormEvent) {
+  function clear() {
+    setTitle('')
+    setScore('')
+    setOutOf('')
+    setWeight('1')
+    setCategory('')
+    setWhen('')
+    setAdding(false)
+    setEditing(null)
+  }
+
+  function edit(g: Grade) {
+    setTitle(g.title)
+    // Compared against null rather than falsiness: a score of 0 is a real
+    // mark and `|| ''` would empty it on the way into the box.
+    setScore(g.score === null ? '' : String(g.score))
+    setOutOf(g.out_of === null ? '' : String(g.out_of))
+    setWeight(String(g.weight ?? 1))
+    setCategory(g.category ?? '')
+    setWhen(g.recorded_on ?? '')
+    setAdding(false)
+    setEditing(g)
+  }
+
+  async function save(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
-    await create.mutateAsync({
+    const input = {
       title,
       // Empty is null, not zero. A test with no mark yet is the most common
       // row in a gradebook, and filing it as zero would be a lie the average
@@ -51,13 +87,10 @@ export function GradesTab({ classId }: { classId: string }) {
       weight: weight.trim() === '' ? 1 : Number(weight),
       category: category || null,
       recordedOn: when || null,
-    })
-    setTitle('')
-    setScore('')
-    setOutOf('')
-    setCategory('')
-    setWhen('')
-    setAdding(false)
+    }
+    if (editing) await update.mutateAsync({ id: editing.id, input })
+    else await create.mutateAsync(input)
+    clear()
   }
 
   if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />
@@ -85,16 +118,16 @@ export function GradesTab({ classId }: { classId: string }) {
             </p>
           )}
         </div>
-        {!adding && (
-          <Button size="sm" onClick={() => setAdding(true)}>
+        {!adding && !editing && (
+          <Button size="sm" onClick={() => { clear(); setAdding(true) }}>
             <Plus className="h-4 w-4" aria-hidden /> Add a mark
           </Button>
         )}
       </div>
 
-      {adding && (
+      {(adding || editing) && (
         <Card className="p-4">
-          <form onSubmit={add} className="flex flex-col gap-3">
+          <form onSubmit={save} className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Input
                 label="What for"
@@ -142,11 +175,18 @@ export function GradesTab({ classId }: { classId: string }) {
                 hint="2 counts double. 0 records it without counting."
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" size="sm" loading={create.isPending}>Save</Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => setAdding(false)}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" size="sm" loading={create.isPending || update.isPending}>
+                Save
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={clear}>
                 Cancel
               </Button>
+              {editing && (
+                <p className="text-[12.5px] text-text-subtle">
+                  Correcting “{editing.title}”. Sharing is unchanged.
+                </p>
+              )}
             </div>
           </form>
         </Card>
@@ -194,6 +234,14 @@ export function GradesTab({ classId }: { classId: string }) {
                       <span className="block text-[12px] tabular-nums text-text-muted">{pct}%</span>
                     )}
                   </span>
+
+                  <button
+                    onClick={() => edit(g)}
+                    aria-label={`Edit ${g.title}`}
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  </button>
 
                   <ShareToggle
                     kind="grade"

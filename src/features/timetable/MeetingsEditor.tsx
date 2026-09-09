@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock, Plus } from 'lucide-react'
+import { Check, Clock, Pencil, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
@@ -9,10 +9,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import {
-  useCreateMeeting, useDeleteMeeting, useMeetings,
+  useCreateMeeting, useDeleteMeeting, useMeetings, useUpdateMeeting,
 } from '@/features/timetable/queries'
 import { DAY_NAMES, clockLabel, minutesOf } from '@/features/timetable/schedule'
 import { useAuth } from '@/lib/auth'
+import type { ClassMeeting } from '@/lib/types'
 
 /**
  * When this class meets, edited where the class is.
@@ -26,6 +27,7 @@ export function MeetingsEditor({ classId }: { classId: string }) {
   const { profile } = useAuth()
   const { data: meetings = [], isLoading, isError, refetch, isFetching } = useMeetings(classId)
   const create = useCreateMeeting(classId)
+  const update = useUpdateMeeting()
   const remove = useDeleteMeeting()
 
   const cycleLength = profile?.timetable_cycle_length ?? null
@@ -36,8 +38,36 @@ export function MeetingsEditor({ classId }: { classId: string }) {
   const [label, setLabel] = useState('')
   const [room, setRoom] = useState('')
   const [error, setError] = useState<string | null>(null)
+  /**
+   * The slot being corrected, or null while one is being added.
+   *
+   * A time typed wrong was unfixable except by removing the row and typing all
+   * five fields again -- and a period label and a room are exactly the sort of
+   * thing nobody remembers the second time. Same form either way, because the
+   * fields are identical and a second copy is two forms to keep in step.
+   */
+  const [editing, setEditing] = useState<ClassMeeting | null>(null)
 
-  async function add(e: React.FormEvent) {
+  function edit(m: ClassMeeting) {
+    setDay(String(m.day_of_week ?? m.cycle_day ?? 1))
+    // Stored as a time, which Postgres hands back with seconds. An <input
+    // type="time"> shows an empty box for "08:50:00", so it is trimmed.
+    setFrom(m.starts_at.slice(0, 5))
+    setTo(m.ends_at.slice(0, 5))
+    setLabel(m.label ?? '')
+    setRoom(m.room ?? '')
+    setError(null)
+    setEditing(m)
+  }
+
+  function stopEditing() {
+    setEditing(null)
+    setLabel('')
+    setRoom('')
+    setError(null)
+  }
+
+  async function save(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     // Checked here as well as by the database, because a check constraint
@@ -46,7 +76,7 @@ export function MeetingsEditor({ classId }: { classId: string }) {
       setError('The end time has to be after the start time.')
       return
     }
-    await create.mutateAsync({
+    const input = {
       // One or the other, never both -- the column check enforces it, and
       // sending both would be refused outright.
       dayOfWeek: cycleLength ? null : Number(day),
@@ -55,7 +85,10 @@ export function MeetingsEditor({ classId }: { classId: string }) {
       endsAt: to,
       label: label || null,
       room: room || null,
-    })
+    }
+    if (editing) await update.mutateAsync({ id: editing.id, input })
+    else await create.mutateAsync(input)
+    if (editing) setEditing(null)
     setLabel('')
     setRoom('')
   }
@@ -93,12 +126,19 @@ export function MeetingsEditor({ classId }: { classId: string }) {
                     {[m.label, m.room].filter(Boolean).join(' · ')}
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => edit(m)}
+                  aria-label={`Edit the ${m.day_of_week !== null ? DAY_NAMES[m.day_of_week] : `Day ${m.cycle_day}`} slot at ${clockLabel(m.starts_at)}`}
+                  className="ml-auto grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden />
+                </button>
                 <ConfirmDelete
                   what={`the ${m.day_of_week !== null ? DAY_NAMES[m.day_of_week] : `Day ${m.cycle_day}`} slot at ${clockLabel(m.starts_at)}`}
                   title="Remove this slot?"
                   pending={remove.isPending}
                   onConfirm={() => remove.mutateAsync(m.id)}
-                  className="ml-auto"
                 />
               </Card>
             </li>
@@ -107,8 +147,10 @@ export function MeetingsEditor({ classId }: { classId: string }) {
       )}
 
       <Card className="p-4">
-        <form onSubmit={add} className="flex flex-col gap-3">
-          <p className="text-[13px] font-medium text-text">Add a time</p>
+        <form onSubmit={save} className="flex flex-col gap-3">
+          <p className="text-[13px] font-medium text-text">
+            {editing ? 'Correct this time' : 'Add a time'}
+          </p>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Select
@@ -157,9 +199,16 @@ export function MeetingsEditor({ classId }: { classId: string }) {
               onChange={(e) => setRoom(e.target.value)}
               className="w-[180px]"
             />
-            <Button type="submit" size="sm" loading={create.isPending}>
-              <Plus className="h-4 w-4" aria-hidden /> Add
+            <Button type="submit" size="sm" loading={create.isPending || update.isPending}>
+              {editing
+                ? <><Check className="h-4 w-4" aria-hidden /> Save</>
+                : <><Plus className="h-4 w-4" aria-hidden /> Add</>}
             </Button>
+            {editing && (
+              <Button type="button" size="sm" variant="secondary" onClick={stopEditing}>
+                <X className="h-4 w-4" aria-hidden /> Cancel
+              </Button>
+            )}
           </div>
         </form>
       </Card>
