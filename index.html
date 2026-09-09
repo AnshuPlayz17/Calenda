@@ -7,6 +7,21 @@
     <meta name="description" content="Your personal school command centre." />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="./brand/favicon.svg" type="image/svg+xml" />
+    <!--
+      Installable on a phone, which is where a school app is actually used.
+      There has been a service worker since the first commit (public/sw.js) and
+      it only ever handled push notifications -- so the app could wake you up
+      and could not be added to your home screen.
+
+      Relative paths throughout, because this is served from /Calenda/ on GitHub
+      Pages and an absolute start_url would land on the wrong origin root.
+      `start_url` carries the hash: without it an installed icon opens the
+      landing page, which is the one screen a signed-in person never wants.
+    -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#1e3765" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Calenda" />
     <!-- Fonts are bundled, not fetched from Google. See src/styles/fonts.ts. -->
     <script>
       // Applied before first paint so the page never flashes the wrong theme.
