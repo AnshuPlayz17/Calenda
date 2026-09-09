@@ -130,10 +130,20 @@ npm run build`.
 - Commit messages explain *why*, including what was tried and rejected. They are
   the durable record — the conversation is not.
 - The owner cannot be assumed to know jargon; explain terms when they appear.
-- Supabase cannot be reached from the dev container (egress policy), so all
-  database and Edge Function work is done by the owner following written
-  instructions. SQL goes in the Supabase dashboard editor; `supabase ...`,
-  `git`, `npm` and `curl` go in his terminal.
+- **Supabase cannot be reached from the dev container, but Postgres can be run
+  IN it, and every migration should be applied there before it is called
+  careful.** `/usr/lib/postgresql/16/bin` is present. `initdb` refuses to run
+  as root, so run it as `ubuntu`; a ~30-line shim providing `auth.users`,
+  `auth.uid()`, `storage.buckets`/`objects`, `storage.foldername()` and the
+  `anon`/`authenticated`/`service_role` roles is then enough to apply every
+  migration in order and run `supabase/tests/rls_test.sql` for real. The first
+  time this was tried it found a live bug that had been shipped for days, and
+  two invalid UUIDs in a test file that had been read four times.
+- The hosted project itself is still unreachable (egress policy), so Edge
+  Function deployment and anything touching real data is done by the owner
+  following written instructions. SQL goes in the Supabase dashboard editor or
+  applies on merge via the GitHub integration; `supabase ...`, `git`, `npm` and
+  `curl` go in his terminal.
 - The live site (github.io) is also unreachable from here. Real-device checks
   are the owner's.
 
@@ -506,6 +516,38 @@ bundled, but it is in a public repo.
 That guard strips comments before searching, because `sampleSchoolYear`'s own
 doc comment names the real calendar to explain that it exists instead of it —
 the first version failed on exactly that.
+
+## `set_my_role()` had never worked, and every parent was a student
+
+Found on 2026-09-09 by running the migrations and `rls_test.sql` against a
+local Postgres for the first time. `select set_my_role('parent')` raised
+`role may not be changed` and left the row untouched.
+
+`guard_profile_role()` is a BEFORE UPDATE trigger that refuses a role change
+unless `auth.uid()` is null or the caller is an admin. `set_my_role()` is
+SECURITY DEFINER, and the pair was written assuming that being a definer
+function is enough to get past it. **It is not. SECURITY DEFINER changes the
+database role a function executes as; it does not touch `auth.uid()`, which
+reads a session setting that is still there inside the function.** So the guard
+blocked the one path built to write that column.
+
+Nobody noticed because a student changes nothing: `handle_new_user()` already
+defaults the column to 'student', so `set_my_role('student')` is not a change
+and the trigger never fires. Only a parent hits it, and `applyDetails()`
+correctly treats the failure as a warning rather than an error -- the account
+exists by then -- so it went quiet. **This is the same failure the project had
+already fixed once** ("everyone was silently `student`"): the question was added
+to the form and the answer has been discarded ever since.
+
+`20260909000700` fixes it with a transaction-local setting that `set_my_role()`
+declares and clears around its own update. That setting is not the control and
+must never be treated as one -- the control is still the column grant, which
+refuses any client naming `role` before a policy or trigger is reached. The
+trigger is the second layer, and it now admits exactly one thing: a function
+that refuses 'admin' by name and takes the row id from the token.
+
+**The test that would have caught it was already in the file**, unrun. 34
+assertions pass now.
 
 ## What was added on 2026-09-09
 
