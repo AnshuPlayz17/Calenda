@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail } from 'lucide-react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -11,7 +11,7 @@ import {
 } from '@/features/auth/aboutYou'
 import { schoolValue } from '@/features/auth/schoolChoice'
 import type { Relation, Role } from '@/features/auth/aboutYou'
-import { useAuth } from '@/lib/auth'
+import { useAuth, SIGN_UP_BLOCKED } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
 const MIN_PASSWORD = 8
@@ -26,6 +26,14 @@ const MIN_PASSWORD = 8
  * user. See supabase/migrations/20260907000100.
  */
 type Step = 'choose' | 'credentials' | 'name' | 'details'
+
+const STEPS: Step[] = ['choose', 'credentials', 'name', 'details']
+
+/** The step the address is asking for, or the first one if it is asking for
+ *  something that is not a step. */
+function readStep(raw: string | null): Step {
+  return STEPS.includes(raw as Step) ? (raw as Step) : 'choose'
+}
 
 export function SignUp() {
   const { session, signInWithProvider, signUpWithPassword } = useAuth()
@@ -48,7 +56,16 @@ export function SignUp() {
   //
   // Nothing is created until the end. Making the account after step one would
   // leave a nameless account behind every abandoned sign-up.
-  const [step, setStep] = useState<Step>('choose')
+  // The step lives in the address rather than in state, and that is a bug fix
+  // rather than a preference. It was state, so the browser's own Back button --
+  // the one a phone puts under your thumb -- left the form entirely and took
+  // three screens of typing with it. Now Back is what it looks like: a step
+  // back. The Back links in the form use the same history, so the two agree.
+  const [params, setParams] = useSearchParams()
+  const step = readStep(params.get('step'))
+  const setStep = (next: Step) => {
+    setParams(next === 'choose' ? {} : { step: next })
+  }
   const [first, setFirst] = useState('')
   const [middle, setMiddle] = useState('')
   const [last, setLast] = useState('')
@@ -65,6 +82,21 @@ export function SignUp() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reveal, setReveal] = useState(false)
+
+  // A refresh, or a link somebody kept, can land on a later step with an empty
+  // form behind it -- the fields are state and state does not survive either.
+  // Sending them back to the start is the only honest option: the alternative
+  // is a "create account" button over three blank screens.
+  //
+  // Only the steps *after* credentials, which is where those two are typed. The
+  // first version of this checked every step and bounced the reader off step
+  // one the instant they reached it, because email and password are empty there
+  // by definition. The probe caught it; a person would have seen a button that
+  // did nothing.
+  if ((step === 'name' || step === 'details') && !email && !password) {
+    return <Navigate to="/sign-up" replace />
+  }
 
   if (session || preview.active) return <Navigate to="/dashboard" replace />
 
@@ -159,6 +191,20 @@ export function SignUp() {
       fineprint="Calenda is a personal project, not an official product of any school. Your notes and personal events are visible only to you."
     >
       <AuthError message={error} />
+      {error === SIGN_UP_BLOCKED && (
+        <p className="mt-2 text-[13px] text-text-muted">
+          <Link to="/sign-in" className="font-medium text-brand underline-offset-2 hover:underline">
+            Go to sign in
+          </Link>
+        </p>
+      )}
+
+      {/* Each step replaces the last, so without this a screen reader is told
+          nothing at all when Continue is pressed -- the heading changes silently
+          and the focus lands somewhere new with no explanation of why. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {step === 'choose' ? '' : `Step ${STEPS.indexOf(step)} of 3`}
+      </p>
 
       {step === 'choose' && (
         <div className="mt-6 flex flex-col gap-2">
@@ -189,19 +235,25 @@ export function SignUp() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Input
-            label="Password"
-            type="password"
-            required
-            minLength={MIN_PASSWORD}
-            autoComplete="new-password"
-            hint={`At least ${MIN_PASSWORD} characters.`}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          {/* One toggle for both boxes, not one each. They are the same secret
+              typed twice, so revealing one and not the other tells the reader
+              nothing they can use -- and two eye buttons in a column reads as
+              two separate settings. */}
+          <Reveal on={reveal} onToggle={() => setReveal((v) => !v)}>
+            <Input
+              label="Password"
+              type={reveal ? 'text' : 'password'}
+              required
+              minLength={MIN_PASSWORD}
+              autoComplete="new-password"
+              hint={`At least ${MIN_PASSWORD} characters.`}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Reveal>
           <Input
             label="Confirm password"
-            type="password"
+            type={reveal ? 'text' : 'password'}
             required
             autoComplete="new-password"
             error={mismatch ? "Those don't match." : undefined}
@@ -332,6 +384,37 @@ function StepMark({ at }: { at: 1 | 2 | 3 }) {
           }
         />
       ))}
+    </div>
+  )
+}
+
+/**
+ * A reveal button sitting on the password box it belongs to.
+ *
+ * Three password entries were typed blind. On a phone, with a password manager
+ * not involved, that is the most common reason a sign-up is abandoned halfway:
+ * a typo you cannot see, twice.
+ *
+ * A wrapper rather than a prop on Input, because Input is shared with every
+ * other form in the app and only this page has two boxes holding one secret.
+ */
+function Reveal({ on, onToggle, children }: {
+  on: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative">
+      {children}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={on}
+        aria-label={on ? 'Hide password' : 'Show password'}
+        className="absolute right-2 top-[26px] grid h-9 w-9 place-items-center rounded-lg text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+      >
+        {on ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
     </div>
   )
 }

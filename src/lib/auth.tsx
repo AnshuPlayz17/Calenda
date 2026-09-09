@@ -105,14 +105,31 @@ export function deviceTimeZone(): string | null {
  */
 const GENERIC_CREDENTIALS_ERROR = 'That email or password is incorrect.'
 
+/**
+ * What a sign-up gets when the address is already in use.
+ *
+ * It used to say "Check your email to finish setting up your account", which
+ * was written when confirmation mail was expected. Confirmation is off, so
+ * nothing was ever sent: somebody who already had an account was told to go and
+ * wait for a message that does not exist, and never learned that signing in was
+ * the answer.
+ *
+ * This says neither "that address is taken" nor "that address is free" -- it is
+ * true whichever it is, which keeps the sign-up form from answering "is this
+ * person registered here?" to anyone who asks. The sign-up page renders a link
+ * to sign-in beneath it, which is the actual next step either way.
+ */
+export const SIGN_UP_BLOCKED = 'That did not work. If you already have an account, sign in instead.'
+
 function friendlyError(message: string): string {
   const m = message.toLowerCase()
   if (m.includes('invalid login') || m.includes('invalid credentials')) {
     return GENERIC_CREDENTIALS_ERROR
   }
   if (m.includes('already registered') || m.includes('already been registered')) {
-    // Same reasoning: do not confirm that an address exists.
-    return 'Check your email to finish setting up your account.'
+    // Same reasoning as the credentials error: do not confirm that an address
+    // exists. See SIGN_UP_BLOCKED for why the old wording was worse than vague.
+    return SIGN_UP_BLOCKED
   }
   // Supabase enforces its own gap between emails to one address and reports it
   // as "For security purposes, you can only request this after 47 seconds",

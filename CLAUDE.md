@@ -341,6 +341,31 @@ by adding a parameter to it — a defaulted parameter makes existing call sites
 ambiguous — and it lives on `parent_links`, not the profile, because one adult
 can be a mother to one student and a guardian to another.
 
+**The step is in the address, not in state.** It was state, so the browser's own
+Back button — the one a phone puts under your thumb — left the form entirely
+and took three screens of typing with it. `?step=` fixes that and makes Forward
+work too. Only `name` and `details` are guarded against a pasted deep link with
+an empty form behind them: the first version guarded every step and bounced the
+reader off step one the instant they reached it, because email and password are
+empty there by definition.
+
+**One reveal toggle for two password boxes.** They hold the same secret typed
+twice, so revealing one and not the other tells the reader nothing — and two eye
+buttons in a column read as two separate settings. It is a wrapper rather than a
+prop on `Input`, which every other form in the app shares.
+
+**An existing account used to be told to check its email.** Confirmation is off,
+so nothing was ever sent: somebody who already had an account was sent away to
+wait for a message that does not exist. `SIGN_UP_BLOCKED` says "if you already
+have an account, sign in instead" with a link, which is true whether or not the
+address is registered — so the form still never answers *is this person
+registered here*.
+
+**Tab still lands in the panel before the form.** The reel's tick buttons come
+first in the DOM, so a keyboard reaches five decorative controls before the
+first field. Known, not fixed, and it lives in `AuthLayout`/`AuthReel` rather
+than on any one page.
+
 **`profiles.heard_from` is asked once and never shown back.** Free text rather
 than a list of five options, because with a handful of users a sentence is
 worth more than a bucket and a list is a guess at the answers before any have
