@@ -10,6 +10,8 @@ import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
   CategoryPreference, NewClassInput, NewEventInput, NotebookPage, NotificationPreferences,
   ParentLink, QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
+  Attachment, ChatMessage, ChatThread, ClassMeeting, Grade, MeetingWithClass,
+  NewGradeInput, NewMeetingInput, ReportCard, ReportCardLine,
 } from '@/lib/types'
 import type { PlainDate } from '@/lib/events'
 
@@ -98,8 +100,20 @@ export interface DataSource {
   createPage(classId: string, parentId: string | null, title?: string): Promise<NotebookPage>
   updatePage(
     id: string,
-    patch: { title?: string; content?: unknown; contentText?: string },
+    patch: {
+      title?: string
+      content?: unknown
+      contentText?: string
+      /** A single emoji, or null to clear it. */
+      icon?: string | null
+      /** Moving a page under another, or to the top level with null. */
+      parentId?: string | null
+      /** Fractional, so a reorder rewrites one row and not every sibling. */
+      position?: number
+    },
   ): Promise<void>
+  /** Hides a page without destroying it. The reversible half of deleting. */
+  setPageArchived(id: string, archived: boolean): Promise<void>
   deletePage(id: string): Promise<void>
   /** Most recently edited pages across every class, for the dashboard. */
   recentPages(limit: number): Promise<Array<NotebookPage & { className: string }>>
@@ -156,6 +170,61 @@ export interface DataSource {
   listQueuedReminders(limit: number): Promise<QueuedReminder[]>
   savePushSubscription(sub: PushSubscriptionJSON): Promise<void>
   removePushSubscription(endpoint: string): Promise<void>
+
+  // ---------------------------------------------------------- timetable --
+
+  /** Every meeting for one class. */
+  listMeetings(classId: string): Promise<ClassMeeting[]>
+  /** The whole week across every class, which is how the timetable is read. */
+  listWeekMeetings(schoolYearId: string): Promise<MeetingWithClass[]>
+  createMeeting(classId: string, input: NewMeetingInput): Promise<ClassMeeting>
+  updateMeeting(id: string, input: NewMeetingInput): Promise<ClassMeeting>
+  deleteMeeting(id: string): Promise<void>
+
+  // ------------------------------------------------------------- grades --
+
+  listGrades(classId: string): Promise<Grade[]>
+  /** Everything marked across every class, for the dashboard summary. */
+  listAllGrades(schoolYearId: string): Promise<Array<Grade & { className: string }>>
+  createGrade(classId: string, input: NewGradeInput): Promise<Grade>
+  updateGrade(id: string, input: NewGradeInput): Promise<Grade>
+  deleteGrade(id: string): Promise<void>
+
+  // ------------------------------------------------------- report cards --
+
+  listReportCards(): Promise<ReportCard[]>
+  getReportCard(id: string): Promise<ReportCard | null>
+  /** Uploads the file and records it. Nothing is decoded by this call. */
+  createReportCard(file: File, term: string | null): Promise<ReportCard>
+  /** Sends it to be read. Consent is recorded before anything leaves. */
+  decodeReportCard(id: string): Promise<void>
+  listReportCardLines(reportCardId: string): Promise<ReportCardLine[]>
+  updateReportCardLine(
+    id: string,
+    patch: { decision?: ReportCardLine['decision']; matchedClassId?: string | null },
+  ): Promise<void>
+  /** Writes the accepted lines into `grades`. Safe to call twice. */
+  applyReportCard(id: string): Promise<{ created: number; skipped: number }>
+  deleteReportCard(id: string): Promise<void>
+
+  // -------------------------------------------------------- attachments --
+
+  listAttachments(classId: string): Promise<Attachment[]>
+  uploadAttachment(classId: string, file: File): Promise<Attachment>
+  /** A short-lived URL. Never a permanent one: the bucket is private. */
+  attachmentUrl(id: string): Promise<string>
+  deleteAttachment(id: string): Promise<void>
+
+  // --------------------------------------------------------------- chat --
+
+  listChatThreads(): Promise<ChatThread[]>
+  createChatThread(title: string): Promise<ChatThread>
+  deleteChatThread(id: string): Promise<void>
+  listChatMessages(threadId: string): Promise<ChatMessage[]>
+  /** Asks. Returns the assistant's reply row, already saved. */
+  sendChatMessage(threadId: string, text: string): Promise<ChatMessage>
+  /** How many of today's allowance are left, for an honest counter. */
+  chatQuotaRemaining(): Promise<{ used: number; limit: number } | null>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first

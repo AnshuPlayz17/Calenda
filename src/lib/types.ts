@@ -234,3 +234,188 @@ export type QueuedReminder = {
   /** Filled in by the client from the subject it points at. */
   subject_title?: string
 }
+
+// ===================================================== added 2026-09-09 ====
+
+// ---------------------------------------------------------- timetable -----
+
+/**
+ * One slot in the week when a class meets.
+ *
+ * Exactly one of `day_of_week` and `cycle_day` is set -- the database enforces
+ * that, so the union is real rather than a convention. `day_of_week` is 0 for
+ * Sunday, matching `Date.prototype.getDay()`, so nothing between Postgres and
+ * the grid has to convert and nothing can be off by one.
+ */
+export type ClassMeeting = {
+  id: string
+  class_id: string
+  owner_id: string
+  day_of_week: number | null
+  cycle_day: number | null
+  /** 'HH:MM:SS' as Postgres returns a `time`. */
+  starts_at: string
+  ends_at: string
+  /** Overrides the class's room for this slot only. */
+  room: string | null
+  /** The school's own word for the slot: "Period 3", "Block A". */
+  label: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type NewMeetingInput = {
+  dayOfWeek?: number | null
+  cycleDay?: number | null
+  startsAt: string
+  endsAt: string
+  room?: string | null
+  label?: string | null
+}
+
+/** A meeting with the class it belongs to, which is how it is always shown. */
+export type MeetingWithClass = ClassMeeting & {
+  className: string
+  courseCode: string | null
+  classRoom: string | null
+  colorToken: string | null
+}
+
+// ------------------------------------------------------------- grades -----
+
+/**
+ * A mark.
+ *
+ * `score` and `out_of` stay separate on purpose: 17/20 is more information
+ * than 85%, and the percentage is computed for display and never stored.
+ * `letter` sits alongside them because some report cards give only "Level 3",
+ * and inventing a number for that would be making data up. Any of the three
+ * may be null -- an unmarked row is a real and useful thing.
+ */
+export type Grade = {
+  id: string
+  owner_id: string
+  class_id: string
+  assignment_id: string | null
+  title: string
+  score: number | null
+  out_of: number | null
+  letter: string | null
+  weight: number
+  category: string | null
+  term: string | null
+  recorded_on: string | null
+  notes: string | null
+  /** 'manual' or 'report_card'. Shown, because they are not equally trusted. */
+  source: 'manual' | 'report_card'
+  shared_with_parents: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type NewGradeInput = {
+  title: string
+  score?: number | null
+  outOf?: number | null
+  letter?: string | null
+  weight?: number
+  category?: string | null
+  term?: string | null
+  recordedOn?: string | null
+  notes?: string | null
+  assignmentId?: string | null
+}
+
+// ------------------------------------------------------- report cards -----
+
+export type ReportCardStatus =
+  'uploaded' | 'decoding' | 'decoded' | 'failed' | 'applied'
+
+export type ReportCard = {
+  id: string
+  owner_id: string
+  school_year_id: string | null
+  storage_path: string
+  original_name: string | null
+  mime_type: string | null
+  byte_size: number | null
+  term: string | null
+  status: ReportCardStatus
+  error: string | null
+  decode_consent_at: string | null
+  decoded_at: string | null
+  applied_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * One line a model read off a report card, before anybody has agreed with it.
+ *
+ * `decision` starts 'pending' for every line however confident the model was.
+ * Nothing here becomes a `Grade` until the student says so.
+ */
+export type ReportCardLine = {
+  id: string
+  report_card_id: string
+  owner_id: string
+  course_name: string | null
+  course_code: string | null
+  teacher: string | null
+  mark: number | null
+  out_of: number | null
+  letter: string | null
+  term: string | null
+  remark: string | null
+  /** 0..1, the model's own claim about itself. Shown; never acted on alone. */
+  confidence: number | null
+  raw: unknown
+  matched_class_id: string | null
+  decision: 'pending' | 'accept' | 'skip'
+  /** Set once accepted, which is what makes applying twice a no-op. */
+  grade_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+// --------------------------------------------------------- attachments ----
+
+export type Attachment = {
+  id: string
+  class_id: string
+  owner_id: string
+  storage_path: string
+  filename: string
+  mime_type: string
+  size_bytes: number
+  shared_with_parents: boolean
+  created_at: string
+}
+
+// ---------------------------------------------------------------- chat ----
+
+export type ChatThread = {
+  id: string
+  owner_id: string
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+/** What an answer was based on, so the reader can go and check it. */
+export type ChatSource = {
+  kind: 'event' | 'assignment' | 'task' | 'note' | 'class' | 'grade'
+  id: string
+  title: string
+}
+
+export type ChatMessage = {
+  id: string
+  thread_id: string
+  owner_id: string
+  role: 'user' | 'assistant'
+  content: string
+  sources: ChatSource[]
+  error: string | null
+  created_at: string
+}

@@ -8,6 +8,8 @@ import type {
   Assignment, CalendarEvent, EventCategory, EventWithCategory, NewAssignmentInput,
   CategoryPreference, NewEventInput, NotebookPage, NotificationPreferences, ParentLink,
   QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
+  Attachment, ChatMessage, ChatThread, ClassMeeting, Grade,
+  NewGradeInput, NewMeetingInput, ReportCard, ReportCardLine,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -539,10 +541,19 @@ export const supabaseSource: DataSource = {
     if (patch.title !== undefined) row.title = patch.title
     if (patch.content !== undefined) row.content = patch.content
     if (patch.contentText !== undefined) row.content_text = patch.contentText
+    if (patch.icon !== undefined) row.icon = patch.icon
+    if (patch.parentId !== undefined) row.parent_page_id = patch.parentId
+    if (patch.position !== undefined) row.position = patch.position
     if (Object.keys(row).length === 0) return
 
     const { error } = await supabase.from('notebook_pages').update(row).eq('id', id)
     if (error) fail('save that page', error)
+  },
+
+  async setPageArchived(id, archived) {
+    const { error } = await supabase
+      .from('notebook_pages').update({ is_archived: archived }).eq('id', id)
+    if (error) fail(archived ? 'archive that page' : 'restore that page', error)
   },
 
   async deletePage(id) {
@@ -671,6 +682,428 @@ export const supabaseSource: DataSource = {
     const { error } = await supabase.from('tasks').delete().eq('id', id)
     if (error) fail('delete that task', error)
   },
+
+  // ---------------------------------------------------------- timetable --
+
+  async listMeetings(classId) {
+    const { data, error } = await supabase
+      .from('class_meetings')
+      .select('*')
+      .eq('class_id', classId)
+      .order('day_of_week', { nullsFirst: false })
+      .order('cycle_day', { nullsFirst: false })
+      .order('starts_at')
+    if (error) fail('load that timetable', error)
+    return (data ?? []) as ClassMeeting[]
+  },
+
+  async listWeekMeetings(schoolYearId) {
+    // Joined rather than fetched twice: the timetable is unreadable without
+    // the class name beside each block, and two round trips to draw one grid
+    // is two chances for it to render half-empty.
+    const { data, error } = await supabase
+      .from('class_meetings')
+      .select('*, classes!inner(name, course_code, room, color_token, school_year_id, is_archived)')
+      .eq('classes.school_year_id', schoolYearId)
+      .eq('classes.is_archived', false)
+      .order('starts_at')
+    if (error) fail('load your timetable', error)
+    type Joined = ClassMeeting & {
+      classes: {
+        name: string; course_code: string | null; room: string | null
+        color_token: string | null
+      }
+    }
+    return ((data ?? []) as Joined[]).map(({ classes, ...m }) => ({
+      ...m,
+      className: classes.name,
+      courseCode: classes.course_code,
+      classRoom: classes.room,
+      colorToken: classes.color_token,
+    }))
+  },
+
+  async createMeeting(classId, input) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { data, error } = await supabase
+      .from('class_meetings')
+      .insert({ class_id: classId, owner_id: auth.user.id, ...meetingRow(input) })
+      .select('*')
+      .single()
+    if (error) fail('add that to your timetable', error)
+    return data as ClassMeeting
+  },
+
+  async updateMeeting(id, input) {
+    const { data, error } = await supabase
+      .from('class_meetings')
+      .update(meetingRow(input))
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) fail('change that timetable slot', error)
+    return data as ClassMeeting
+  },
+
+  async deleteMeeting(id) {
+    const { error } = await supabase.from('class_meetings').delete().eq('id', id)
+    if (error) fail('remove that timetable slot', error)
+  },
+
+  // ------------------------------------------------------------- grades --
+
+  async listGrades(classId) {
+    const { data, error } = await supabase
+      .from('grades')
+      .select('*')
+      .eq('class_id', classId)
+      .order('recorded_on', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+    if (error) fail('load your marks', error)
+    return (data ?? []) as Grade[]
+  },
+
+  async listAllGrades(schoolYearId) {
+    const { data, error } = await supabase
+      .from('grades')
+      .select('*, classes!inner(name, school_year_id)')
+      .eq('classes.school_year_id', schoolYearId)
+      .order('recorded_on', { ascending: false, nullsFirst: false })
+    if (error) fail('load your marks', error)
+    type Joined = Grade & { classes: { name: string } }
+    return ((data ?? []) as Joined[]).map(({ classes, ...g }) => ({
+      ...g, className: classes.name,
+    }))
+  },
+
+  async createGrade(classId, input) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { data, error } = await supabase
+      .from('grades')
+      .insert({ class_id: classId, owner_id: auth.user.id, ...gradeRow(input) })
+      .select('*')
+      .single()
+    if (error) fail('save that mark', error)
+    return data as Grade
+  },
+
+  async updateGrade(id, input) {
+    const { data, error } = await supabase
+      .from('grades').update(gradeRow(input)).eq('id', id).select('*').single()
+    if (error) fail('change that mark', error)
+    return data as Grade
+  },
+
+  async deleteGrade(id) {
+    const { error } = await supabase.from('grades').delete().eq('id', id)
+    if (error) fail('delete that mark', error)
+  },
+
+  // ------------------------------------------------------- report cards --
+
+  async listReportCards() {
+    const { data, error } = await supabase
+      .from('report_cards').select('*').order('created_at', { ascending: false })
+    if (error) fail('load your report cards', error)
+    return (data ?? []) as ReportCard[]
+  },
+
+  async getReportCard(id) {
+    const { data, error } = await supabase
+      .from('report_cards').select('*').eq('id', id).maybeSingle()
+    if (error) fail('load that report card', error)
+    return (data as ReportCard | null) ?? null
+  },
+
+  async createReportCard(file, term) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    // The path decides who can read it. Everything under the owner's uid, and
+    // the storage policy refuses anything that is not -- so this prefix is not
+    // a convention the app has to remember, it is the control.
+    const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin'
+    const path = `${auth.user.id}/report-cards/${crypto.randomUUID()}.${ext}`
+
+    const up = await supabase.storage.from('attachments').upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    })
+    if (up.error) fail('upload that report card', up.error as { message: string })
+
+    const { data, error } = await supabase
+      .from('report_cards')
+      .insert({
+        owner_id: auth.user.id,
+        storage_path: path,
+        original_name: file.name,
+        mime_type: file.type || null,
+        byte_size: file.size,
+        term,
+      })
+      .select('*')
+      .single()
+    if (error) {
+      // The row is what makes the object findable. Without it the upload is an
+      // orphan nobody can list, read or delete, quietly using the free tier.
+      await supabase.storage.from('attachments').remove([path])
+      fail('save that report card', error)
+    }
+    return data as ReportCard
+  },
+
+  async decodeReportCard(id) {
+    // Consent is written before anything leaves, not after it succeeds. A
+    // failed decode still sent the document.
+    const { error: consentError } = await supabase
+      .from('report_cards')
+      .update({ decode_consent_at: new Date().toISOString(), status: 'decoding', error: null })
+      .eq('id', id)
+    if (consentError) fail('start reading that report card', consentError)
+
+    const { error } = await supabase.functions.invoke('calenda-decode', {
+      body: { reportCardId: id },
+    })
+    if (error) {
+      await supabase.from('report_cards')
+        .update({ status: 'failed', error: String(error).slice(0, 500) })
+        .eq('id', id)
+      throw new Error('We could not read that report card. You can still add the marks by hand.')
+    }
+  },
+
+  async listReportCardLines(reportCardId) {
+    const { data, error } = await supabase
+      .from('report_card_lines')
+      .select('*')
+      .eq('report_card_id', reportCardId)
+      // Least certain first. The lines most likely to be wrong are the ones
+      // that most need a person to look, so they are not at the bottom.
+      .order('confidence', { ascending: true, nullsFirst: true })
+    if (error) fail('load what we read', error)
+    return (data ?? []) as ReportCardLine[]
+  },
+
+  async updateReportCardLine(id, patch) {
+    const row: Record<string, unknown> = {}
+    if (patch.decision !== undefined) row.decision = patch.decision
+    if (patch.matchedClassId !== undefined) row.matched_class_id = patch.matchedClassId
+    if (Object.keys(row).length === 0) return
+    const { error } = await supabase.from('report_card_lines').update(row).eq('id', id)
+    if (error) fail('save that decision', error)
+  },
+
+  async applyReportCard(id) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const lines = await this.listReportCardLines(id)
+    let created = 0
+    let skipped = 0
+
+    for (const line of lines) {
+      // Three reasons to pass over a line, and none of them is an error:
+      // it was not accepted, it has already been applied (which is what makes
+      // this safe to run twice), or nobody said which class it belongs to.
+      if (line.decision !== 'accept' || line.grade_id || !line.matched_class_id) {
+        skipped++
+        continue
+      }
+      const { data, error } = await supabase
+        .from('grades')
+        .insert({
+          owner_id: auth.user.id,
+          class_id: line.matched_class_id,
+          title: line.course_name?.trim() || 'Report card',
+          score: line.mark,
+          out_of: line.out_of,
+          letter: line.letter,
+          term: line.term,
+          notes: line.remark,
+          source: 'report_card',
+        })
+        .select('id')
+        .single()
+      if (error) fail('save those marks', error)
+
+      await supabase.from('report_card_lines')
+        .update({ grade_id: data.id }).eq('id', line.id)
+      created++
+    }
+
+    await supabase.from('report_cards')
+      .update({ status: 'applied', applied_at: new Date().toISOString() })
+      .eq('id', id)
+
+    return { created, skipped }
+  },
+
+  async deleteReportCard(id) {
+    const card = await this.getReportCard(id)
+    const { error } = await supabase.from('report_cards').delete().eq('id', id)
+    if (error) fail('delete that report card', error)
+    // After the row, so a failed delete does not leave a row pointing at an
+    // object that is gone. An orphaned object is waste; a row pointing at
+    // nothing is a broken screen.
+    if (card) await supabase.storage.from('attachments').remove([card.storage_path])
+  },
+
+  // -------------------------------------------------------- attachments --
+
+  async listAttachments(classId) {
+    const { data, error } = await supabase
+      .from('files').select('*').eq('class_id', classId)
+      .order('created_at', { ascending: false })
+    if (error) fail('load those attachments', error)
+    return (data ?? []) as Attachment[]
+  },
+
+  async uploadAttachment(classId, file) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+
+    const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin'
+    const path = `${auth.user.id}/notes/${crypto.randomUUID()}.${ext}`
+
+    const up = await supabase.storage.from('attachments').upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    })
+    if (up.error) fail('upload that file', up.error as { message: string })
+
+    const { data, error } = await supabase
+      .from('files')
+      .insert({
+        class_id: classId,
+        owner_id: auth.user.id,
+        storage_path: path,
+        filename: file.name,
+        mime_type: file.type || 'application/octet-stream',
+        size_bytes: file.size,
+      })
+      .select('*')
+      .single()
+    if (error) {
+      await supabase.storage.from('attachments').remove([path])
+      fail('save that file', error)
+    }
+    return data as Attachment
+  },
+
+  async attachmentUrl(id) {
+    const { data: row, error } = await supabase
+      .from('files').select('storage_path').eq('id', id).single()
+    if (error) fail('open that file', error)
+
+    // Signed and short-lived. The bucket is private, so there is no permanent
+    // URL to hand out -- which is the point: a link that keeps working is a
+    // link that keeps working after it has been forwarded.
+    const { data, error: signError } = await supabase.storage
+      .from('attachments')
+      .createSignedUrl(row.storage_path as string, 60 * 5)
+    if (signError) fail('open that file', signError as { message: string })
+    return data.signedUrl
+  },
+
+  async deleteAttachment(id) {
+    const { data: row } = await supabase
+      .from('files').select('storage_path').eq('id', id).maybeSingle()
+    const { error } = await supabase.from('files').delete().eq('id', id)
+    if (error) fail('delete that file', error)
+    if (row) await supabase.storage.from('attachments').remove([row.storage_path as string])
+  },
+
+  // --------------------------------------------------------------- chat --
+
+  async listChatThreads() {
+    const { data, error } = await supabase
+      .from('chat_threads').select('*').order('updated_at', { ascending: false })
+    if (error) fail('load your chats', error)
+    return (data ?? []) as ChatThread[]
+  },
+
+  async createChatThread(title) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { data, error } = await supabase
+      .from('chat_threads')
+      .insert({ owner_id: auth.user.id, title: title.slice(0, 80) || 'New chat' })
+      .select('*')
+      .single()
+    if (error) fail('start that chat', error)
+    return data as ChatThread
+  },
+
+  async deleteChatThread(id) {
+    const { error } = await supabase.from('chat_threads').delete().eq('id', id)
+    if (error) fail('delete that chat', error)
+  },
+
+  async listChatMessages(threadId) {
+    const { data, error } = await supabase
+      .from('chat_messages').select('*').eq('thread_id', threadId)
+      .order('created_at')
+    if (error) fail('load that chat', error)
+    return (data ?? []) as ChatMessage[]
+  },
+
+  async sendChatMessage(threadId, text) {
+    // The function does the asking. It holds the model key, forwards this
+    // user's token so every read is still behind RLS, and claims a message
+    // against the daily quota before it spends anything.
+    const { data, error } = await supabase.functions.invoke('calenda-chat', {
+      body: { threadId, message: text },
+    })
+    if (error) {
+      throw new Error(
+        'The assistant is not answering right now. Your message was not sent.',
+      )
+    }
+    return (data as { reply: ChatMessage }).reply
+  },
+
+  async chatQuotaRemaining() {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data, error } = await supabase
+      .from('chat_usage').select('used').eq('day', today).maybeSingle()
+    // A counter that cannot be read is not worth an error on the page it sits
+    // in the corner of.
+    if (error) return null
+    // Kept in step with claim_chat_message() by hand, because the function
+    // deliberately takes no arguments -- see 20260909000500.
+    return { used: (data?.used as number | undefined) ?? 0, limit: 40 }
+  },
+}
+
+/** Shared between create and update so the two cannot drift apart. */
+function meetingRow(input: NewMeetingInput) {
+  return {
+    // Exactly one of these, and null for the other. Sending both would trip
+    // the check constraint; sending neither would too.
+    day_of_week: input.dayOfWeek ?? null,
+    cycle_day: input.cycleDay ?? null,
+    starts_at: input.startsAt,
+    ends_at: input.endsAt,
+    room: input.room?.trim() || null,
+    label: input.label?.trim() || null,
+  }
+}
+
+function gradeRow(input: NewGradeInput) {
+  return {
+    title: input.title.trim(),
+    score: input.score ?? null,
+    out_of: input.outOf ?? null,
+    letter: input.letter?.trim() || null,
+    weight: input.weight ?? 1,
+    category: input.category?.trim() || null,
+    term: input.term?.trim() || null,
+    recorded_on: input.recordedOn || null,
+    notes: input.notes?.trim() || null,
+    assignment_id: input.assignmentId ?? null,
+  }
 }
 
 /** Shared between create and update so the two cannot drift apart. */
