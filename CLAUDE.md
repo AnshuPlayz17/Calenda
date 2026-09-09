@@ -152,9 +152,11 @@ words.** It said "Create your account / It takes about a minute." on all four
 screens, which is the largest text on the page carrying no information after
 the first — and the step marks under it were three unlabelled bars, in the same
 grey as the subtitle, which read as decoration. The words go *beside* the bars,
-on a row that already exists, so they cost no height; every subtitle is checked
-to be one line at the column's 380px, because a wrap costs 22px on the step that
-has the least to give. `AuthLayout` takes a `stepKey` and re-keys the column so
+on a row that already exists — but only `leading-none` makes that free: a 12px
+string inheriting the body's 1.6 turns a 4px row into a 19px one, which put the
+Back link four pixels below the fold at 375x667 on two of the steps. Every
+subtitle is likewise checked to be one line at the column's 380px, because a
+wrap costs 22px on the step that has the least to give. `AuthLayout` takes a `stepKey` and re-keys the column so
 each step arrives rather than being swapped in between two frames — no
 `AnimatePresence`, because `mode="wait"` holds the next step off the screen for
 the length of the old one's exit, which on a form is a press that appears to do
