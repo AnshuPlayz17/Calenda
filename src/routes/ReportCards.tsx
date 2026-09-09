@@ -277,7 +277,7 @@ function ReviewDialog({
               loading={apply.isPending}
               onClick={async () => setResult(await apply.mutateAsync(cardId))}
             >
-              Save {acceptable > 0 ? acceptable : ''} to my marks
+              {acceptable > 0 ? `Save ${acceptable} to my marks` : 'Save to my marks'}
             </Button>
           </div>
         </div>
