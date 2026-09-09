@@ -279,9 +279,13 @@ Deno.serve(async (req) => {
 
   if (saveError) return json({ error: 'could not save the reply' }, 500)
 
+  // Owner-scoped as well as id-scoped. The ownership check above already makes
+  // this unreachable for a thread that is not the caller's -- but this runs as
+  // the service role, and a write that depends on a check thirty lines up for
+  // its safety is one edit away from not having one.
   await admin.from('chat_threads')
     .update({ updated_at: new Date().toISOString() })
-    .eq('id', threadId)
+    .eq('id', threadId).eq('owner_id', user.id)
 
   return json({ reply: saved })
 })

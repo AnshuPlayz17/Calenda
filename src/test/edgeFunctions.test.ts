@@ -124,6 +124,40 @@ describe('the Edge Functions', () => {
     expect(ownershipAt).toBeLessThan(downloadAt)
   })
 
+  it('every service-role write names an owner, not just a row id', () => {
+    // The service role does not consult RLS, so a write keyed only on an id
+    // the caller supplied is a cross-tenant write waiting for a reordering.
+    // calenda-decode's `fail` helper was exactly that: reachable from the
+    // missing-key branch, which sat above the ownership check, so anyone
+    // holding a uuid could stamp "failed" onto a stranger's report card.
+    //
+    // Checking the shape rather than the ordering is deliberate. Ordering is
+    // what keeps being got wrong; a write that carries its own owner is safe
+    // wherever somebody later moves it.
+    let inspected = 0
+    for (const name of ['calenda-decode', 'calenda-chat']) {
+      const src = readFileSync(join(ROOT, name, 'index.ts'), 'utf8')
+
+      // Each `admin` chain, up to the semicolon that ends it.
+      const chains = src.split(/\badmin\b/).slice(1)
+      for (const rest of chains) {
+        const chain = rest.split(/\n\n|(?<=\))\n(?=\s*(?:const|let|if|return|await|\/))/)[0] ?? ''
+        const writes = /\.(update|delete|insert)\(/.test(chain)
+        if (!writes) continue
+        inspected++
+        // An insert names the owner in the row it writes; an update or a
+        // delete has to name it in the filter.
+        expect(chain, `${name}: a service-role write with no owner in it:\n${chain}`)
+          .toMatch(/owner_id/)
+      }
+    }
+
+    // Seven of them today. A chunker that quietly stops matching turns the
+    // loop above into a no-op that reports success -- which is how a guard
+    // ends up passing for a year while guarding nothing.
+    expect(inspected).toBeGreaterThanOrEqual(7)
+  })
+
   it('no function hardcodes a credential', () => {
     for (const file of files) {
       const src = readFileSync(file, 'utf8')

@@ -97,18 +97,33 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
+  /**
+   * Marks the card as failed and says why, so the screen shows a reason rather
+   * than a row stuck on "reading" forever.
+   *
+   * It is scoped by owner as well as by id. The update runs as the service
+   * role, which does not consult report_cards' policies, so `.eq('id', id)`
+   * alone means any caller who knows a uuid can stamp "failed" and an error
+   * message onto a stranger's card. Every guard below happens to run after
+   * ownership is established -- but a helper whose safety depends on where it
+   * is called from is a trap for the next person to add a check, and one such
+   * call (the missing-key branch) was above the check until 2026-09-09.
+   */
   const fail = async (message: string, status = 400) => {
     await admin.from('report_cards')
-      .update({ status: 'failed', error: message }).eq('id', id)
+      .update({ status: 'failed', error: message })
+      .eq('id', id).eq('owner_id', user.id)
     return json({ error: message }, status)
   }
 
-  if (!KEY) return await fail('The assistant has no model key set, so nothing can be read yet.', 503)
-
   // RLS decides this, not us. A row the caller cannot see comes back null.
+  // Nothing above this line writes anything, and nothing below it may be
+  // reached without it.
   const { data: card } = await asUser
     .from('report_cards').select('*').eq('id', id).maybeSingle()
   if (!card) return json({ error: 'not found' }, 404)
+
+  if (!KEY) return await fail('The assistant has no model key set, so nothing can be read yet.', 503)
 
   const mime = String(card.mime_type ?? '')
   const isPdf = mime === 'application/pdf'
@@ -166,7 +181,11 @@ Deno.serve(async (req) => {
     return null
   }
 
-  await admin.from('report_card_lines').delete().eq('report_card_id', id)
+  // Owner-scoped for the same reason `fail` is: these run as the service role,
+  // and a delete keyed only on an id it was handed is one reordering away from
+  // being reachable before ownership is known.
+  await admin.from('report_card_lines')
+    .delete().eq('report_card_id', id).eq('owner_id', user.id)
   const { error: insertError } = await admin.from('report_card_lines').insert(
     rows.map((r) => ({
       report_card_id: id,
@@ -191,7 +210,7 @@ Deno.serve(async (req) => {
     status: 'decoded',
     decoded_at: new Date().toISOString(),
     error: null,
-  }).eq('id', id)
+  }).eq('id', id).eq('owner_id', user.id)
 
   return json({ lines: rows.length })
 })
