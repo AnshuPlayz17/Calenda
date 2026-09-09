@@ -1,9 +1,12 @@
+import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
+import { PlayCircle } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { GoogleImport } from '@/features/google/GoogleImport'
 import { ParentsSection } from '@/features/parents/ParentsSection'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
+import { CycleCard } from '@/features/timetable/CycleCard'
 import { AccountCard } from '@/features/settings/AccountCard'
 import { agendaLabel } from '@/lib/datetime'
 
@@ -91,6 +94,34 @@ export function SettingsPage() {
       </motion.section>
 
       <motion.section {...rise(5)}>
+        <CycleCard />
+      </motion.section>
+
+      {/* The walkthrough's own closing screen says "you can come back to this
+          any time from Settings", and for its whole life there was nothing here
+          to come back from. Copy that promises a thing is worse than no copy:
+          the reader goes looking, does not find it, and stops believing the
+          rest. */}
+      <motion.section {...rise(6)}>
+        <Card>
+          <CardHeader title="Walkthrough" />
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-5">
+            <p className="max-w-[46ch] text-[13.5px] text-text-muted">
+              The tour of what Calenda does. Watching it again changes nothing —
+              it reads your own classes and dates, and touches none of them.
+            </p>
+            <Link
+              to="/welcome"
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border px-3.5 text-[13px] font-medium text-text no-underline transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+            >
+              <PlayCircle className="h-4 w-4" aria-hidden />
+              Watch it again
+            </Link>
+          </div>
+        </Card>
+      </motion.section>
+
+      <motion.section {...rise(7)}>
         <AccountCard />
       </motion.section>
     </div>

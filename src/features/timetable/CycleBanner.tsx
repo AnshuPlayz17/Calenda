@@ -29,8 +29,11 @@ export function CycleBanner({ todayCycle }: { todayCycle: number | null }) {
 
   const length = profile?.timetable_cycle_length ?? null
   // Nothing to show for a school that runs an ordinary week, which is most of
-  // them. Setting a cycle up lives in Settings, not in a banner on a page
-  // somebody came to read.
+  // them. Setting a cycle up lives in Settings (CycleCard), not in a banner on
+  // a page somebody came to read -- which was true of where it BELONGS long
+  // before it was true of where it was: this comment named a card that did not
+  // exist until 2026-09-09, and until then no account could have a cycle at
+  // all.
   if (!length) return null
 
   async function correct() {
