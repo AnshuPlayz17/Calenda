@@ -27,6 +27,23 @@
  * The workflow now fails loudly instead of skipping, and the sender below
  * moved off `onboarding@resend.dev` -- which only ever delivered to the
  * project owner, so even a working dispatcher would have reached nobody else.
+ *
+ * ANYONE CAN INVOKE THIS, AND THAT IS DELIBERATE
+ *
+ * It is called with the anon key, which is public by design, so a stranger can
+ * POST to it. Audited on 2026-09-09 and left alone, because the worst they can
+ * do is ask it to do its job early: it sends only what claim_due_reminders()
+ * says is already due, that claim marks rows as it takes them under `for
+ * update skip locked`, and Deno.serve here takes no request argument at all --
+ * there is nothing in the call to point it at somebody. So a thousand
+ * invocations send the same reminders once and no reminder arrives early.
+ *
+ * A shared-secret header was considered and rejected. It would need a new
+ * secret set in two places before reminders worked at all, which is another
+ * way for a feature that has never delivered anything to keep not delivering
+ * anything -- and it would buy protection against wasted compute rather than
+ * against a wrong send. If the free tier's invocation budget ever becomes the
+ * binding constraint, that is the moment to add it, not before.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'

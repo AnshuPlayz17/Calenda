@@ -48,6 +48,13 @@ and the thing it was supposed to start never starts. Two audit runs were
 reported as "still running" for twenty minutes while nothing was running at
 all. Wait on the output file, or use a pattern that cannot match the waiter.
 
+It is worse than it looks, because it can also be *wrong the other way*.
+Written as a heredoc it is one bug; written inline the newlines can collapse
+and the whole chain becomes one mangled line that never reaches the command it
+was supposed to run. **Put a multi-step wait in a script file and run the
+file** — the newlines survive, and the pattern it greps for lives somewhere
+that is not the waiter's own command line.
+
 **A probe that reports everything as broken is usually the probe.** Three
 separate tools in one night measured something easy instead of something true:
 the sidebar check compared rects against a box and called every item in a
@@ -677,6 +684,43 @@ header, and at least five reads must still go through that client, so switching
 them to the service role one at a time fails too. Two orderings are asserted
 for the same reason: quota before the model is asked, ownership before the file
 is downloaded. Reversing either is invisible when wrong.
+
+**Two of those guards were themselves broken, and the review that found it is
+worth repeating.** `src.indexOf('claim_chat_message')` matched the file's own
+header comment, which explains the ordering in prose — so the assertion
+compared the comment's position against the call and would have passed with the
+quota claimed last. The replacement guard acquired the same defect twice while
+being written (`SERVICE_KEY` matches its own declaration at the top of the
+file). **Anchor an ordering assertion on the call, never on a name that also
+appears in the prose above it** — and assert that what you searched for was
+found, because `indexOf` returning -1 is smaller than everything.
+
+**A service-role write must name its owner, not just the row id.** The service
+role does not consult RLS, so `.eq('id', id)` on an id the caller handed you is
+a cross-tenant write waiting for somebody to move a check. Three were found on
+2026-09-09: `calenda-chat` wrote messages into any `threadId` it was given and
+bumped that thread's `updated_at`, and `calenda-decode`'s `fail` helper — which
+stamps `status='failed'` onto a card — was reachable from the missing-key
+branch, which sat *above* the ownership check. None of them leaked anything;
+every read in both functions is JWT-scoped, so these were integrity holes
+rather than disclosures.
+
+Both fixes shipped: the ownership check moved first (and, in `calenda-chat`,
+above the quota claim so an unanswerable request costs nothing), and every
+service-role write is keyed on `owner_id` as well. The guard checks the
+**shape** rather than the ordering on purpose — a write carrying its own owner
+stays safe wherever somebody later moves it, and ordering is the thing that
+keeps being got wrong. It counts what it inspected, so a chunking regex that
+stops matching fails loudly instead of passing over an empty list.
+
+`notify-dispatch` is the deliberate exception and stays as it is. It is invoked
+with the public anon key, so anyone can POST to it — audited and left alone,
+because `Deno.serve` there takes no request argument at all and it sends only
+what `claim_due_reminders()` says is already due, claimed under `for update
+skip locked`. A thousand invocations send the same reminders once. A
+shared-secret header would need a new secret set in two places before reminders
+worked at all, and would buy protection against wasted compute rather than
+against a wrong send.
 
 ## The landing page
 
