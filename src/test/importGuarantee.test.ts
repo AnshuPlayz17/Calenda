@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import { analyseImport, buildWrites, summarise } from '@/features/import/analyse'
 import type { ImportCandidate, Resolution } from '@/features/import/analyse'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
+import { schoolEvents2026_27 } from './fixtures/realCalendar2026_27'
 import type { EventWithCategory } from '@/lib/types'
 
 const CANDIDATES: ImportCandidate[] = schoolEvents2026_27.map((e) => ({

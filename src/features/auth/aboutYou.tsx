@@ -1,5 +1,7 @@
 import { GraduationCap, Users } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
+import { SCHOOLS } from '@/data/schools'
+import { OTHER_SCHOOL } from './schoolChoice'
 
 /**
  * The questions Calenda asks about a person, wherever it asks them.
@@ -134,58 +136,137 @@ export function RelationPicker({ value, onChange }: {
   )
 }
 
+/**
+ * Which school, from the list the landing page names.
+ *
+ * A list rather than a text box was asked for, and it carries a claim the
+ * database cannot yet back: there is no school entity, so a `community` event
+ * is still visible to every account and picking a name changes nothing about
+ * what you see. The hint says so rather than letting the control imply
+ * otherwise.
+ *
+ * The last option is not decoration. A required list of fifteen schools with no
+ * way out is not a validation, it is a door shut on everybody else -- so
+ * choosing it reveals a box and that box is required in its place.
+ */
+export function SchoolPicker({ value, other, onChange, onOther }: {
+  value: string
+  other: string
+  onChange: (v: string) => void
+  onOther: (v: string) => void
+}) {
+  return (
+    <div>
+      <label htmlFor="school" className="text-[13px] font-medium text-text">School</label>
+      <select
+        id="school"
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 h-11 w-full rounded-lg border border-border bg-surface px-3 text-[14px] text-text transition-colors duration-150 hover:border-border-strong focus:border-brand focus:outline-none"
+      >
+        <option value="" disabled>Choose your school</option>
+        {SCHOOLS.map((s) => (
+          <option key={s.name} value={s.name}>{s.name}</option>
+        ))}
+        <option value={OTHER_SCHOOL}>Another school</option>
+      </select>
+
+      {value === OTHER_SCHOOL && (
+        <div className="mt-3">
+          <Input
+            label="Which school?"
+            required
+            value={other}
+            onChange={(e) => onOther(e.target.value)}
+          />
+        </div>
+      )}
+
+      <p className="mt-1.5 text-[12.5px] text-text-subtle">
+        Recorded for later — it does not change what you see yet.
+      </p>
+    </div>
+  )
+}
+
 /** School and grade. Rendered only for a student; a parent has neither. */
-export function StudentFields({ school, grade, onSchool, onGrade }: {
+export function StudentFields({ school, schoolOther, grade, onSchool, onSchoolOther, onGrade }: {
   school: string
+  schoolOther: string
   grade: string
   onSchool: (v: string) => void
+  onSchoolOther: (v: string) => void
   onGrade: (v: string) => void
 }) {
   return (
     <>
-      <Input
-        label="Your school"
+      <SchoolPicker
         value={school}
-        onChange={(e) => onSchool(e.target.value)}
-        // The honest version. Calenda has no school entity yet -- a community
-        // event is visible to every account -- so a field implying it filed you
-        // under a school would be claiming something untrue. A text box rather
-        // than a list for the same reason: a picker reads as "these are
-        // supported", and those names belong on the landing page.
-        hint="Optional. Recorded for later — it does not change what you see yet."
+        other={schoolOther}
+        onChange={onSchool}
+        onOther={onSchoolOther}
       />
       <Input
         label="Grade"
+        required
         value={grade}
         onChange={(e) => onGrade(e.target.value)}
-        hint="Optional. Only you and a parent you link with can see it."
+        hint="Only you and a parent you link with can see it."
       />
     </>
   )
 }
 
-/** The relation, and the code that links a parent to their student. */
-export function ParentFields({ relation, code, onRelation, onCode }: {
+/**
+ * The relation, and the code that links a parent to their student.
+ *
+ * The code is required, with one way past it, and that is not a loophole. It
+ * comes from the student's own settings, so a parent who signs up first cannot
+ * produce one however willing they are -- requiring it outright would not
+ * validate anything, it would deadlock every parent whose child has not made an
+ * account yet. Saying so explicitly is a real answer; leaving the field blank
+ * is not.
+ */
+export function ParentFields({ relation, code, noCode, onRelation, onCode, onNoCode }: {
   relation: Relation
   code: string
+  noCode: boolean
   onRelation: (v: Relation) => void
   onCode: (v: string) => void
+  onNoCode: (v: boolean) => void
 }) {
   return (
     <>
       <RelationPicker value={relation} onChange={onRelation} />
+      {!noCode && (
       <Input
         label="Your student's code"
+        required
         value={code}
         // Uppercased as it is typed, because redeem_parent_invite upper()s it
         // anyway and a lowercase code that then works is confusing to have
         // typed. Eight characters with no 0/O/1/I, so it survives being read
         // down a phone.
         onChange={(e) => onCode(e.target.value.toUpperCase())}
-        hint="Optional. They can make one in their settings, and you can add it any time."
+        hint="Eight characters, from their settings."
         autoCapitalize="characters"
         spellCheck={false}
       />
+      )}
+
+      {/* One line, not two. At 375px the longer wording wrapped and pushed the
+          Back link thirteen pixels below the fold. "I'll add it later" was the
+          half that could go: the hint under the field already says so. */}
+      <label className="flex items-center gap-2.5 text-[13px] leading-relaxed text-text-muted">
+        <input
+          type="checkbox"
+          checked={noCode}
+          onChange={(e) => onNoCode(e.target.checked)}
+          className="h-4 w-4 shrink-0 rounded border-border"
+        />
+        I don't have a code yet
+      </label>
     </>
   )
 }
@@ -205,9 +286,10 @@ export function HeardFrom({ value, onChange }: {
   return (
     <Input
       label="How did you hear about Calenda?"
+      required
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      hint="Optional."
+      hint="A sentence is fine."
     />
   )
 }

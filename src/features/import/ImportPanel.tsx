@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAllForYear, useClearAll, useImportEvents } from '@/features/events/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
-import { schoolEvents2026_27 } from '@/data/schoolCalendar'
+import { sampleSchoolYear } from '@/data/sampleSchoolYear'
 import { agendaLabel } from '@/lib/datetime'
 import { spanDays } from '@/lib/events'
 import { analyseImport, buildWrites, summarise } from './analyse'
@@ -14,7 +14,7 @@ import type { AnalysedRow, ImportCandidate, Resolution } from './analyse'
 import { cn } from '@/lib/cn'
 import { dataSource } from '@/data'
 
-const CANDIDATES: ImportCandidate[] = schoolEvents2026_27.map((e) => ({
+const CANDIDATES: ImportCandidate[] = sampleSchoolYear.map((e) => ({
   title: e.title,
   description: e.description,
   startDate: e.startDate,

@@ -21,8 +21,8 @@ export function PreviewBanner() {
     >
       <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span>
-        <strong className="font-semibold">Preview.</strong> Showing the real 2026–27 school
-        calendar as sample data. Changes are not saved — connect Supabase to keep them.
+        <strong className="font-semibold">Preview.</strong> An invented school year, so you
+        can see how it works. Changes are not saved — connect Supabase to keep them.
       </span>
       <button
         onClick={exit}
