@@ -11,6 +11,7 @@ import { MagneticDock } from '@/components/motion/MagneticDock'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
+import { NextUpCard } from '@/features/timetable/NextUpCard'
 import { useEvents } from '@/features/events/queries'
 import { useClasses, useRecentPages, useUpcomingAssignments } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
@@ -93,6 +94,14 @@ export function Dashboard() {
           {isLoading ? 'Checking your calendar…' : summarise(today, todayEvents, upcoming)}
         </p>
       </motion.header>
+
+      {/* Above the dock, because "you have Functions in twenty minutes" is the
+          most time-sensitive thing on this page and the only one that is wrong
+          if you read it five minutes late. It renders nothing when there is no
+          timetable, and nothing once the school day is over. */}
+      <motion.div {...rise(1)}>
+        <NextUpCard />
+      </motion.div>
 
       {/* The four things somebody opens the dashboard to do. The dock magnifies
           under a cursor and is a plain row of buttons without one, which is the

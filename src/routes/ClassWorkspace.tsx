@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import {
-  ArrowLeft, Archive, CheckSquare, ClipboardList, FileText, NotebookPen, Plus,
-  Smile, Trash2,
+  ArrowLeft, Archive, CheckSquare, ClipboardList, Clock, FileText, GraduationCap,
+  NotebookPen, Plus, Smile, Trash2,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -13,6 +13,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Dialog } from '@/components/ui/Dialog'
 import { NoteEditor } from '@/features/notebook/NoteEditor'
 import { PageTree } from '@/features/notebook/PageTree'
+import { MeetingsEditor } from '@/features/timetable/MeetingsEditor'
+import { GradesTab } from '@/features/grades/GradesTab'
 import { descendantsOf, positionBetween } from '@/features/notebook/pageTree'
 import { AssignmentDialog } from '@/features/assignments/AssignmentDialog'
 import {
@@ -24,7 +26,7 @@ import type { Assignment, NotebookPage } from '@/lib/types'
 import { ShareToggle } from '@/features/parents/ShareToggle'
 import { cn } from '@/lib/cn'
 
-type Tab = 'notes' | 'assignments' | 'tasks'
+type Tab = 'notes' | 'assignments' | 'tasks' | 'times' | 'marks'
 
 export function ClassWorkspace() {
   const { classId } = useParams<{ classId: string }>()
@@ -33,7 +35,9 @@ export function ClassWorkspace() {
   // land where you actually were rather than resetting to notes.
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab')
-  const tab: Tab = raw === 'assignments' || raw === 'tasks' ? raw : 'notes'
+  const tab: Tab = raw === 'assignments' || raw === 'tasks' || raw === 'times' || raw === 'marks'
+    ? raw
+    : 'notes'
   const setTab = (next: Tab) => {
     setParams((prev) => {
       const copy = new URLSearchParams(prev)
@@ -63,6 +67,8 @@ export function ClassWorkspace() {
     { id: 'notes', label: 'Notes', Icon: NotebookPen },
     { id: 'assignments', label: 'Assignments', Icon: ClipboardList },
     { id: 'tasks', label: 'Tasks', Icon: CheckSquare },
+    { id: 'marks', label: 'Marks', Icon: GraduationCap },
+    { id: 'times', label: 'Times', Icon: Clock },
   ]
 
   return (
@@ -126,6 +132,8 @@ export function ClassWorkspace() {
       {tab === 'notes' && <NotesTab classId={klass.id} />}
       {tab === 'assignments' && <AssignmentsTab classId={klass.id} />}
       {tab === 'tasks' && <TasksTab classId={klass.id} />}
+      {tab === 'marks' && <GradesTab classId={klass.id} />}
+      {tab === 'times' && <MeetingsEditor classId={klass.id} />}
     </div>
   )
 }

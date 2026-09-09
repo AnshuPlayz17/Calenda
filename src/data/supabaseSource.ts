@@ -418,6 +418,7 @@ export const supabaseSource: DataSource = {
       class: 'classes',
       notebook_page: 'notebook_pages',
       assignment: 'assignments',
+      grade: 'grades',
     }[kind]
 
     const { error } = await supabase

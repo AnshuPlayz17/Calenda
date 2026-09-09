@@ -44,6 +44,7 @@ const SettingsPage = lazy(() => import('@/routes/Settings').then((m) => ({ defau
 const SuggestionsPage = lazy(() => import('@/routes/Suggestions').then((m) => ({ default: m.SuggestionsPage })))
 const AdminPage = lazy(() => import('@/routes/Admin').then((m) => ({ default: m.AdminPage })))
 const CalendarPage = lazy(() => import('@/routes/Calendar').then((m) => ({ default: m.CalendarPage })))
+const TimetablePage = lazy(() => import('@/routes/Timetable').then((m) => ({ default: m.Timetable })))
 import { SchoolYearProvider } from '@/features/schoolYear/SchoolYearProvider'
 
 const queryClient = new QueryClient({
@@ -146,6 +147,7 @@ export function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="calendar" element={<CalendarPage />} />
                 <Route path="classes" element={<ClassesPage />} />
+                <Route path="timetable" element={<TimetablePage />} />
                 <Route path="classes/:classId" element={<ClassWorkspace />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="suggestions" element={<SuggestionsPage />} />

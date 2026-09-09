@@ -194,7 +194,18 @@ export type ParentLink = {
 }
 
 /** Anything that can carry a shared_with_parents flag. */
-export type Shareable = 'event' | 'class' | 'notebook_page' | 'assignment'
+/**
+ * The things that carry a `shared_with_parents` column.
+ *
+ * NOT the database's `shareable` enum, despite the name, and the difference
+ * matters. That enum is for the `shares` table -- per-person share links --
+ * and adding a value to it is a migration with a documented trap attached.
+ * This union only ever picks a table to flip a boolean on, so 'grade' can be
+ * here while `shareable` deliberately has no 'grade' in it: a mark is not a
+ * document you hand to a named person, it is either visible to a linked parent
+ * or it is not.
+ */
+export type Shareable = 'event' | 'class' | 'notebook_page' | 'assignment' | 'grade'
 
 // --------------------------------------------------------- notifications ----
 

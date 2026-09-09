@@ -582,6 +582,7 @@ export const previewSource: DataSource = {
       kind === 'event' ? store.find((e) => e.id === id)
       : kind === 'class' ? classes.find((c) => c.id === id)
       : kind === 'notebook_page' ? pages.find((p) => p.id === id)
+      : kind === 'grade' ? grades.find((g) => g.id === id)
       : assignments.find((a) => a.id === id)
     if (target) target.shared_with_parents = shared
   },

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
-  CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
+  CalendarClock, CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
   Settings, ShieldCheck, Menu, X, LogOut, Search, Info, UserRound,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn'
 const nav = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard, end: true },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
+  { to: '/timetable', label: 'Timetable', Icon: CalendarClock },
   { to: '/classes', label: 'Classes', Icon: GraduationCap },
   { to: '/notifications', label: 'Notifications', Icon: Bell },
   { to: '/suggestions', label: 'Suggestions', Icon: Lightbulb },

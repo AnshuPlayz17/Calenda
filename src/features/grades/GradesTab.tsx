@@ -1,0 +1,219 @@
+import { useMemo, useState } from 'react'
+import { GraduationCap, Plus, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ErrorState } from '@/components/ui/ErrorState'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { ShareToggle } from '@/features/parents/ShareToggle'
+import {
+  useCreateGrade, useDeleteGrade, useGrades,
+} from '@/features/grades/queries'
+import { averageNote, averageOf, percentOf, scoreLabel } from './average'
+import { cn } from '@/lib/cn'
+
+/**
+ * Marks for one class.
+ *
+ * Every row starts private and is shared one at a time. That is not a setting
+ * tucked away somewhere -- it is a toggle on each row, defaulting off, because
+ * a student whose parent is linked should never discover that adding a mark
+ * published it.
+ */
+export function GradesTab({ classId }: { classId: string }) {
+  const { data: grades = [], isLoading, isError, refetch, isFetching } = useGrades(classId)
+  const create = useCreateGrade(classId)
+  const remove = useDeleteGrade()
+
+  const [title, setTitle] = useState('')
+  const [score, setScore] = useState('')
+  const [outOf, setOutOf] = useState('')
+  const [weight, setWeight] = useState('1')
+  const [category, setCategory] = useState('')
+  const [when, setWhen] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const average = useMemo(() => averageOf(grades), [grades])
+  const note = averageNote(average)
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) return
+    await create.mutateAsync({
+      title,
+      // Empty is null, not zero. A test with no mark yet is the most common
+      // row in a gradebook, and filing it as zero would be a lie the average
+      // then repeats.
+      score: score.trim() === '' ? null : Number(score),
+      outOf: outOf.trim() === '' ? null : Number(outOf),
+      weight: weight.trim() === '' ? 1 : Number(weight),
+      category: category || null,
+      recordedOn: when || null,
+    })
+    setTitle('')
+    setScore('')
+    setOutOf('')
+    setCategory('')
+    setWhen('')
+    setAdding(false)
+  }
+
+  if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />
+  if (isError) {
+    return <ErrorState what="your marks" retrying={isFetching} onRetry={() => void refetch()} />
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          {average.percent !== null ? (
+            <>
+              <p className="font-display text-[28px] font-medium leading-none tracking-tight text-text">
+                {average.percent}%
+              </p>
+              {/* The number and how it was reached, together. An average
+                  without its working is a claim; with it, it is checkable --
+                  which is this whole app's argument. */}
+              {note && <p className="mt-1.5 text-[12.5px] text-text-muted">{note}</p>}
+            </>
+          ) : (
+            <p className="text-[13.5px] text-text-muted">
+              Nothing marked yet, so there is no average to show.
+            </p>
+          )}
+        </div>
+        {!adding && (
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus className="h-4 w-4" aria-hidden /> Add a mark
+          </Button>
+        )}
+      </div>
+
+      {adding && (
+        <Card className="p-4">
+          <form onSubmit={add} className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Input
+                label="What for"
+                required
+                autoFocus
+                placeholder="Unit 3 test"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <Input
+                label="Category"
+                placeholder="Test, Quiz, Lab…"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+              <Input
+                label="Date"
+                type="date"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+              />
+              <Input
+                label="Score"
+                type="number"
+                step="any"
+                placeholder="Leave empty if not marked"
+                value={score}
+                onChange={(e) => setScore(e.target.value)}
+              />
+              <Input
+                label="Out of"
+                type="number"
+                step="any"
+                min="0.001"
+                value={outOf}
+                onChange={(e) => setOutOf(e.target.value)}
+              />
+              <Input
+                label="Weight"
+                type="number"
+                step="any"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                hint="2 counts double. 0 records it without counting."
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" size="sm" loading={create.isPending}>Save</Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setAdding(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {grades.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={GraduationCap}
+            title="No marks yet"
+            description="Add one and Calenda works out the weighted average. Marks are private until you share them, one at a time."
+          />
+        </Card>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {grades.map((g) => {
+            const pct = percentOf(g)
+            return (
+              <li key={g.id}>
+                <Card className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-medium text-text">
+                      {g.title}
+                    </span>
+                    <span className="block truncate text-[12.5px] text-text-muted">
+                      {[
+                        g.category,
+                        g.recorded_on,
+                        g.weight !== 1 ? `weight ${g.weight}` : null,
+                        // Said out loud. A mark a model read off a photograph
+                        // is not the same kind of fact as one you typed.
+                        g.source === 'report_card' ? 'from a report card' : null,
+                      ].filter(Boolean).join(' · ') || 'No date'}
+                    </span>
+                  </span>
+
+                  <span className="shrink-0 text-right">
+                    <span className={cn(
+                      'block tabular-nums text-[14px]',
+                      g.score === null ? 'text-text-subtle' : 'font-medium text-text',
+                    )}>
+                      {scoreLabel(g)}
+                    </span>
+                    {pct !== null && (
+                      <span className="block text-[12px] tabular-nums text-text-muted">{pct}%</span>
+                    )}
+                  </span>
+
+                  <ShareToggle
+                    kind="grade"
+                    id={g.id}
+                    shared={g.shared_with_parents}
+                    label={`The mark for “${g.title}”`}
+                  />
+
+                  <button
+                    onClick={() => void remove.mutateAsync(g.id)}
+                    aria-label={`Delete ${g.title}`}
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-danger"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </Card>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
