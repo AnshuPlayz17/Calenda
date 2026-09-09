@@ -1,7 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 
+/**
+ * Everything below patches jsdom, so it has to stand aside in a test file that
+ * asked for the node environment instead -- `edgeFunctions.test.ts` does,
+ * because esbuild refuses to start under jsdom. Without this guard that file
+ * fails at setup with "window is not defined", which points at the wrong thing
+ * entirely.
+ */
+const hasDom = typeof window !== 'undefined'
+
 // jsdom has no matchMedia, which the theme provider reads on mount.
-if (!window.matchMedia) {
+if (hasDom && !window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,
