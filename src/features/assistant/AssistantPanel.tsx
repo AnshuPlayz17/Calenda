@@ -39,10 +39,13 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
   const bottomRef = useRef<HTMLDivElement>(null)
   const returnFocusTo = useRef<HTMLElement | null>(null)
 
-  const { data: threads = [] } = useChatThreads()
+  // Both gated on `open`. This component is mounted on every screen so it can
+  // animate in, and un-gated these fired two requests per page load for a panel
+  // nobody had opened.
+  const { data: threads = [] } = useChatThreads(open)
   const createThread = useCreateThread()
   const send = useSendMessage()
-  const { data: quota } = useChatQuota()
+  const { data: quota } = useChatQuota(open)
 
   const [threadId, setThreadId] = useState<string | null>(null)
   const { data: messages = [] } = useChatMessages(threadId)

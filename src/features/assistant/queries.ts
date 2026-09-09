@@ -5,10 +5,19 @@ const THREADS = 'chat-threads'
 const MESSAGES = 'chat-messages'
 const QUOTA = 'chat-quota'
 
-export function useChatThreads() {
+/**
+ * `enabled` is not an optimisation, it is a bug fix.
+ *
+ * AssistantPanel is mounted by AppShell on every screen so it can animate in,
+ * which means its hooks run on every page load whether or not anybody opened
+ * it -- two Supabase requests per navigation, for a panel nobody looked at, for
+ * every user. Gated on the panel actually being open.
+ */
+export function useChatThreads(enabled = true) {
   return useQuery({
     queryKey: [THREADS],
     queryFn: () => dataSource.listChatThreads(),
+    enabled,
   })
 }
 
@@ -20,10 +29,11 @@ export function useChatMessages(threadId: string | null) {
   })
 }
 
-export function useChatQuota() {
+export function useChatQuota(enabled = true) {
   return useQuery({
     queryKey: [QUOTA],
     queryFn: () => dataSource.chatQuotaRemaining(),
+    enabled,
     // The counter is a courtesy, not a control -- the database decides. A
     // stale-by-a-minute number is fine and refetching it constantly is not.
     staleTime: 60_000,
