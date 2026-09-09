@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Clock, Plus, Trash2 } from 'lucide-react'
+import { Clock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -92,13 +93,13 @@ export function MeetingsEditor({ classId }: { classId: string }) {
                     {[m.label, m.room].filter(Boolean).join(' · ')}
                   </span>
                 )}
-                <button
-                  onClick={() => void remove.mutateAsync(m.id)}
-                  aria-label={`Remove ${m.day_of_week !== null ? DAY_NAMES[m.day_of_week] : `Day ${m.cycle_day}`} ${clockLabel(m.starts_at)}`}
-                  className="ml-auto grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-danger"
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                </button>
+                <ConfirmDelete
+                  what={`the ${m.day_of_week !== null ? DAY_NAMES[m.day_of_week] : `Day ${m.cycle_day}`} slot at ${clockLabel(m.starts_at)}`}
+                  title="Remove this slot?"
+                  pending={remove.isPending}
+                  onConfirm={() => remove.mutateAsync(m.id)}
+                  className="ml-auto"
+                />
               </Card>
             </li>
           ))}

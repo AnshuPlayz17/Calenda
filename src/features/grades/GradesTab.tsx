@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { GraduationCap, Plus, Trash2 } from 'lucide-react'
+import { GraduationCap, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -201,13 +202,17 @@ export function GradesTab({ classId }: { classId: string }) {
                     label={`The mark for “${g.title}”`}
                   />
 
-                  <button
-                    onClick={() => void remove.mutateAsync(g.id)}
-                    aria-label={`Delete ${g.title}`}
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-danger"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  </button>
+                  <ConfirmDelete
+                    what={`the mark for “${g.title}”`}
+                    title="Delete this mark?"
+                    detail={
+                      g.shared_with_parents
+                        ? 'It is shared with a linked parent, so it disappears from their view too.'
+                        : undefined
+                    }
+                    pending={remove.isPending}
+                    onConfirm={() => remove.mutateAsync(g.id)}
+                  />
                 </Card>
               </li>
             )

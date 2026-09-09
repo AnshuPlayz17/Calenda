@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import {
-  AlertTriangle, Check, FileText, Trash2, Upload, X,
+  AlertTriangle, Check, FileText, Upload, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -134,7 +135,8 @@ export function ReportCards() {
               <CardRow
                 card={card}
                 onOpen={() => setOpenId(card.id)}
-                onDelete={() => void remove.mutateAsync(card.id)}
+                onDelete={() => remove.mutateAsync(card.id)}
+                deleting={remove.isPending}
               />
             </li>
           ))}
@@ -178,11 +180,12 @@ export function ReportCards() {
 }
 
 function CardRow({
-  card, onOpen, onDelete,
+  card, onOpen, onDelete, deleting,
 }: {
   card: ReportCard
   onOpen: () => void
-  onDelete: () => void
+  onDelete: () => Promise<unknown>
+  deleting?: boolean
 }) {
   const label: Record<ReportCard['status'], string> = {
     uploaded: 'Not read yet',
@@ -221,13 +224,19 @@ function CardRow({
       {(card.status === 'decoded' || card.status === 'applied') && (
         <Button size="sm" variant="secondary" onClick={onOpen}>Check it</Button>
       )}
-      <button
-        onClick={onDelete}
-        aria-label={`Delete ${card.original_name ?? 'this report card'}`}
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-danger"
-      >
-        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-      </button>
+      <ConfirmDelete
+        what={`“${card.original_name ?? 'this report card'}”`}
+        title="Delete this report card?"
+        detail={
+          // The document goes with it, and any mark already saved does not.
+          // Both halves are surprising in opposite directions, so both are said.
+          card.status === 'applied'
+            ? 'The uploaded document is deleted too. Marks you already saved stay in your classes.'
+            : 'The uploaded document is deleted too, along with everything read off it.'
+        }
+        pending={deleting}
+        onConfirm={onDelete}
+      />
     </Card>
   )
 }

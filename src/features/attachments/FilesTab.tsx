@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, FileText, ImageIcon, Paperclip, Trash2, Upload } from 'lucide-react'
+import { Download, FileText, ImageIcon, Paperclip, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDelete } from '@/components/ui/ConfirmDelete'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -154,13 +155,13 @@ export function FilesTab({ classId }: { classId: string }) {
                   >
                     <Download className="h-3.5 w-3.5" aria-hidden />
                   </button>
-                  <button
-                    onClick={() => void remove.mutateAsync(f.id)}
-                    aria-label={`Delete ${f.filename}`}
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-danger"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  </button>
+                  <ConfirmDelete
+                    what={`“${f.filename}”`}
+                    title="Delete this file?"
+                    detail="The file itself is removed from storage, not just this link to it."
+                    pending={remove.isPending}
+                    onConfirm={() => remove.mutateAsync(f.id)}
+                  />
                 </Card>
               </li>
             )
