@@ -60,6 +60,12 @@ access as the wrong user and requires it to fail:
 > pages may claim reminders are delivered until one has been.** See the
 > deployment checklist in README/CLAUDE.md; the workflow now fails loudly when
 > unconfigured, precisely so this cannot go quiet again.
+>
+> **The two landing panels were reworded the same day** to describe the
+> schedule rather than the arrival — "Scheduled by you, and never doubled"
+> in place of "Warned early, and only once". Everything they now claim is in
+> the list below and is true whether or not a reminder has ever been sent, so
+> the page does not need editing again once one has.
 - Web push, free: needs only a self-generated VAPID key pair
 - Per-category toggles, multiple offsets per category, quiet hours with per-day
   selection

@@ -110,9 +110,13 @@ workflow) and check that a reminder arrives. Until one has:
 
 > **Nothing on the marketing pages may claim reminders are delivered.**
 
-`docs/FACTS.md` has been corrected to say delivery is unverified. The landing
-page's Reminders panel still reads as though they are delivered — that is
-deliberately left for you to decide once you have seen one arrive.
+`docs/FACTS.md` has been corrected to say delivery is unverified, and the two
+landing panels that read as though reminders arrive now describe the *schedule*
+instead — "Scheduled by you, and never doubled", rather than "Warned early".
+Everything they claim (per-category lead times, quiet hours, a duplicate
+refused by a unique constraint) is true today and stays true once delivery is
+on, so nothing there needs changing after you have seen one arrive. If you
+would rather have the old wording back it is one commit.
 
 ---
 
