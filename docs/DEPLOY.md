@@ -72,7 +72,7 @@ by hand under Storage → Policies, which runs as the owning role. The bucket
 insert is unaffected either way.
 
 **Every migration was applied to a real Postgres before being committed**, in
-order, twice, with all 104 SQL assertions passing. CI now does the same on
+order, twice, with all 108 SQL assertions passing. CI now does the same on
 every pull request. What that does *not* cover is your real data — a migration
 can be correct and still meet a row it did not expect.
 
@@ -139,7 +139,7 @@ from the container this was built in.
 | Verified | How |
 |---|---|
 | Every migration, in order, twice | Applied to a real Postgres 16 |
-| 104 SQL assertions | `./scripts/db-test.sh`, now also in CI |
+| 108 SQL assertions | `./scripts/db-test.sh`, now also in CI |
 | Edge Function syntax + security properties | esbuild parse and guards in `npm test` |
 | Every screen, 72 configurations | The browser harness, several clean runs |
 | Keyboard order, 9 screens | 0 problems |

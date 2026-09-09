@@ -511,6 +511,75 @@ begin
   perform expect('stranger CANNOT read another user''s chat usage', seen, 0::bigint);
 end $$;
 
+-- (13b) A conversation is private, and so is every line of it ----------------
+-- chat_usage was covered and the conversation itself was not, which is the
+-- half that contains what was actually said. Worth asserting directly rather
+-- than inferring from chat_messages_all, because that policy has two arms --
+-- owner_id AND a thread the writer owns -- and reading it is not the same as
+-- running it.
+--
+-- It also pins the arm the Edge Function had to be taught: a message may not
+-- be filed into somebody else's thread. calenda-chat bypassed this with the
+-- service role until 2026-09-09 and is now checked separately in
+-- src/test/edgeFunctions.test.ts; this is the rule it was bypassing.
+do $$
+declare seen bigint; ok boolean := false;
+begin
+  insert into chat_threads (id, owner_id, title) values
+    ('00000000-0000-0000-0000-00000000c001',
+     '00000000-0000-0000-0000-0000000000a1', 'Mine');
+  insert into chat_messages (thread_id, owner_id, role, content) values
+    ('00000000-0000-0000-0000-00000000c001',
+     '00000000-0000-0000-0000-0000000000a1', 'user', 'what is due this week');
+
+  select as_user_count('00000000-0000-0000-0000-0000000000a4',
+    'select count(*) from chat_threads where id = ''00000000-0000-0000-0000-00000000c001''')
+    into seen;
+  perform expect('stranger CANNOT see another user''s conversation', seen, 0::bigint);
+
+  select as_user_count('00000000-0000-0000-0000-0000000000a4',
+    'select count(*) from chat_messages where thread_id = ''00000000-0000-0000-0000-00000000c001''')
+    into seen;
+  perform expect('stranger CANNOT read what was said in it', seen, 0::bigint);
+
+  -- The second arm of the policy. Carrying your own owner_id is not enough:
+  -- the thread has to be yours too, or anyone with a uuid can write into a
+  -- stranger's conversation.
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a4', true);
+    set local role authenticated;
+    insert into chat_messages (thread_id, owner_id, role, content) values
+      ('00000000-0000-0000-0000-00000000c001',
+       '00000000-0000-0000-0000-0000000000a4', 'user', 'planted');
+  exception when others then
+    ok := true;
+  end;
+  reset role;
+  perform expect('stranger CANNOT file a message into another user''s thread', ok, true);
+
+  -- The positive control, and it is not optional. Without it the assertion
+  -- above passes on ANY failure -- a foreign key, a typo in a column name, a
+  -- missing table -- and reports a policy that is not being reached as a
+  -- policy that is working. This is the mistake the six original tests made in
+  -- the other direction: they used a privilege as fixture setup and never
+  -- attacked the getting of it.
+  ok := false;
+  begin
+    perform set_config('request.jwt.claim.sub',
+      '00000000-0000-0000-0000-0000000000a1', true);
+    set local role authenticated;
+    insert into chat_messages (thread_id, owner_id, role, content) values
+      ('00000000-0000-0000-0000-00000000c001',
+       '00000000-0000-0000-0000-0000000000a1', 'user', 'and this one lands');
+    ok := true;
+  exception when others then
+    ok := false;
+  end;
+  reset role;
+  perform expect('...while the owner still can, so the refusal is the policy', ok, true);
+end $$;
+
 -- (14) The new profile columns are actually writable --------------------------
 -- The counterpart to test (9), and the reason it exists. `rls.sql` revokes
 -- update on profiles and re-grants a named list; a column missing from that
