@@ -10,8 +10,23 @@
  * both pick up the same row, so a duplicate reminder is impossible even if the
  * schedule fires twice.
  *
- * Deploy:  supabase functions deploy notify-dispatch
- * Secrets: RESEND_API_KEY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+ * Deploy:  supabase functions deploy notify-dispatch  (or merge -- the
+ *          functions.yml workflow does it, so no local CLI is needed)
+ * Secrets: BREVO_API_KEY and MAIL_FROM (preferred), or RESEND_API_KEY
+ *          VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+ *
+ * THIS HAS NEVER ACTUALLY DELIVERED A REMINDER
+ *
+ * Two independent reasons, both found on 2026-09-09. The hourly workflow began
+ * with `if [ -z "$SUPABASE_FUNCTION_URL" ]; then exit 0` and that secret was
+ * never set, so it ran every hour, printed one line and passed. And no Edge
+ * Function had ever been deployed, so there was nothing at the other end to
+ * call. Meanwhile the landing page carries a whole panel about reminders and
+ * FACTS.md called notifications "verified live end-to-end".
+ *
+ * The workflow now fails loudly instead of skipping, and the sender below
+ * moved off `onboarding@resend.dev` -- which only ever delivered to the
+ * project owner, so even a working dispatcher would have reached nobody else.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
@@ -32,6 +47,26 @@ const supabase = createClient(
 )
 
 const RESEND_KEY = Deno.env.get('RESEND_API_KEY')
+const BREVO_KEY = Deno.env.get('BREVO_API_KEY')
+/**
+ * The address reminders come from.
+ *
+ * It has to be a sender Brevo has verified for this account -- the same
+ * subdomain the auth mail already goes through, e.g.
+ * "Calenda <something@NNNNNNN.brevosend.com>". Sending "from" a personal Gmail
+ * through a third party is the alternative and it is worse: it fails DMARC
+ * alignment and gets filtered, because the mail is signed by Brevo while
+ * claiming to be from Google.
+ */
+const MAIL_FROM = Deno.env.get('MAIL_FROM') ?? ''
+/**
+ * MAIL_FROM is required by both branches, so it belongs in the readiness check
+ * rather than only in the sender. Without it here, a project with a Resend key
+ * and no sender address would report email as configured, then fail every
+ * single reminder -- filling the queue with rows that can never succeed, which
+ * is exactly the state the `skip` path below exists to prevent.
+ */
+const EMAIL_READY = Boolean(MAIL_FROM && (BREVO_KEY || RESEND_KEY))
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:noreply@calenda.app'
@@ -55,22 +90,64 @@ async function describe(r: Reminder): Promise<{ title: string; when: string } | 
   return null
 }
 
+/**
+ * Brevo first, Resend only as a fallback.
+ *
+ * Brevo is where this project's mail already goes -- Supabase auth uses it over
+ * custom SMTP from a verified subdomain -- so reminders arriving from the same
+ * place is both one less service and one less way to fail DMARC. Its HTTP API
+ * is used rather than SMTP because an Edge Function has no SMTP client.
+ *
+ * The Resend branch is kept only because it is what exists today and removing
+ * it in the same change that moves the sender would make a failure impossible
+ * to attribute. It no longer uses onboarding@resend.dev.
+ */
 async function sendEmail(to: string, subject: string, body: string) {
+  if (BREVO_KEY && MAIL_FROM) {
+    const { name, email } = parseFrom(MAIL_FROM)
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': BREVO_KEY,
+        'Content-Type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name, email },
+        to: [{ email: to }],
+        subject,
+        textContent: body,
+      }),
+    })
+    if (!res.ok) {
+      throw new Error(`brevo ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    }
+    return
+  }
+
   if (!RESEND_KEY) throw new Error('email not configured')
+  if (!MAIL_FROM) {
+    // Refused rather than falling back to onboarding@resend.dev, which delivers
+    // only to the account owner. A reminder that silently reaches nobody is
+    // worse than one that fails and says why.
+    throw new Error('MAIL_FROM is not set, so mail would only reach the owner')
+  }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${RESEND_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from: 'Calenda <onboarding@resend.dev>',
-      to: [to],
-      subject,
-      text: body,
-    }),
+    body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, text: body }),
   })
   if (!res.ok) throw new Error(`email failed: ${res.status}`)
+}
+
+/** "Calenda <a@b.com>" into its two halves; a bare address works too. */
+function parseFrom(value: string): { name: string; email: string } {
+  const match = value.match(/^\s*(.*?)\s*<([^>]+)>\s*$/)
+  if (match) return { name: match[1] || 'Calenda', email: match[2]! }
+  return { name: 'Calenda', email: value.trim() }
 }
 
 async function sendPush(profileId: string, title: string, body: string, tag: string) {
@@ -131,7 +208,7 @@ Deno.serve(async () => {
       // A channel with no sender behind it is skipped, not failed. Marking it
       // failed would fill the queue with rows that can never succeed and make
       // a missing API key look like a broken reminder.
-      if (r.channel === 'email' && !RESEND_KEY) {
+      if (r.channel === 'email' && !EMAIL_READY) {
         await skip(r.id, 'email sending is not configured')
         skipped++
         continue

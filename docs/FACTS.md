@@ -45,7 +45,21 @@ access as the wrong user and requires it to fail:
   `shared_with_parents`, default false.
 - A parent viewing a shared class still cannot see private notebook pages inside it.
 
-## Notifications (verified live end-to-end this project)
+## Notifications (schema and dispatcher verified; DELIVERY NOT YET VERIFIED)
+
+> **Corrected 2026-09-09.** This section was headed "verified live end-to-end",
+> and that was not true. No Edge Function had ever been deployed, and the
+> hourly workflow that pokes the dispatcher began with a guard on a repository
+> secret that was never set -- so it ran every hour, printed "skipping", and
+> passed. Nothing has ever been delivered to anybody. The sender was also
+> `onboarding@resend.dev`, which reaches only the project owner, so even a
+> working dispatcher would have reached nobody else.
+>
+> Everything below about the *schema* is still true and still checkable. What
+> was not true was the claim that mail had arrived. **Nothing on the marketing
+> pages may claim reminders are delivered until one has been.** See the
+> deployment checklist in README/CLAUDE.md; the workflow now fails loudly when
+> unconfigured, precisely so this cannot go quiet again.
 - Web push, free: needs only a self-generated VAPID key pair
 - Per-category toggles, multiple offsets per category, quiet hours with per-day
   selection
