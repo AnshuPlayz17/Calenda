@@ -635,6 +635,43 @@ caught up" to somebody who had not started and then showed five cards each
 correctly reporting that it was empty. Day one now gets one card and three
 steps, gated on classes *and* events *and* assignments all being empty.
 
+## Leaving, and being installed
+
+**`.ics` export.** Calenda is one student's personal project and it could stop
+being maintained; an app you can only leave by abandoning your data is a trap.
+`src/features/calendar/ics.ts` builds the file in the browser -- no server, no
+request, no quota -- and the button says it exports the events in view rather
+than implying it is everything. Seventeen tests, most of them about failures
+that only appear on somebody else's machine: DTEND on an all-day event is
+**exclusive** (a one-day event ends the following day, and getting it wrong
+makes every exported holiday a day short); CRLF throughout, because Outlook
+rejects bare newlines; an unescaped newline in a description corrupts every
+line after it, not just its own; and line folding counts **UTF-8 bytes**,
+because an emoji is four octets and folding by character length produces lines
+that look legal and are not.
+
+No `VALARM`, deliberately. Calenda's scheduler knows the reader's quiet hours
+and timezone; a second, dumber copy of every reminder in another calendar means
+being woken twice.
+
+**A web manifest.** There has been a service worker since the first commit and
+it only ever handled push -- so the app could wake you up and could not be added
+to a home screen, on the device a school app is actually used on. Relative
+paths throughout (this is served from `/Calenda/`), and `start_url` carries the
+hash, or an installed icon opens the landing page.
+
+## The Edge Functions are checked as far as they can be
+
+They run on Deno against a live project, so nothing local proves they work.
+`src/test/edgeFunctions.test.ts` proves the two things that would otherwise
+surface as a red deploy or worse: every file parses (esbuild, in the **node**
+environment -- esbuild will not start under jsdom), and the security property
+is still in the file. `calenda-chat` must forward the caller's Authorization
+header, and at least five reads must still go through that client, so switching
+them to the service role one at a time fails too. Two orderings are asserted
+for the same reason: quota before the model is asked, ownership before the file
+is downloaded. Reversing either is invisible when wrong.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
