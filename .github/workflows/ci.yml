@@ -34,3 +34,32 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # The SQL had never been run anywhere until 2026-09-09, on the reasoning that
+  # Supabase is unreachable from the dev container. That was true and it was
+  # never a reason to leave it unverified -- and the first run found that
+  # set_my_role() had never worked, with the test that proves it sitting unrun
+  # in the repo. This makes that impossible to repeat.
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply every migration and run every SQL test
+        env:
+          # The script creates and drops databases, so it connects to the
+          # maintenance database rather than one it is about to replace.
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: ./scripts/db-test.sh
