@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
 import { NextUpCard } from '@/features/timetable/NextUpCard'
+import { FirstDay } from '@/features/welcome/FirstDay'
 import { useEvents } from '@/features/events/queries'
 import { useClasses, useRecentPages, useUpcomingAssignments } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
@@ -70,6 +71,16 @@ export function Dashboard() {
 
   const firstName = profile?.full_name?.split(' ')[0]
 
+  /**
+   * A genuinely new account, as opposed to a quiet week.
+   *
+   * All three, not just events: somebody who has classes but nothing on today
+   * is having an ordinary Tuesday and wants the normal dashboard, not a
+   * getting-started card telling them to do what they have already done.
+   */
+  const blank = !isLoading
+    && classes.length === 0 && events.length === 0 && assignments.length === 0
+
   const rise = (i: number) =>
     reduce
       ? {}
@@ -91,7 +102,16 @@ export function Dashboard() {
           {greeting()}{firstName ? <>, {firstName}.</> : '.'}
         </h1>
         <p className="mt-1.5 max-w-[52ch] text-[15px] text-text-muted">
-          {isLoading ? 'Checking your calendar…' : summarise(today, todayEvents, upcoming)}
+          {isLoading
+            ? 'Checking your calendar…'
+            // "You're all caught up" is what summarise() says with nothing to
+            // report, and on a brand-new account that is simply false: you are
+            // not caught up, you have not started. Congratulating somebody on
+            // the screen where they are meant to begin is worse than saying
+            // nothing.
+            : blank
+              ? 'Nothing in here yet — this is where your week will be.'
+              : summarise(today, todayEvents, upcoming)}
         </p>
       </motion.header>
 
@@ -147,6 +167,13 @@ export function Dashboard() {
           dashboard scrolled sideways and the Calendar and Classes links sat off
           the right edge. min-w-0 is what lets the truncation inside actually
           take effect. */}
+      {/* Day one gets one card with three steps instead of five cards each
+          correctly reporting that it is empty. See FirstDay for why. */}
+      {blank ? (
+        <motion.div {...rise(2)}>
+          <FirstDay />
+        </motion.div>
+      ) : (
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <motion.div {...rise(2)}>
@@ -324,6 +351,7 @@ export function Dashboard() {
           </motion.div>
         </div>
       </div>
+      )}
 
       <EventDialog open={dialogOpen} onClose={() => setDialogOpen(false)} event={null} />
     </div>
