@@ -13,6 +13,8 @@ import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
 import { NextUpCard } from '@/features/timetable/NextUpCard'
 import { FirstDay } from '@/features/welcome/FirstDay'
+import { useAllGrades } from '@/features/grades/queries'
+import { averageNote, averageOf } from '@/features/grades/average'
 import { useEvents } from '@/features/events/queries'
 import { useClasses, useRecentPages, useUpcomingAssignments } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
@@ -60,6 +62,29 @@ export function Dashboard() {
   const { data: assignments = [] } = useUpcomingAssignments(current?.id, 5)
   const { data: classes = [] } = useClasses(current?.id)
   const { data: recentNotes = [] } = useRecentPages(4)
+  const { data: allGrades = [] } = useAllGrades(current?.id)
+
+  /**
+   * One overall average, and one per class.
+   *
+   * Both computed here rather than stored, for the same reason the class page
+   * does it: a stored average is a second copy of a fact that goes stale
+   * silently, and a mark somebody did not expect is the worst thing for this
+   * app to be confidently wrong about.
+   */
+  const average = useMemo(() => averageOf(allGrades), [allGrades])
+  const byClass = useMemo(() => {
+    const groups = new Map<string, typeof allGrades>()
+    for (const g of allGrades) {
+      const list = groups.get(g.className)
+      if (list) list.push(g)
+      else groups.set(g.className, [g])
+    }
+    return [...groups.entries()]
+      .map(([className, rows]) => ({ className, percent: averageOf(rows).percent }))
+      .filter((row): row is { className: string; percent: number } => row.percent !== null)
+      .sort((a, b) => b.percent - a.percent)
+  }, [allGrades])
 
   const { todayEvents, upcoming } = useMemo(() => {
     const onToday = events.filter((e) => e.start_date <= today && e.end_date >= today)
@@ -318,6 +343,47 @@ export function Dashboard() {
               )}
             </Card>
           </motion.div>
+          {/* Marks, and only when there are any. A card headed "Marks" reading
+              "nothing yet" on a dashboard that already has four other empty
+              cards is the day-one problem again, one card at a time. */}
+          {average.percent !== null && (
+            <motion.div {...rise(5)}>
+              <Card>
+                <CardHeader
+                  title="Marks"
+                  action={
+                    <Link to="/classes"
+                          className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
+                      Classes <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  }
+                />
+                <div className="px-5 pb-5">
+                  <p className="font-display text-[30px] font-medium leading-none tracking-tight text-text">
+                    {average.percent}%
+                  </p>
+                  {/* The working, same as the class page. A number without it
+                      is a claim; with it, it can be checked. */}
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-text-muted">
+                    {averageNote(average)}
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-1">
+                    {byClass.slice(0, 4).map(({ className, percent }) => (
+                      <li key={className} className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-[13px] text-text-muted">
+                          {className}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-[13px] font-medium text-text">
+                          {percent}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
           <motion.div {...rise(6)}>
             <Card>
               <CardHeader title="Recent notes" />
