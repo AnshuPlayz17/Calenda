@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { ProviderIcon } from '@/components/ProviderIcon'
@@ -99,5 +100,59 @@ export function NotConnected({ children }: { children: ReactNode }) {
         Explore the preview
       </Button>
     </div>
+  )
+}
+
+/**
+ * Which step of a multi-step form this is, in bars and in words.
+ *
+ * It was three unlabelled bars, on the reasoning that the count is the whole
+ * message and "Step 1 of 3" is four times the height of it. Half of that was
+ * right and half was wrong: the bars alone are read as decoration -- they sit
+ * directly under a subtitle in the same grey and never move while you are on a
+ * step -- and the count is the whole message only for somebody who already
+ * knows there are steps. The words cost nothing, because they go beside the
+ * bars rather than under them, on a row that already exists.
+ *
+ * `aria-hidden` on all of it: the AuthLayout live region says the same thing at
+ * the moment it changes, and a screen reader that reads both hears it twice.
+ */
+export function StepMark({ at, of, label }: { at: number; of: number; label?: string }) {
+  return (
+    <div aria-hidden className="flex items-center gap-2.5">
+      <span className="flex items-center gap-1.5">
+        {Array.from({ length: of }, (_, i) => i + 1).map((n) => (
+          <span
+            key={n}
+            className={
+              'block h-1 rounded-full transition-all duration-300 '
+              + (n === at ? 'w-6 bg-brand' : n < at ? 'w-3 bg-brand/35' : 'w-3 bg-border')
+            }
+          />
+        ))}
+      </span>
+      <span className="text-[12px] font-medium tracking-tight text-text-subtle">
+        Step {at} of {of}{label ? ` · ${label}` : ''}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A step back, which is a link in everything but the tag.
+ *
+ * A button rather than an anchor because it moves the form's own step, not the
+ * page -- but it is drawn as text, because it must never compete with the
+ * primary action directly above it.
+ */
+export function BackLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {children}
+    </button>
   )
 }

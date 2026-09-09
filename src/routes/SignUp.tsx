@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Eye, EyeOff, Mail } from 'lucide-react'
+import { Eye, EyeOff, Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
-import { AuthError, NotConnected, ProviderButtons, Separator } from '@/features/auth/AuthParts'
+import {
+  AuthError, BackLink, NotConnected, ProviderButtons, Separator, StepMark,
+} from '@/features/auth/AuthParts'
 import {
   HeardFrom, ParentFields, RolePicker, StudentFields,
 } from '@/features/auth/aboutYou'
@@ -33,6 +35,39 @@ const STEPS: Step[] = ['choose', 'credentials', 'name', 'details']
  *  something that is not a step. */
 function readStep(raw: string | null): Step {
   return STEPS.includes(raw as Step) ? (raw as Step) : 'choose'
+}
+
+/**
+ * What the top of the page says on each step.
+ *
+ * It said "Create your account / It takes about a minute." on all four, which
+ * is the largest text on the page carrying no information after the first
+ * screen -- and on the two steps that ask questions rather than credentials it
+ * was actively unhelpful, because the reason for the questions is the one thing
+ * somebody deciding whether to answer them wants.
+ *
+ * Every one of these is one line at the column's 380px, checked rather than
+ * assumed. A subtitle that wraps to two costs 22px on the step that had the
+ * least room to give -- the last one is already the tallest screen here, and
+ * the reason its gaps are 4px tighter than every other step's.
+ */
+const HEADINGS: Record<Step, { title: string; subtitle: string }> = {
+  choose: {
+    title: 'Create your account',
+    subtitle: 'It takes about a minute.',
+  },
+  credentials: {
+    title: 'Create your account',
+    subtitle: 'An email and a password to sign in with.',
+  },
+  name: {
+    title: 'Who you are',
+    subtitle: 'Your name, and which of the two you are.',
+  },
+  details: {
+    title: 'Last step',
+    subtitle: 'These decide what Calenda shows you.',
+  },
 }
 
 export function SignUp() {
@@ -176,10 +211,16 @@ export function SignUp() {
 
   const mismatch = confirm.length > 0 && password !== confirm
 
+  const { title, subtitle } = HEADINGS[step]
+
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="It takes about a minute."
+      title={title}
+      subtitle={subtitle}
+      // Each step arrives rather than being swapped in between two frames, and
+      // the change is announced from outside the part that is re-keyed.
+      stepKey={step}
+      announce={step === 'choose' ? '' : `Step ${STEPS.indexOf(step)} of 3`}
       footer={
         <>
           Already have an account?{' '}
@@ -198,13 +239,6 @@ export function SignUp() {
           </Link>
         </p>
       )}
-
-      {/* Each step replaces the last, so without this a screen reader is told
-          nothing at all when Continue is pressed -- the heading changes silently
-          and the focus lands somewhere new with no explanation of why. */}
-      <p className="sr-only" role="status" aria-live="polite">
-        {step === 'choose' ? '' : `Step ${STEPS.indexOf(step)} of 3`}
-      </p>
 
       {step === 'choose' && (
         <div className="mt-6 flex flex-col gap-2">
@@ -225,7 +259,7 @@ export function SignUp() {
 
       {step === 'credentials' && (
         <form onSubmit={toAbout} className="mt-6 flex flex-col gap-4">
-          <StepMark at={1} />
+          <StepMark at={1} of={3} label="How you sign in" />
           <Input
             label="Email"
             type="email"
@@ -272,7 +306,7 @@ export function SignUp() {
 
       {step === 'name' && (
         <form onSubmit={toDetails} className="mt-6 flex flex-col gap-4">
-          <StepMark at={2} />
+          <StepMark at={2} of={3} label="Your name" />
           <Input
             label="First name"
             autoComplete="given-name"
@@ -315,7 +349,7 @@ export function SignUp() {
         // less is twenty-four, which clears it without taking a field out or
         // disturbing the steps that already fit.
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
-          <StepMark at={3} />
+          <StepMark at={3} of={3} label={role === 'student' ? 'Your school' : 'Your student'} />
 
           {role === 'student' ? (
             <StudentFields
@@ -365,30 +399,6 @@ export function SignUp() {
 
 
 /**
- * Which of the three steps this is.
- *
- * Two marks rather than the words "Step 1 of 2", because the count is the
- * whole message and the sentence is four times the height of it on a window
- * that has none to spare.
- */
-function StepMark({ at }: { at: 1 | 2 | 3 }) {
-  return (
-    <div className="flex items-center gap-1.5" aria-label={`Step ${at} of 3`}>
-      {[1, 2, 3].map((n) => (
-        <span
-          key={n}
-          aria-hidden
-          className={
-            'block h-1 rounded-full transition-all duration-300 '
-            + (n === at ? 'w-6 bg-brand' : 'w-3 bg-border')
-          }
-        />
-      ))}
-    </div>
-  )
-}
-
-/**
  * A reveal button sitting on the password box it belongs to.
  *
  * Three password entries were typed blind. On a phone, with a password manager
@@ -418,16 +428,3 @@ function Reveal({ on, onToggle, children }: {
     </div>
   )
 }
-
-function BackLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
-    >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {children}
-    </button>
-  )
-}
-

@@ -40,6 +40,17 @@ type AuthContextValue = {
   profile: Profile | null
   /** True until the first session check resolves, so routes never flash. */
   loading: boolean
+  /**
+   * True once the profile fetch has *finished*, whatever it found.
+   *
+   * Distinct from `profile !== null`, which cannot tell "not here yet" from
+   * "no row I can read" -- and that ambiguity was a hole. `loading` went false
+   * the moment the session resolved while the profile was still in flight, so
+   * the first-run gate saw a null profile, fell through, and rendered the
+   * dashboard to somebody who had never been asked anything. This is what the
+   * gate waits for instead.
+   */
+  profileReady: boolean
   isAdmin: boolean
   signInWithProvider: (provider: Provider) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
@@ -212,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileReady, setProfileReady] = useState(false)
 
   /**
    * Load the profile, and keep its stored zone level with the device.
@@ -239,6 +251,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loaded = (data as Profile) ?? null
     setProfile(loaded)
+    // Set even when the row came back empty. "We looked and found nothing" is
+    // an answer; the gate must not wait forever on a profile that will never
+    // arrive, or an unreadable row would lock somebody out of the whole app.
+    setProfileReady(true)
     if (!loaded) return
 
     const zone = deviceTimeZone()
@@ -256,13 +272,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return
       setSession(data.session)
       if (data.session?.user) void loadProfile(data.session.user.id)
+      else setProfileReady(true)
       setLoading(false)
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next)
-      if (next?.user) void loadProfile(next.user.id)
-      else setProfile(null)
+      if (next?.user) {
+        // A different person is signing in, so what is known about the last one
+        // is not an answer about this one.
+        setProfileReady(false)
+        void loadProfile(next.user.id)
+      } else {
+        setProfile(null)
+        setProfileReady(true)
+      }
     })
 
     return () => {
@@ -279,6 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       profile,
       loading,
+      profileReady,
       isAdmin: profile?.role === 'admin',
 
       async signInWithProvider(provider) {
@@ -376,7 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) await loadProfile(session.user.id)
       },
     }
-  }, [session, profile, loading])
+  }, [session, profile, loading, profileReady])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -140,6 +140,29 @@ reporting a button below it as a failure and a footnote link below it as a note,
 because those are not the same defect. Do not loosen that check to make
 something pass.
 
+**The form is written before the panel in the DOM, and put back on the right
+with `col-start`.** A keyboard follows the DOM, not the grid: with the panel
+written first, pressing Tab on arriving at either page crossed the brand link
+and the reel's five tick buttons — six decorative stops — before reaching the
+first field. Grid placement puts the panel back on the left without putting it
+back in front. `taborder.mjs` beside the harness checks it.
+
+**Every step of the sign-up form says where it is, in the heading and in
+words.** It said "Create your account / It takes about a minute." on all four
+screens, which is the largest text on the page carrying no information after
+the first — and the step marks under it were three unlabelled bars, in the same
+grey as the subtitle, which read as decoration. The words go *beside* the bars,
+on a row that already exists, so they cost no height; every subtitle is checked
+to be one line at the column's 380px, because a wrap costs 22px on the step that
+has the least to give. `AuthLayout` takes a `stepKey` and re-keys the column so
+each step arrives rather than being swapped in between two frames — no
+`AnimatePresence`, because `mode="wait"` holds the next step off the screen for
+the length of the old one's exit, which on a form is a press that appears to do
+nothing. The live region that announces the change lives *outside* what
+`stepKey` re-keys: a live region that is unmounted and mounted again carrying
+its new text is generally not announced at all, so the one element that exists
+to narrate the change would be the one element the change destroys.
+
 **The panel beside the form is a reel, not a diagram.** `AuthReel.tsx` cycles
 five scenes on a four-and-a-half-second dwell — the imported year, a class workspace, the
 agenda, a reminder — each drawn from the same invented sample data the landing
@@ -376,22 +399,31 @@ A bad invite code does not fail the sign-up. The account exists by then and
 refusing to sign somebody in over a typo in an optional field is the worse
 outcome — but it is carried to the welcome screen and said, not swallowed.
 
-**OAuth users never see the sign-up form.** They get a name from their provider
-and are still silently `student`. The fix is a first-run step, not a form field.
-
 **OAuth users never saw the sign-up form, and they are most of the accounts.**
 `handle_new_user()` copies a name out of the provider's metadata, so that much
 arrived; everything else did not, and every one of them was silently a
 `student`. `/first-run` asks them, gated on `onboarded_at` — a column that
 existed from the first migration and that nothing had ever written or read.
 
-The gate is in `RequireAuth` and runs for every signed-in person on every
-protected page, so each of its three conditions exists to prevent a specific
-trap: `profile` must have loaded (it is null both while loading and when the
-row cannot be read, so bouncing on it would fire mid-sign-in), preview is
-excluded (sample data, no profile row, a screen that could never be completed),
-and `/first-run` sits outside the gate or it redirects to itself. Seven tests
-cover exactly those shapes.
+The gate runs for every signed-in person on every protected page, so each of
+its conditions exists to prevent a specific trap, and it lives in
+`src/app/firstRunGate.ts` as `needsFirstRun()` rather than inline in
+`RequireAuth` — because the test used to reproduce those four lines instead of
+calling them, which checks that a copy behaves rather than that the app does.
+Preview is excluded (sample data, no profile row, a screen that could never be
+completed), and `/first-run` sits outside the gate or it redirects to itself.
+
+**A null profile meant two different things and the gate could not tell them
+apart.** `loadProfile` was fire-and-forget with `setLoading(false)` right after
+it, so `loading` went false the moment the *session* resolved while the profile
+was still in flight. The gate saw null, fell through, and rendered the dashboard
+to somebody who had never been asked anything — asked a moment later when the
+profile landed, unless it was slow or failed, in which case never. `profileReady`
+now goes true when the fetch *finishes*, empty row included: "we looked and found
+nothing" is an answer, and an unreadable row must not lock somebody out of the
+app while the only way forward is a screen that writes to that row. Three
+outcomes now, not two — `wait`, `ask`, `through` — over seven tests that call
+the shipping function.
 
 **The questions live in `aboutYou.tsx`, asked in two places.** A copy in each is
 how a parent signing up one way ends up with a relation and the other way

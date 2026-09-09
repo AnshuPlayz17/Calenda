@@ -27,6 +27,7 @@ import { ForgotPassword } from '@/routes/ForgotPassword'
 import { ResetPassword } from '@/routes/ResetPassword'
 import { FirstRun } from '@/routes/FirstRun'
 import { AuthCallback } from '@/routes/AuthCallback'
+import { needsFirstRun } from './firstRunGate'
 
 /* The founder page is a section of the landing page now, not a page of its own.
    The old URL is kept because it has been linked; it lands on the section. */
@@ -62,7 +63,7 @@ function FullPageLoader() {
 
 /** Waits for the first session check so a signed-in user never sees sign-in. */
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, profileReady } = useAuth()
   const preview = usePreview()
   const location = useLocation()
   if (loading) return <FullPageLoader />
@@ -73,25 +74,16 @@ function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   // Somebody who arrived through Google, GitHub or Discord never saw the
-  // sign-up form, so nothing ever asked whether they are a student or a
-  // parent -- and they are most of the accounts. `onboarded_at` is the flag
-  // for "has answered", and until this it was read from the database on every
-  // profile load and used by nothing at all.
-  //
-  // Three conditions rather than one, and each is there to make it impossible
-  // to trap somebody:
-  //
-  //   - `profile` must have loaded. It is null for a moment after sign-in and
-  //     also whenever the row cannot be read, and redirecting on a value that
-  //     is merely not here yet would bounce people mid-load.
-  //   - preview is excluded, because it runs on sample data with no profile
-  //     row behind it and would otherwise be a first-run screen that can never
-  //     be completed.
-  //   - the screen itself is outside this gate, so there is no path where it
-  //     redirects to itself.
-  if (session && profile && !profile.onboarded_at) {
-    return <Navigate to="/first-run" replace />
-  }
+  // sign-up form. See firstRunGate.ts for why each branch is there; it is its
+  // own function so the tests can call the one that ships.
+  const gate = needsFirstRun({
+    session: Boolean(session),
+    profile,
+    profileReady,
+    preview: preview.active,
+  })
+  if (gate === 'wait') return <FullPageLoader />
+  if (gate === 'ask') return <Navigate to="/first-run" replace />
 
   return <>{children}</>
 }

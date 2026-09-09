@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
-import { AuthError } from '@/features/auth/AuthParts'
+import { AuthError, BackLink, StepMark } from '@/features/auth/AuthParts'
 import {
   HeardFrom, ParentFields, RolePicker, StudentFields,
 } from '@/features/auth/aboutYou'
@@ -104,9 +104,18 @@ export function FirstRun() {
   return (
     <AuthLayout
       title={step === 'name' ? 'One more thing' : `Thanks${greeting ? `, ${greeting}` : ''}`}
+      // Both one line at 380px, like the sign-up form's. This screen cannot be
+      // measured from the dev container -- it needs a signed-in session, and
+      // Supabase is unreachable from here -- so it is kept the same height as
+      // the sign-up step it mirrors, which can be, rather than left to guess.
       subtitle={step === 'name'
-        ? 'You are signed in. Two questions and Calenda knows what to show you.'
-        : 'These decide what Calenda shows you, so it asks for all of them.'}
+        ? 'You are signed in. Two short steps to go.'
+        : 'These decide what Calenda shows you.'}
+      // Same treatment as the sign-up form, because this is the sign-up form
+      // for everybody who arrived through a provider. Two steps rather than
+      // three: the credentials step already happened by definition.
+      stepKey={step}
+      announce={`Step ${step === 'name' ? 1 : 2} of 2`}
     >
       <AuthError message={error} />
 
@@ -115,6 +124,7 @@ export function FirstRun() {
           onSubmit={(e) => { e.preventDefault(); setStep('details') }}
           className="mt-6 flex flex-col gap-4"
         >
+          <StepMark at={1} of={2} label="Your name" />
           <Input
             label="Your name"
             autoComplete="name"
@@ -133,6 +143,8 @@ export function FirstRun() {
         // gap-3 for the same reason as sign-up's last step: it is the tallest
         // screen here and the parent branch is the tallest version of it.
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
+          <StepMark at={2} of={2} label={role === 'student' ? 'Your school' : 'Your student'} />
+
           {role === 'student' ? (
             <StudentFields
               school={school}
@@ -158,13 +170,7 @@ export function FirstRun() {
           <Button type="submit" size="lg" fullWidth loading={busy} disabled={!detailsReady}>
             Finish setting up
           </Button>
-          <button
-            type="button"
-            onClick={() => setStep('name')}
-            className="self-center text-[13px] text-text-muted underline-offset-2 hover:text-text hover:underline"
-          >
-            Back
-          </button>
+          <BackLink onClick={() => setStep('name')}>Back</BackLink>
         </form>
       )}
     </AuthLayout>
