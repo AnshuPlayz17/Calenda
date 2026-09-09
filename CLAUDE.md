@@ -67,6 +67,23 @@ before and after a change, which is the tell. **Ask what a person could not
 do, not what a number is:** not "is it inside the box" but "can it be
 reached"; not "did focus move" but "did the route survive".
 
+**A pipeline hides the exit code you care about.** `npm run build 2>&1 | tail -3
+&& git commit` commits whatever happens: the status of a pipeline is the last
+command's, and `tail` always succeeds. A build printing three type errors was
+committed on top of on 2026-09-09, and the same trap had already been recorded
+once here for `code=$?` after a grep. Run each gate on its own line and read
+its own status, or use `set -o pipefail`.
+
+**Check whether the app keeps its own promises.** Grep the user-facing copy for
+sentences that point at another screen — "from Settings", "in your classes",
+"any time from" — and follow every one. Two were broken on 2026-09-09: the
+walkthrough's closing line sent people to a Settings card that did not exist,
+and `CycleBanner`'s comment named the same missing card while the whole
+rotating-timetable path (`cycle_day`, `cycleDayFor` and its twenty-eight tests,
+the cycle-day slot in `MeetingsEditor`) sat unreachable because nothing could
+write `timetable_cycle_length`. **A column read in four places and written in
+none is a feature nobody can turn on** — grep for the write, not the read.
+
 Always run before pushing: `npm run typecheck && npm run lint && npm test &&
 npm run build`.
 
@@ -647,6 +664,26 @@ already had a decent empty state, except the dashboard, which said "you're all
 caught up" to somebody who had not started and then showed five cards each
 correctly reporting that it was empty. Day one now gets one card and three
 steps, gated on classes *and* events *and* assignments all being empty.
+
+## The timetable cycle
+
+Some schools run Day 1 to Day 6 rather than Monday to Friday, carrying the
+count across weekends and skipping every closure. `class_meetings` takes either
+a `day_of_week` or a `cycle_day`, never both, and the check constraint enforces
+the XOR.
+
+**`CycleCard` in Settings is the only thing that turns it on**, and it asks for
+the length and for which day today is in one breath. A length on its own is a
+cycle counting from a date nobody chose, and there is no deriving that date:
+the count skips closures, so it cannot be recovered from a calendar. Turning it
+off clears the anchor too, or switching it back on next term silently resumes
+an old count.
+
+`CycleBanner` on the Timetable page shows what the app believes and lets it be
+corrected in one tap, which re-anchors to today rather than patching one day.
+That is the honest answer to a count that drifts: not hiding the number, and
+not recomputing it from the imported calendar either — which sounds better and
+would be wrong in a new way every time the calendar was incomplete.
 
 ## Leaving, and being installed
 
