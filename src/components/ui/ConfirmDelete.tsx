@@ -87,11 +87,12 @@ export function ConfirmDelete({
           </div>
         }
       >
-        {detail
-          ? <p className="text-[13.5px] text-text-muted">{detail}</p>
-          // Dialog requires children; the description above carries the whole
-          // message when there is no second consequence to name.
-          : null}
+        {/* The irreversibility stays in the description, where every caller
+            gets it. Moving it here to fill the body meant the three callers
+            with a second consequence to name -- the ones most worth warning --
+            were the three that stopped being told the delete was permanent.
+            Dialog pads an empty body, which is air rather than a defect. */}
+        {detail ? <p className="text-[13.5px] text-text-muted">{detail}</p> : null}
       </Dialog>
     </>
   )

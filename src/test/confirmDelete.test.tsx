@@ -50,6 +50,24 @@ describe('a delete that asks first', () => {
     expect(onConfirm).not.toHaveBeenCalled()
   })
 
+  it('warns that it is permanent even when there is an extra consequence', async () => {
+    // The irreversibility lives in the description rather than the body for
+    // exactly this reason: filling the body with it instead meant the three
+    // callers with something extra to say -- a file, a shared mark, a report
+    // card -- were the three that stopped being told the delete was permanent.
+    render(
+      <ConfirmDelete
+        what="“transcript.pdf”"
+        detail="The file itself is removed from storage, not just this link to it."
+        onConfirm={async () => {}}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+    const said = screen.getByRole('dialog').textContent ?? ''
+    expect(said).toContain('cannot be undone')
+    expect(said).toContain('removed from storage')
+  })
+
   it('says the extra consequence when there is one', async () => {
     // A file's row and the file itself are different things, and deleting one
     // deletes the other. Somebody expecting to remove a link would be wrong.
