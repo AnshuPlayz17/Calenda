@@ -205,7 +205,8 @@ export type ParentLink = {
  * document you hand to a named person, it is either visible to a linked parent
  * or it is not.
  */
-export type Shareable = 'event' | 'class' | 'notebook_page' | 'assignment' | 'grade'
+export type Shareable =
+  'event' | 'class' | 'notebook_page' | 'assignment' | 'grade' | 'file'
 
 // --------------------------------------------------------- notifications ----
 

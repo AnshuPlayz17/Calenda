@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import {
   ArrowLeft, Archive, CheckSquare, ClipboardList, Clock, FileText, GraduationCap,
-  NotebookPen, Plus, Smile, Trash2,
+  NotebookPen, Paperclip, Plus, Smile, Trash2,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +15,7 @@ import { NoteEditor } from '@/features/notebook/NoteEditor'
 import { PageTree } from '@/features/notebook/PageTree'
 import { MeetingsEditor } from '@/features/timetable/MeetingsEditor'
 import { GradesTab } from '@/features/grades/GradesTab'
+import { FilesTab } from '@/features/attachments/FilesTab'
 import { descendantsOf, positionBetween } from '@/features/notebook/pageTree'
 import { AssignmentDialog } from '@/features/assignments/AssignmentDialog'
 import {
@@ -26,7 +27,7 @@ import type { Assignment, NotebookPage } from '@/lib/types'
 import { ShareToggle } from '@/features/parents/ShareToggle'
 import { cn } from '@/lib/cn'
 
-type Tab = 'notes' | 'assignments' | 'tasks' | 'times' | 'marks'
+type Tab = 'notes' | 'assignments' | 'tasks' | 'times' | 'marks' | 'files'
 
 export function ClassWorkspace() {
   const { classId } = useParams<{ classId: string }>()
@@ -35,9 +36,11 @@ export function ClassWorkspace() {
   // land where you actually were rather than resetting to notes.
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab')
-  const tab: Tab = raw === 'assignments' || raw === 'tasks' || raw === 'times' || raw === 'marks'
-    ? raw
-    : 'notes'
+  const tab: Tab =
+    raw === 'assignments' || raw === 'tasks' || raw === 'times'
+    || raw === 'marks' || raw === 'files'
+      ? raw
+      : 'notes'
   const setTab = (next: Tab) => {
     setParams((prev) => {
       const copy = new URLSearchParams(prev)
@@ -69,6 +72,7 @@ export function ClassWorkspace() {
     { id: 'tasks', label: 'Tasks', Icon: CheckSquare },
     { id: 'marks', label: 'Marks', Icon: GraduationCap },
     { id: 'times', label: 'Times', Icon: Clock },
+    { id: 'files', label: 'Files', Icon: Paperclip },
   ]
 
   return (
@@ -134,6 +138,7 @@ export function ClassWorkspace() {
       {tab === 'tasks' && <TasksTab classId={klass.id} />}
       {tab === 'marks' && <GradesTab classId={klass.id} />}
       {tab === 'times' && <MeetingsEditor classId={klass.id} />}
+      {tab === 'files' && <FilesTab classId={klass.id} />}
     </div>
   )
 }
