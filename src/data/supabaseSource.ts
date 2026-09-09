@@ -18,6 +18,33 @@ import type { DataSource, EventFilters, ImportOptions, ImportWrite, ReviewAction
 const EVENT_COLUMNS = '*, category:event_categories(*)'
 
 /** Turns a Postgres error into something a person can act on. */
+/**
+ * What an Edge Function actually said, if it said anything.
+ *
+ * `functions.invoke` reports every non-2xx as one generic FunctionsHttpError,
+ * so the sentence the function wrote -- "The assistant has no model key set",
+ * "This provider cannot read PDFs. Take a photo or a screenshot of the report
+ * card and upload that instead.", "That's all the assistant can answer today"
+ * -- is in the response body and nowhere else. Both call sites used to replace
+ * it with a generic apology, which threw away the only actionable half. The
+ * missing-key case is the state every new deployment starts in, so that was
+ * the message most people would ever see.
+ *
+ * `context` is the raw Response. Reading it can fail -- a consumed body, a
+ * non-JSON error raised by the edge itself before the function ran -- and the
+ * callers all have a sentence of their own to fall back to.
+ */
+async function functionMessage(error: unknown): Promise<string | null> {
+  const context = (error as { context?: Response } | null)?.context
+  if (!context || typeof context.json !== 'function') return null
+  try {
+    const body = await context.json() as { message?: unknown }
+    return typeof body?.message === 'string' && body.message ? body.message : null
+  } catch {
+    return null
+  }
+}
+
 function fail(context: string, error: { message: string; code?: string }): never {
   if (error.code === '23505') throw new Error('That already exists.')
   if (error.code === '42501') throw new Error("You don't have permission to do that.")
@@ -869,10 +896,20 @@ export const supabaseSource: DataSource = {
       body: { reportCardId: id },
     })
     if (error) {
-      await supabase.from('report_cards')
-        .update({ status: 'failed', error: String(error).slice(0, 500) })
-        .eq('id', id)
-      throw new Error('We could not read that report card. You can still add the marks by hand.')
+      const said = await functionMessage(error)
+      // Only when the function did not already record one. It writes its own
+      // reason into this row before answering, so overwriting unconditionally
+      // replaced "take a photo of it instead" with the string form of a
+      // FunctionsHttpError -- destroying the useful half in the one place the
+      // screen reads it back from.
+      if (!said) {
+        await supabase.from('report_cards')
+          .update({ status: 'failed', error: 'We could not read that report card.' })
+          .eq('id', id)
+      }
+      throw new Error(
+        said ?? 'We could not read that report card. You can still add the marks by hand.',
+      )
     }
   },
 
@@ -1059,8 +1096,9 @@ export const supabaseSource: DataSource = {
       body: { threadId, message: text },
     })
     if (error) {
+      const said = await functionMessage(error)
       throw new Error(
-        'The assistant is not answering right now. Your message was not sent.',
+        said ?? 'The assistant is not answering right now. Your message was not sent.',
       )
     }
     return (data as { reply: ChatMessage }).reply
