@@ -59,6 +59,46 @@ describe('the closing mark', () => {
     expect(screen.getByRole('button', { name: /skip/i })).toBeTruthy()
   })
 
+  it('takes focus, because it covers the button that opened it', () => {
+    // Without this, focus stays on "Start using Calenda" -- a control that is
+    // now underneath a full-screen overlay. Tab from there walks the page
+    // behind the scene, which is both confusing and invisible.
+    show(null)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /skip/i }))
+  })
+
+  it('announces itself as taking over the window', () => {
+    // aria-modal is the only thing that tells a screen reader the rest of the
+    // page is not currently reachable. It matches what is actually true here.
+    show(null)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.getAttribute('aria-modal')).toBe('true')
+  })
+
+  it('leaves on Escape, not only on a press', async () => {
+    vi.useFakeTimers()
+    const onDone = vi.fn()
+    render(
+      <MemoryRouter>
+        <ClosingMark school={null} onDone={onDone} />
+      </MemoryRouter>,
+    )
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+
+    // Escape starts the fade; onDone follows it. Well inside the 2200ms hold,
+    // so nothing here can pass because the scene simply ran to its end.
+    let elapsed = 0
+    while (elapsed < 1500 && onDone.mock.calls.length === 0) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+      elapsed += 100
+    }
+    expect(onDone).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
   it('finishes on its own, and says it is done exactly once', async () => {
     vi.useFakeTimers()
     const onDone = vi.fn()

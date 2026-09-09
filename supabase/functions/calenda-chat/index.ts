@@ -88,6 +88,30 @@ Deno.serve(async (req) => {
   // no genuine question about a timetable is four thousand characters.
   if (message.length > 4000) return json({ error: 'That message is too long.' }, 400)
 
+  /**
+   * The thread must be the caller's, checked with the caller's own token.
+   *
+   * Everything read below already goes through RLS, so nothing here could leak
+   * -- but the two writes at the end use the service role, and the service role
+   * does not consult chat_messages_all. That policy already says a message may
+   * only be inserted into a thread the writer owns. Without this check the one
+   * code path that bypasses the policy is also the only path that writes, so a
+   * request naming somebody else's threadId would file a row against their
+   * thread and bump its updated_at, reordering a stranger's conversation list.
+   *
+   * It is checked before the quota is claimed, so a request that was never
+   * going to be answered costs the caller nothing either.
+   */
+  const { data: thread, error: threadError } = await asUser
+    .from('chat_threads')
+    .select('id')
+    .eq('id', threadId)
+    .maybeSingle()
+  if (threadError) return json({ error: 'could not read the conversation' }, 500)
+  // Not found and not yours are the same answer on purpose: distinguishing them
+  // tells anyone holding a uuid whether it names a real conversation.
+  if (!thread) return json({ error: 'no such conversation' }, 404)
+
   if (!configured()) {
     return json({
       error: 'not_configured',
@@ -216,9 +240,14 @@ Deno.serve(async (req) => {
 
   // The question is saved before the model is asked, so a failure leaves a
   // conversation that shows what was asked rather than losing it.
-  await admin.from('chat_messages').insert({
+  //
+  // The error is read rather than dropped: unchecked, a failure here loses the
+  // question and keeps the answer, which reads as the assistant replying to
+  // nothing.
+  const { error: questionError } = await admin.from('chat_messages').insert({
     thread_id: threadId, owner_id: user.id, role: 'user', content: message,
   })
+  if (questionError) return json({ error: 'could not save the question' }, 500)
 
   let answer: string
   let failure: string | null = null

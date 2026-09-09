@@ -73,13 +73,44 @@ describe('the Edge Functions', () => {
 
   it('the assistant claims quota before it spends anything', () => {
     const src = readFileSync(join(ROOT, 'calenda-chat', 'index.ts'), 'utf8')
-    const quotaAt = src.indexOf('claim_chat_message')
+    // The CALL, not the name. The file's own header explains the ordering in
+    // prose, so `indexOf('claim_chat_message')` finds the comment at the top
+    // and this assertion passes however the code below is arranged -- which is
+    // what it did until 2026-09-09.
+    const quotaAt = src.indexOf("rpc('claim_chat_message')")
     const askAt = src.indexOf('await ask(')
     expect(quotaAt).toBeGreaterThan(-1)
     expect(askAt).toBeGreaterThan(-1)
     // A refusal has to cost nothing. If the model is asked first, the daily
     // allowance is spent by requests that are then turned away.
     expect(quotaAt).toBeLessThan(askAt)
+  })
+
+  it('the assistant checks the thread is the caller\'s before it writes anything', () => {
+    const src = readFileSync(join(ROOT, 'calenda-chat', 'index.ts'), 'utf8')
+
+    // Read with the caller's client, so RLS answers the question rather than
+    // the function trusting the id it was handed.
+    const checkAt = src.indexOf("asUser\n    .from('chat_threads')")
+    // Where the admin client is CONSTRUCTED, not where the key is read out of
+    // the environment -- that happens at the top of the file, so anchoring on
+    // the constant makes this assertion impossible to satisfy and says nothing
+    // about ordering.
+    const adminAt = src.indexOf('createClient(SUPABASE_URL, SERVICE_KEY')
+    const quotaAt = src.indexOf("rpc('claim_chat_message')")
+    expect(checkAt).toBeGreaterThan(-1)
+    expect(quotaAt).toBeGreaterThan(-1)
+    expect(adminAt).toBeGreaterThan(-1)
+
+    // The two writes at the end run as the service role, which does not
+    // consult chat_messages_all -- the policy that already says a message may
+    // only go into a thread its writer owns. Reversed or removed, this
+    // function becomes the one path that can file a row against a stranger's
+    // conversation and reorder their list.
+    expect(checkAt).toBeLessThan(adminAt)
+    // And before the quota, so a request that was never going to be answered
+    // costs the caller nothing.
+    expect(checkAt).toBeLessThan(quotaAt)
   })
 
   it('the decoder checks ownership before it opens the file', () => {
