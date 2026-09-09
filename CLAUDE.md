@@ -42,6 +42,62 @@ overflow, any element wider than the viewport, and console errors.
 The bar the landing page currently holds: **p95 17 ms, zero frames over 50 ms,
 all nine configurations clean.** Do not regress it.
 
+**`pgrep -f "node appcheck"` matches the shell that is waiting for it.** A
+wait-loop whose own command line contains the pattern it greps for never exits,
+and the thing it was supposed to start never starts. Two audit runs were
+reported as "still running" for twenty minutes while nothing was running at
+all. Wait on the output file, or use a pattern that cannot match the waiter.
+
+It is worse than it looks, because it can also be *wrong the other way*.
+Written as a heredoc it is one bug; written inline the newlines can collapse
+and the whole chain becomes one mangled line that never reaches the command it
+was supposed to run. **Put a multi-step wait in a script file and run the
+file** — the newlines survive, and the pattern it greps for lives somewhere
+that is not the waiter's own command line.
+
+**A probe that reports everything as broken is usually the probe.** Three
+separate tools in one night measured something easy instead of something true:
+the sidebar check compared rects against a box and called every item in a
+scrolled list clipped; the keyboard check flagged the mobile header (not
+rendered), every labelled input (labelled correctly), and produced nine
+different "first tab stops" (because a hash change does not reset focus); and
+the skip-link check asked only whether focus reached the content, not whether
+the content was the right page. Two of the three reported the *same* numbers
+before and after a change, which is the tell. **Ask what a person could not
+do, not what a number is:** not "is it inside the box" but "can it be
+reached"; not "did focus move" but "did the route survive".
+
+**A pipeline hides the exit code you care about.** `npm run build 2>&1 | tail -3
+&& git commit` commits whatever happens: the status of a pipeline is the last
+command's, and `tail` always succeeds. A build printing three type errors was
+committed on top of on 2026-09-09, and the same trap had already been recorded
+once here for `code=$?` after a grep. Run each gate on its own line and read
+its own status, or use `set -o pipefail`.
+
+**Check whether the app keeps its own promises.** Grep the user-facing copy for
+sentences that point at another screen — "from Settings", "in your classes",
+"any time from" — and follow every one. Two were broken on 2026-09-09: the
+walkthrough's closing line sent people to a Settings card that did not exist,
+and `CycleBanner`'s comment named the same missing card while the whole
+rotating-timetable path (`cycle_day`, `cycleDayFor` and its twenty-eight tests,
+the cycle-day slot in `MeetingsEditor`) sat unreachable because nothing could
+write `timetable_cycle_length`. **A column read in four places and written in
+none is a feature nobody can turn on** — grep for the write, not the read.
+
+**And a column in the type but not in the `select` is the same bug wearing a
+disguise.** `loadProfile` named seven columns while `Profile` had grown to
+twelve. A column left out of a select is `undefined` at runtime, and every
+reader takes it through `?? null` — which is the right thing to write and
+exactly what makes never-fetched indistinguishable from never-set. So
+`profile.school` read as no school and the walkthrough's closing monogram never
+appeared for anybody, and the rotating timetable looked like it saved and then
+forgot on reload, because `updateProfile` merges its patch into local state and
+only a reload asks the database. `data as Profile` asserts a shape rather than
+checking one, so nothing failed. `noProfileColumnDrift.test.ts` now holds the
+two together. **The select stays one inline literal** — supabase-js parses that
+string at the type level, so a `.join(', ')` widens it to `string` and takes
+the column checking with it.
+
 Always run before pushing: `npm run typecheck && npm run lint && npm test &&
 npm run build`.
 
@@ -80,6 +136,32 @@ npm run build`.
   nine frames over 100ms on a phone. It is painted once and composited.
 - **Fonts are bundled, not fetched from Google.** See `src/styles/fonts.ts`. Do
   not reintroduce the CDN link.
+- **A skip link cannot be `<a href="#main">` in a hash-routed app.** The router
+  reads `#main` as the route `/main` and renders the 404. It is a button that
+  moves focus to `<main tabIndex={-1}>`. The probe said it worked, because the
+  next Tab did land in content — the content of the not-found page.
+- **`sr-only` clips an element; it does not remove it.** Anything with it stays
+  focusable, so a hidden file input is a stop in the tab order with no visible
+  shape and no name. Give it `tabIndex={-1}`; the button beside it is the
+  control.
+- **A child of a `display:none` parent still reports its own computed
+  `display`.** Checking `getComputedStyle(el).display` says nothing about
+  whether it is rendered. `el.checkVisibility()` is the question you meant.
+- **An `<input>` has no accessible name of its own and should not.** Its name
+  comes from `<label for>`, so an audit reading `textContent` or `aria-label`
+  flags every correctly-labelled field in the app. Read `el.labels`.
+- **Changing the hash is a same-document navigation, so focus does not reset.**
+  Any probe measuring "where does Tab go first" has to load each screen fresh
+  or it is reporting where the previous screen left off.
+- **`vi.advanceTimersByTime` cannot cross a React render.** Where one timer
+  sets state and an effect then schedules a second timer, a single large
+  advance fires the first, queues the render, and finishes — the second timer
+  does not exist yet. Advance in steps inside `act()`.
+- **Adding a value to the `shareable` enum is a migration with a trap; adding
+  one to the TypeScript `Shareable` union is not.** They share a name and are
+  not the same thing. The enum is for `shares` (per-person links); the union
+  only picks which table to flip `shared_with_parents` on. `grade` and `file`
+  are in the union deliberately and not in the enum.
 
 ## Working conventions
 
@@ -92,10 +174,20 @@ npm run build`.
 - Commit messages explain *why*, including what was tried and rejected. They are
   the durable record — the conversation is not.
 - The owner cannot be assumed to know jargon; explain terms when they appear.
-- Supabase cannot be reached from the dev container (egress policy), so all
-  database and Edge Function work is done by the owner following written
-  instructions. SQL goes in the Supabase dashboard editor; `supabase ...`,
-  `git`, `npm` and `curl` go in his terminal.
+- **Supabase cannot be reached from the dev container, but Postgres can be run
+  IN it, and every migration should be applied there before it is called
+  careful.** `/usr/lib/postgresql/16/bin` is present. `initdb` refuses to run
+  as root, so run it as `ubuntu`; a ~30-line shim providing `auth.users`,
+  `auth.uid()`, `storage.buckets`/`objects`, `storage.foldername()` and the
+  `anon`/`authenticated`/`service_role` roles is then enough to apply every
+  migration in order and run `supabase/tests/rls_test.sql` for real. The first
+  time this was tried it found a live bug that had been shipped for days, and
+  two invalid UUIDs in a test file that had been read four times.
+- The hosted project itself is still unreachable (egress policy), so Edge
+  Function deployment and anything touching real data is done by the owner
+  following written instructions. SQL goes in the Supabase dashboard editor or
+  applies on merge via the GitHub integration; `supabase ...`, `git`, `npm` and
+  `curl` go in his terminal.
 - The live site (github.io) is also unreachable from here. Real-device checks
   are the owner's.
 
@@ -357,6 +449,20 @@ long frame in fifteen hundred, with p95 unchanged, is the container. Three
 consecutive runs failing the same configuration is the page. Do not spend a
 round on the former, and do not write off the latter.
 
+**Three full runs on 2026-09-09 put four different configurations in the fail
+column and never the same one twice** — `sign-in 414x736 [form]`, then `sign-up
+1440x900 [step2]`, then `sign-in 1440x900 [form]` and `sign-up 1440x900 [dark]`
+together. Every one was a single frame with p95 still 17ms, and both that were
+re-measured alone came back clean. **Which configuration fails is better
+evidence than how many do:** a page defect sits still, and this walks around.
+
+**Do not run the npm gates beside the harness.** `sign-up 1440x900 [step2]`
+came back p95 33ms with seven long frames in the middle run, which is not the
+container's usual signature and cost a round of suspicion — `typecheck`, `lint`,
+`test` and `build` were running against the same cores. Measured alone
+immediately afterwards it was 17ms. A measurement taken while something else is
+compiling is not a measurement.
+
 **Parent invites were already the best-built thing in this area** and only
 needed calling: `create_parent_invite()` makes eight characters with no
 `0/O/1/I` so a code survives being read down a phone, and
@@ -468,6 +574,218 @@ bundled, but it is in a public repo.
 That guard strips comments before searching, because `sampleSchoolYear`'s own
 doc comment names the real calendar to explain that it exists instead of it —
 the first version failed on exactly that.
+
+## `set_my_role()` had never worked, and every parent was a student
+
+Found on 2026-09-09 by running the migrations and `rls_test.sql` against a
+local Postgres for the first time. `select set_my_role('parent')` raised
+`role may not be changed` and left the row untouched.
+
+`guard_profile_role()` is a BEFORE UPDATE trigger that refuses a role change
+unless `auth.uid()` is null or the caller is an admin. `set_my_role()` is
+SECURITY DEFINER, and the pair was written assuming that being a definer
+function is enough to get past it. **It is not. SECURITY DEFINER changes the
+database role a function executes as; it does not touch `auth.uid()`, which
+reads a session setting that is still there inside the function.** So the guard
+blocked the one path built to write that column.
+
+Nobody noticed because a student changes nothing: `handle_new_user()` already
+defaults the column to 'student', so `set_my_role('student')` is not a change
+and the trigger never fires. Only a parent hits it, and `applyDetails()`
+correctly treats the failure as a warning rather than an error -- the account
+exists by then -- so it went quiet. **This is the same failure the project had
+already fixed once** ("everyone was silently `student`"): the question was added
+to the form and the answer has been discarded ever since.
+
+`20260909000700` fixes it with a transaction-local setting that `set_my_role()`
+declares and clears around its own update. That setting is not the control and
+must never be treated as one -- the control is still the column grant, which
+refuses any client naming `role` before a policy or trigger is reached. The
+trigger is the second layer, and it now admits exactly one thing: a function
+that refuses 'admin' by name and takes the row id from the token.
+
+**The test that would have caught it was already in the file**, unrun. 34
+assertions pass now.
+
+## What was added on 2026-09-09
+
+Six migrations, two Edge Functions, five features and two audits. All of the
+SQL is unrun — Supabase is unreachable from the dev container — and written to
+be safe to apply twice, because this project has a GitHub integration that
+applies migrations on merge *and* a habit of pasting SQL by hand.
+
+**The owner has to do four things** before any of it works: a Groq key and
+`MODEL_PROVIDER`/`MODEL_API_KEY` in Supabase Edge Function secrets; a private
+`attachments` bucket (or let `20260909000400` create it); `SUPABASE_ACCESS_TOKEN`
+and `SUPABASE_PROJECT_REF` as GitHub secrets so `functions.yml` can deploy;
+and `BREVO_API_KEY` + `MAIL_FROM` for reminders.
+
+**The timetable is a table, not columns and not events.** `class_meetings`
+holds one row per slot. Expanding a timetable into `events` would be about a
+thousand rows a student nobody asked for, each needing suppression on every
+holiday. Rotating Day 1..Day N schools get `cycle_day`; the honest limit is
+that counting weekdays drifts the first time a school closes unexpectedly, so
+the banner says which day it *believes* it is and offers a one-tap re-anchor.
+Deriving school days from the imported calendar sounds better and would be
+confidently wrong in a new way whenever that calendar was incomplete.
+
+**Marks are private by default and that default is the feature.** A student
+whose parent is linked can experience mark tracking as surveillance; defaulting
+to visible makes that choice for them. `score` and `out_of` stay separate so
+17/20 does not become 85, and `letter` exists because some report cards give
+only "Level 3" and inventing a number would be making data up. No average is
+stored: it is computed on read and shown with its working ("Weighted, from 5
+marks. 2 not counted"). An unmarked row is excluded, never counted as zero —
+an upcoming test is not a test you failed.
+
+**Report cards are the import pipeline again**, deliberately the same shape.
+The model produces a proposal; every line starts `pending` however confident it
+claimed to be; nothing reaches `grades` until a person accepts that line *and*
+picks a class. Owner-only with no parent arm anywhere: sharing one mark is a
+different act from handing over the document it came from, with its comments
+and every other mark on it. The model is told not to correct spelling, because
+a misread subject name is the signal telling a student not to trust that line.
+
+**The assistant reads as the user.** `calenda-chat` forwards the caller's JWT
+into its Supabase client, so every read goes through the same policies the app
+does. This is the opposite of `notify-dispatch`, which runs as the service role
+because it must reach everybody's reminders and accepts no input about whose. A
+service-role assistant is one prompt injection in one shared note away from
+reading every account; a JWT-scoped one cannot return anything its user could
+not already open in a tab. The quota is claimed *before* the model is asked,
+and it is a constant inside a definer function taking no arguments — a
+caller-supplied limit is not a limit.
+
+**The walkthrough ends on the student's own school, and there is no "x".**
+`<school> x Calenda` is the visual grammar of a partnership lockup, which would
+be an endorsement claim under a live trademark. Put to the owner; he chose this
+version. `schoolMark()` never derives initials — a school on the list gets its
+curated monogram, one typed into the "another school" box gets its own name.
+Two tests hold the line, one on invented initials and one on the separator.
+
+**Reminders had never sent anything, and FACTS.md said they had.** Two
+independent reasons: `reminders.yml` opened with `if [ -z
+"$SUPABASE_FUNCTION_URL" ]; then exit 0` and that secret was never set, so it
+ran hourly, printed one line and passed; and no Edge Function had ever been
+deployed. Sixty green checks a day for a feature that had never delivered
+anything, under a landing panel about reminders. The workflow now **fails**
+when unconfigured — a job that passes without doing its work is worse than one
+that fails, because nothing will ever prompt you to look. The sender moved off
+`onboarding@resend.dev`, which only ever reached the account owner.
+
+`docs/FACTS.md` line 48 read "Notifications (verified live end-to-end)". It now
+says delivery is not yet verified and explains how the claim came to be false.
+**Nothing on the marketing pages may claim reminders are delivered until one
+has been.** The landing page's Reminders panel is still written as though they
+are; that is the owner's call and it is flagged, not quietly rewritten.
+
+**The mobile drawer was lying about being a modal.** It has carried
+`role="dialog" aria-modal="true"` since it was written and never moved focus
+into itself or trapped it — so a screen reader was told a modal had opened
+while focus stayed behind it, and Tab walked out into a covered page.
+Announcing a trap that does not exist is worse than not announcing one.
+
+**Day one had never been looked at.** Preview seeds two classes, a year of
+events, a notebook, a timetable and a term of marks, so every audit ever run
+measured a full account. Emptied by building with the seeds off: every screen
+already had a decent empty state, except the dashboard, which said "you're all
+caught up" to somebody who had not started and then showed five cards each
+correctly reporting that it was empty. Day one now gets one card and three
+steps, gated on classes *and* events *and* assignments all being empty.
+
+## The timetable cycle
+
+Some schools run Day 1 to Day 6 rather than Monday to Friday, carrying the
+count across weekends and skipping every closure. `class_meetings` takes either
+a `day_of_week` or a `cycle_day`, never both, and the check constraint enforces
+the XOR.
+
+**`CycleCard` in Settings is the only thing that turns it on**, and it asks for
+the length and for which day today is in one breath. A length on its own is a
+cycle counting from a date nobody chose, and there is no deriving that date:
+the count skips closures, so it cannot be recovered from a calendar. Turning it
+off clears the anchor too, or switching it back on next term silently resumes
+an old count.
+
+`CycleBanner` on the Timetable page shows what the app believes and lets it be
+corrected in one tap, which re-anchors to today rather than patching one day.
+That is the honest answer to a count that drifts: not hiding the number, and
+not recomputing it from the imported calendar either — which sounds better and
+would be wrong in a new way every time the calendar was incomplete.
+
+## Leaving, and being installed
+
+**`.ics` export.** Calenda is one student's personal project and it could stop
+being maintained; an app you can only leave by abandoning your data is a trap.
+`src/features/calendar/ics.ts` builds the file in the browser -- no server, no
+request, no quota -- and the button says it exports the events in view rather
+than implying it is everything. Seventeen tests, most of them about failures
+that only appear on somebody else's machine: DTEND on an all-day event is
+**exclusive** (a one-day event ends the following day, and getting it wrong
+makes every exported holiday a day short); CRLF throughout, because Outlook
+rejects bare newlines; an unescaped newline in a description corrupts every
+line after it, not just its own; and line folding counts **UTF-8 bytes**,
+because an emoji is four octets and folding by character length produces lines
+that look legal and are not.
+
+No `VALARM`, deliberately. Calenda's scheduler knows the reader's quiet hours
+and timezone; a second, dumber copy of every reminder in another calendar means
+being woken twice.
+
+**A web manifest.** There has been a service worker since the first commit and
+it only ever handled push -- so the app could wake you up and could not be added
+to a home screen, on the device a school app is actually used on. Relative
+paths throughout (this is served from `/Calenda/`), and `start_url` carries the
+hash, or an installed icon opens the landing page.
+
+## The Edge Functions are checked as far as they can be
+
+They run on Deno against a live project, so nothing local proves they work.
+`src/test/edgeFunctions.test.ts` proves the two things that would otherwise
+surface as a red deploy or worse: every file parses (esbuild, in the **node**
+environment -- esbuild will not start under jsdom), and the security property
+is still in the file. `calenda-chat` must forward the caller's Authorization
+header, and at least five reads must still go through that client, so switching
+them to the service role one at a time fails too. Two orderings are asserted
+for the same reason: quota before the model is asked, ownership before the file
+is downloaded. Reversing either is invisible when wrong.
+
+**Two of those guards were themselves broken, and the review that found it is
+worth repeating.** `src.indexOf('claim_chat_message')` matched the file's own
+header comment, which explains the ordering in prose — so the assertion
+compared the comment's position against the call and would have passed with the
+quota claimed last. The replacement guard acquired the same defect twice while
+being written (`SERVICE_KEY` matches its own declaration at the top of the
+file). **Anchor an ordering assertion on the call, never on a name that also
+appears in the prose above it** — and assert that what you searched for was
+found, because `indexOf` returning -1 is smaller than everything.
+
+**A service-role write must name its owner, not just the row id.** The service
+role does not consult RLS, so `.eq('id', id)` on an id the caller handed you is
+a cross-tenant write waiting for somebody to move a check. Three were found on
+2026-09-09: `calenda-chat` wrote messages into any `threadId` it was given and
+bumped that thread's `updated_at`, and `calenda-decode`'s `fail` helper — which
+stamps `status='failed'` onto a card — was reachable from the missing-key
+branch, which sat *above* the ownership check. None of them leaked anything;
+every read in both functions is JWT-scoped, so these were integrity holes
+rather than disclosures.
+
+Both fixes shipped: the ownership check moved first (and, in `calenda-chat`,
+above the quota claim so an unanswerable request costs nothing), and every
+service-role write is keyed on `owner_id` as well. The guard checks the
+**shape** rather than the ordering on purpose — a write carrying its own owner
+stays safe wherever somebody later moves it, and ordering is the thing that
+keeps being got wrong. It counts what it inspected, so a chunking regex that
+stops matching fails loudly instead of passing over an empty list.
+
+`notify-dispatch` is the deliberate exception and stays as it is. It is invoked
+with the public anon key, so anyone can POST to it — audited and left alone,
+because `Deno.serve` there takes no request argument at all and it sends only
+what `claim_due_reminders()` says is already due, claimed under `for update
+skip locked`. A thousand invocations send the same reminders once. A
+shared-secret header would need a new secret set in two places before reminders
+worked at all, and would buy protection against wasted compute rather than
+against a wrong send.
 
 ## The landing page
 

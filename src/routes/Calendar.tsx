@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
-import { CalendarPlus, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react'
+import {
+  CalendarPlus, ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal,
+} from 'lucide-react'
 import {
   addDays, addMonths, endOfMonth, monthLabel, startOfMonth, startOfWeek, todayPlain, weekGrid,
 } from '@/lib/datetime'
@@ -21,6 +23,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { CategoryDot } from '@/components/ui/CategoryDot'
+import { icsFilename, toIcs } from '@/features/calendar/ics'
 import { cn } from '@/lib/cn'
 
 type ViewMode = 'month' | 'week' | 'agenda'
@@ -173,6 +176,8 @@ export function CalendarPage() {
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </button>
             </div>
+
+            <ExportButton events={events} yearLabel={current?.label ?? null} />
 
             <Button size="sm" onClick={() => openNew()}>
               <CalendarPlus className="h-4 w-4" aria-hidden />
@@ -345,5 +350,61 @@ export function CalendarPage() {
         defaultDate={defaultDate}
       />
     </div>
+  )
+}
+
+/**
+ * Download everything currently loaded as an .ics file.
+ *
+ * WHY AN APP SHOULD BE LEAVEABLE
+ *
+ * Calenda is a personal project by one student. It could stop being maintained,
+ * and an app you can only leave by abandoning your data is a trap. A file that
+ * opens in Apple Calendar, Google Calendar or Outlook is the difference between
+ * "I stopped using Calenda" and "I lost my school year".
+ *
+ * It costs nothing to run -- no server, no request, no quota. The file is built
+ * in the browser out of rows that are already on screen, which is also its one
+ * honest limit: it exports the window you are looking at, and the button says
+ * so rather than implying it is everything you have ever had.
+ */
+function ExportButton({
+  events, yearLabel,
+}: {
+  events: EventWithCategory[]
+  yearLabel: string | null
+}) {
+  const [done, setDone] = useState(false)
+
+  function download() {
+    const blob = new Blob([toIcs(events, { name: `Calenda ${yearLabel ?? ''}`.trim() })], {
+      type: 'text/calendar;charset=utf-8',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = icsFilename(yearLabel)
+    a.click()
+    // Revoked on the next tick rather than immediately: some browsers have not
+    // started reading the blob when click() returns, and revoking first gives
+    // an empty file with no error anywhere.
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+    setDone(true)
+    setTimeout(() => setDone(false), 2500)
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      onClick={download}
+      disabled={events.length === 0}
+      title={events.length === 0
+        ? 'Nothing to export yet'
+        : `Download the ${events.length} events in view as a calendar file`}
+    >
+      <Download className="h-4 w-4" aria-hidden />
+      <span className="hidden sm:inline">{done ? 'Downloaded' : 'Export'}</span>
+    </Button>
   )
 }

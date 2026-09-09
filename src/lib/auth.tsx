@@ -12,8 +12,21 @@ export type Profile = {
   avatar_url: string | null
   role: Role
   grade: string | null
+  school: string | null
   timezone: string
   onboarded_at: string | null
+  /**
+   * A rotating Day 1..Day N timetable, or null for an ordinary week.
+   *
+   * The anchor pair is how a date is turned into a cycle day. It is
+   * re-settable because counting weekdays drifts the first time the school
+   * closes unexpectedly, and the student is the only one who knows.
+   */
+  timetable_cycle_length: number | null
+  timetable_cycle_anchor: string | null
+  timetable_cycle_anchor_day: number | null
+  /** When they finished or skipped the post-signup walkthrough. */
+  walkthrough_seen_at: string | null
 }
 
 /** Everything the sign-up form collects beyond an address and a password. */
@@ -79,6 +92,20 @@ type AuthContextValue = {
   completeFirstRun: (answers: FirstRunAnswers) => Promise<{ warning: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  /**
+   * Writes a few of the caller's own profile fields.
+   *
+   * Deliberately narrow. `rls.sql` revokes update on `profiles` and re-grants a
+   * named list of columns, and Postgres refuses the WHOLE statement if any
+   * column in it is outside that grant -- so a wide `Partial<Profile>` here
+   * would let a caller take down a name change by including `role` in the same
+   * object. These four are in the grant, and adding a fifth means adding it to
+   * the grant first. See 20260909000600.
+   */
+  updateProfile: (patch: Partial<Pick<Profile,
+    'timetable_cycle_length' | 'timetable_cycle_anchor'
+    | 'timetable_cycle_anchor_day' | 'walkthrough_seen_at'
+  >>) => Promise<{ error: string | null }>
 }
 
 
@@ -245,7 +272,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, role, grade, timezone, onboarded_at')
+      /**
+       * Every field of `Profile`, and it has to stay that way.
+       *
+       * This list was written by hand and stopped at seven while the type grew
+       * to twelve, and nothing anywhere failed. A column missing from a select
+       * is `undefined` at runtime, which every reader treats as "not set": so
+       * `profile.school` read as no school and the walkthrough's closing
+       * monogram never appeared for anybody, and the rotating timetable looked
+       * like it saved and then forgot on the next load, because
+       * `updateProfile` merges its patch into local state and only a reload
+       * asks the database what is really there.
+       *
+       * It stays one literal rather than a constant because supabase-js parses
+       * the string at the type level, and a joined or concatenated one widens
+       * to `string` and takes that checking with it.
+       * `noProfileColumnDrift.test.ts` holds it against the type.
+       *
+       * `select('*')` would work and is worse: it fetches `heard_from`, which
+       * is deliberately collected and never shown back.
+       */
+      .select('id, full_name, avatar_url, role, grade, school, timezone, onboarded_at, timetable_cycle_length, timetable_cycle_anchor, timetable_cycle_anchor_day, walkthrough_seen_at')
       .eq('id', userId)
       .maybeSingle()
 
@@ -399,6 +446,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       async refreshProfile() {
         if (session?.user) await loadProfile(session.user.id)
+      },
+
+      async updateProfile(patch) {
+        if (!session?.user) return { error: 'You need to be signed in.' }
+        const { error } = await supabase.from('profiles')
+          .update(patch).eq('id', session.user.id)
+        if (error) return { error: 'We could not save that. Please try again.' }
+        // Merged locally rather than refetched. The caller is usually a control
+        // the user is looking at, and a round trip before the number changes
+        // reads as the button not having worked.
+        setProfile((prev) => (prev ? { ...prev, ...patch } : prev))
+        return { error: null }
       },
     }
   }, [session, profile, loading, profileReady])

@@ -8,6 +8,8 @@
 import type {
   Assignment, EventCategory, EventWithCategory, NewAssignmentInput, NewEventInput,
   CategoryPreference, NotebookPage, NotificationPreferences, ParentLink, QueuedReminder,
+  Attachment, ChatMessage, ChatThread, ClassMeeting, Grade, MeetingWithClass,
+  ReportCard, ReportCardLine,
   SchoolClass, SchoolYear, Shareable, Task,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
@@ -105,6 +107,14 @@ const assignments: Assignment[] = []
 const tasks: Task[] = []
 const parentLinks: ParentLink[] = []
 const previewInvites = new Set<string>()
+const meetings: ClassMeeting[] = []
+const grades: Grade[] = []
+const reportCards: ReportCard[] = []
+const reportCardLines: ReportCardLine[] = []
+const attachments: Attachment[] = []
+const chatThreads: ChatThread[] = []
+const chatMessages: ChatMessage[] = []
+let chatUsed = 0
 
 const previewPrefs: NotificationPreferences = {
   profile_id: OWNER_ID,
@@ -159,6 +169,152 @@ function seedClasses() {
   classes.push(make('Functions', 'MCR3U', 'Ms. Patel'))
 }
 seedClasses()
+
+/**
+ * A notebook with something in it.
+ *
+ * The preview seeded no pages at all, which meant three screens had only ever
+ * been seen empty: the notes tab, the dashboard's recent-notes card, and every
+ * measurement any harness has ever taken of them. A tree cannot be judged
+ * without a tree, so this seeds nested pages rather than a flat list.
+ *
+ * All of it is invented, like every other number on the marketing pages. It is
+ * the shape of a real notebook, not a copy of one.
+ */
+function seedNotebook() {
+  const cs = classes[0]!
+  const fn = classes[1]!
+  const now = new Date().toISOString()
+  const ago = (days: number) =>
+    new Date(Date.now() - days * 86_400_000).toISOString()
+
+  const page = (
+    klass: string, title: string, parent: string | null, pos: number,
+    icon: string | null, text: string, touched: string,
+  ): NotebookPage => ({
+    id: nextId(),
+    class_id: klass,
+    owner_id: OWNER_ID,
+    parent_page_id: parent,
+    title,
+    icon,
+    content: {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+    },
+    content_text: text,
+    position: pos,
+    is_archived: false,
+    shared_with_parents: false,
+    created_at: now,
+    updated_at: touched,
+  })
+
+  const unit3 = page(fn.id, 'Unit 3 — Rational functions', null, 1000, '📐',
+    'Vertical asymptote where the denominator is zero and the numerator is not.',
+    ago(1))
+  pages.push(unit3)
+  pages.push(page(fn.id, 'Asymptotes', unit3.id, 1000, null,
+    'Horizontal: compare degrees. Equal degrees means the ratio of leading coefficients.',
+    ago(1)))
+  pages.push(page(fn.id, 'Worked examples', unit3.id, 2000, null,
+    'f(x) = (2x + 1)/(x - 3). Asymptotes at x = 3 and y = 2.', ago(3)))
+  pages.push(page(fn.id, 'Test 2 review', null, 2000, '✅',
+    'Transformations, then rationals. Bring the formula sheet.', ago(4)))
+
+  const arrays = page(cs.id, 'Arrays and lists', null, 1000, '📗',
+    'An array is fixed length. A list grows, and that growth is not free.',
+    ago(2))
+  pages.push(arrays)
+  pages.push(page(cs.id, 'Big-O, roughly', arrays.id, 1000, null,
+    'Lookup by index is constant. Searching without an index is not.', ago(6)))
+  pages.push(page(cs.id, 'Recursion', null, 2000, '🌀',
+    'Base case first. Every call has to make the problem smaller or it never ends.',
+    ago(8)))
+}
+seedNotebook()
+
+/**
+ * A week that actually has a shape.
+ *
+ * Times are the school day rather than round numbers, because a timetable made
+ * of 09:00 and 10:00 blocks does not show whether the grid copes with a
+ * period that starts at twenty past.
+ */
+function seedTimetable() {
+  const [cs, fn] = classes as [SchoolClass, SchoolClass]
+  const now = new Date().toISOString()
+  const slot = (
+    klass: SchoolClass, day: number, from: string, to: string, label: string,
+    room: string | null = null,
+  ): ClassMeeting => ({
+    id: nextId(),
+    class_id: klass.id,
+    owner_id: OWNER_ID,
+    day_of_week: day,
+    cycle_day: null,
+    starts_at: from,
+    ends_at: to,
+    room,
+    label,
+    created_at: now,
+    updated_at: now,
+  })
+
+  // Monday to Friday, two classes, deliberately not the same time every day.
+  meetings.push(slot(fn, 1, '08:50:00', '10:05:00', 'Period 1'))
+  meetings.push(slot(cs, 1, '13:20:00', '14:35:00', 'Period 3', 'Lab 2'))
+  meetings.push(slot(cs, 2, '10:20:00', '11:35:00', 'Period 2', 'Lab 2'))
+  meetings.push(slot(fn, 3, '08:50:00', '10:05:00', 'Period 1'))
+  meetings.push(slot(cs, 4, '13:20:00', '14:35:00', 'Period 3', 'Lab 2'))
+  meetings.push(slot(fn, 5, '10:20:00', '11:35:00', 'Period 2'))
+}
+seedTimetable()
+
+/**
+ * Marks, including one that is not marked yet.
+ *
+ * That last one is the point: an upcoming test with a date and no score is the
+ * most common row in a real gradebook and the easiest one for a schema or a
+ * screen to reject by accident.
+ */
+function seedGrades() {
+  const [cs, fn] = classes as [SchoolClass, SchoolClass]
+  const now = new Date().toISOString()
+  const day = (offset: number) =>
+    new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10)
+
+  const mark = (
+    klass: SchoolClass, title: string, score: number | null, outOf: number | null,
+    category: string, on: string, weight = 1,
+  ): Grade => ({
+    id: nextId(),
+    owner_id: OWNER_ID,
+    class_id: klass.id,
+    assignment_id: null,
+    title,
+    score,
+    out_of: outOf,
+    letter: null,
+    weight,
+    category,
+    term: 'Term 1',
+    recorded_on: on,
+    notes: null,
+    source: 'manual',
+    // Off, on every one of them. The default is the feature.
+    shared_with_parents: false,
+    created_at: now,
+    updated_at: now,
+  })
+
+  grades.push(mark(fn, 'Unit 1 quiz', 17, 20, 'Quiz', day(-24)))
+  grades.push(mark(fn, 'Unit 2 test', 41, 50, 'Test', day(-11), 2))
+  grades.push(mark(fn, 'Unit 3 test', null, null, 'Test', day(6), 2))
+  grades.push(mark(cs, 'Arrays lab', 19, 20, 'Lab', day(-18)))
+  grades.push(mark(cs, 'Recursion assignment', 27, 35, 'Assignment', day(-5), 1.5))
+}
+seedGrades()
 
 function fromInput(input: NewEventInput, id: string, schoolYearId: string): EventWithCategory {
   const now = new Date().toISOString()
@@ -426,6 +582,8 @@ export const previewSource: DataSource = {
       kind === 'event' ? store.find((e) => e.id === id)
       : kind === 'class' ? classes.find((c) => c.id === id)
       : kind === 'notebook_page' ? pages.find((p) => p.id === id)
+      : kind === 'grade' ? grades.find((g) => g.id === id)
+      : kind === 'file' ? attachments.find((f) => f.id === id)
       : assignments.find((a) => a.id === id)
     if (target) target.shared_with_parents = shared
   },
@@ -533,6 +691,16 @@ export const previewSource: DataSource = {
     if (patch.title !== undefined) row.title = patch.title
     if (patch.content !== undefined) row.content = patch.content
     if (patch.contentText !== undefined) row.content_text = patch.contentText
+    if (patch.icon !== undefined) row.icon = patch.icon
+    if (patch.parentId !== undefined) row.parent_page_id = patch.parentId
+    if (patch.position !== undefined) row.position = patch.position
+    row.updated_at = new Date().toISOString()
+  },
+
+  async setPageArchived(id, archived) {
+    const row = pages.find((p) => p.id === id)
+    if (!row) return
+    row.is_archived = archived
     row.updated_at = new Date().toISOString()
   },
 
@@ -683,5 +851,427 @@ export const previewSource: DataSource = {
       })
     }
     return writes.length
+  },
+
+  // ---------------------------------------------------------- timetable --
+
+  async listMeetings(classId) {
+    return meetings
+      .filter((m) => m.class_id === classId)
+      .sort((a, b) =>
+        (a.day_of_week ?? a.cycle_day ?? 0) - (b.day_of_week ?? b.cycle_day ?? 0)
+        || a.starts_at.localeCompare(b.starts_at))
+  },
+
+  async listWeekMeetings(schoolYearId) {
+    const live = new Map(
+      classes.filter((c) => c.school_year_id === schoolYearId && !c.is_archived)
+        .map((c) => [c.id, c]),
+    )
+    const out: MeetingWithClass[] = []
+    for (const m of meetings) {
+      const c = live.get(m.class_id)
+      if (!c) continue
+      out.push({
+        ...m,
+        className: c.name,
+        courseCode: c.course_code,
+        classRoom: c.room,
+        colorToken: c.color_token,
+      })
+    }
+    return out.sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+  },
+
+  async createMeeting(classId, input) {
+    const now = new Date().toISOString()
+    const row: ClassMeeting = {
+      id: nextId(),
+      class_id: classId,
+      owner_id: OWNER_ID,
+      day_of_week: input.dayOfWeek ?? null,
+      cycle_day: input.cycleDay ?? null,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt,
+      room: input.room?.trim() || null,
+      label: input.label?.trim() || null,
+      created_at: now,
+      updated_at: now,
+    }
+    meetings.push(row)
+    return row
+  },
+
+  async updateMeeting(id, input) {
+    const row = meetings.find((m) => m.id === id)
+    if (!row) throw new Error('That timetable slot no longer exists.')
+    row.day_of_week = input.dayOfWeek ?? null
+    row.cycle_day = input.cycleDay ?? null
+    row.starts_at = input.startsAt
+    row.ends_at = input.endsAt
+    row.room = input.room?.trim() || null
+    row.label = input.label?.trim() || null
+    row.updated_at = new Date().toISOString()
+    return row
+  },
+
+  async deleteMeeting(id) {
+    const i = meetings.findIndex((m) => m.id === id)
+    if (i !== -1) meetings.splice(i, 1)
+  },
+
+  // ------------------------------------------------------------- grades --
+
+  async listGrades(classId) {
+    return grades
+      .filter((g) => g.class_id === classId)
+      .sort((a, b) => (b.recorded_on ?? '').localeCompare(a.recorded_on ?? ''))
+  },
+
+  async listAllGrades(schoolYearId) {
+    const live = new Map(
+      classes.filter((c) => c.school_year_id === schoolYearId).map((c) => [c.id, c.name]),
+    )
+    return grades
+      .filter((g) => live.has(g.class_id))
+      .map((g) => ({ ...g, className: live.get(g.class_id)! }))
+      .sort((a, b) => (b.recorded_on ?? '').localeCompare(a.recorded_on ?? ''))
+  },
+
+  async createGrade(classId, input) {
+    const now = new Date().toISOString()
+    const row: Grade = {
+      id: nextId(),
+      owner_id: OWNER_ID,
+      class_id: classId,
+      assignment_id: input.assignmentId ?? null,
+      title: input.title.trim(),
+      score: input.score ?? null,
+      out_of: input.outOf ?? null,
+      letter: input.letter?.trim() || null,
+      weight: input.weight ?? 1,
+      category: input.category?.trim() || null,
+      term: input.term?.trim() || null,
+      recorded_on: input.recordedOn || null,
+      notes: input.notes?.trim() || null,
+      source: 'manual',
+      shared_with_parents: false,
+      created_at: now,
+      updated_at: now,
+    }
+    grades.push(row)
+    return row
+  },
+
+  async updateGrade(id, input) {
+    const row = grades.find((g) => g.id === id)
+    if (!row) throw new Error('That mark no longer exists.')
+    Object.assign(row, {
+      title: input.title.trim(),
+      score: input.score ?? null,
+      out_of: input.outOf ?? null,
+      letter: input.letter?.trim() || null,
+      weight: input.weight ?? 1,
+      category: input.category?.trim() || null,
+      term: input.term?.trim() || null,
+      recorded_on: input.recordedOn || null,
+      notes: input.notes?.trim() || null,
+      assignment_id: input.assignmentId ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    return row
+  },
+
+  async deleteGrade(id) {
+    const i = grades.findIndex((g) => g.id === id)
+    if (i !== -1) grades.splice(i, 1)
+  },
+
+  // ------------------------------------------------------- report cards --
+
+  async listReportCards() {
+    return [...reportCards].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
+  async getReportCard(id) {
+    return reportCards.find((r) => r.id === id) ?? null
+  },
+
+  async createReportCard(file, term) {
+    const now = new Date().toISOString()
+    const row: ReportCard = {
+      id: nextId(),
+      owner_id: OWNER_ID,
+      school_year_id: YEAR_ID,
+      storage_path: `preview/${file.name}`,
+      original_name: file.name,
+      mime_type: file.type || null,
+      byte_size: file.size,
+      term,
+      status: 'uploaded',
+      error: null,
+      decode_consent_at: null,
+      decoded_at: null,
+      applied_at: null,
+      created_at: now,
+      updated_at: now,
+    }
+    reportCards.push(row)
+    return row
+  },
+
+  /**
+   * The preview cannot ask a model anything -- there is no network and no key.
+   * It invents a plausible reading instead, and the review screen is then
+   * exercisable end to end without a Supabase project.
+   *
+   * The invented lines deliberately include one the "model" was unsure about
+   * and one that matches no class, because those are the two cases the review
+   * screen exists for, and a demo where everything matches perfectly is a demo
+   * that never shows the part that matters.
+   */
+  async decodeReportCard(id) {
+    const card = reportCards.find((r) => r.id === id)
+    if (!card) return
+    card.decode_consent_at = new Date().toISOString()
+    card.status = 'decoding'
+
+    const now = new Date().toISOString()
+    const line = (
+      course: string, mark: number | null, outOf: number | null,
+      confidence: number, matched: string | null, remark: string | null,
+    ): ReportCardLine => ({
+      id: nextId(),
+      report_card_id: card.id,
+      owner_id: OWNER_ID,
+      course_name: course,
+      course_code: null,
+      teacher: null,
+      mark,
+      out_of: outOf,
+      letter: null,
+      term: card.term,
+      remark,
+      confidence,
+      raw: { course, mark },
+      matched_class_id: matched,
+      decision: 'pending',
+      grade_id: null,
+      created_at: now,
+      updated_at: now,
+    })
+
+    const [cs, fn] = classes as [SchoolClass, SchoolClass]
+    reportCardLines.push(
+      line('Functions', 84, 100, 0.96, fn.id, 'Works steadily and asks good questions.'),
+      line('Computer Science', 91, 100, 0.94, cs.id, null),
+      // Read poorly on purpose: a smudged line is the normal case.
+      line('Enqlish', 78, 100, 0.41, null, null),
+      // Real, legible, and matches nothing the student has set up.
+      line('Physical Education', 88, 100, 0.93, null, null),
+    )
+
+    card.status = 'decoded'
+    card.decoded_at = now
+    card.updated_at = now
+  },
+
+  async listReportCardLines(reportCardId) {
+    return reportCardLines
+      .filter((l) => l.report_card_id === reportCardId)
+      .sort((a, b) => (a.confidence ?? 0) - (b.confidence ?? 0))
+  },
+
+  async updateReportCardLine(id, patch) {
+    const row = reportCardLines.find((l) => l.id === id)
+    if (!row) return
+    if (patch.decision !== undefined) row.decision = patch.decision
+    if (patch.matchedClassId !== undefined) row.matched_class_id = patch.matchedClassId
+    row.updated_at = new Date().toISOString()
+  },
+
+  async applyReportCard(id) {
+    const card = reportCards.find((r) => r.id === id)
+    if (!card) return { created: 0, skipped: 0 }
+    let created = 0
+    let skipped = 0
+    const now = new Date().toISOString()
+
+    for (const line of reportCardLines.filter((l) => l.report_card_id === id)) {
+      if (line.decision !== 'accept' || line.grade_id || !line.matched_class_id) {
+        skipped++
+        continue
+      }
+      const row: Grade = {
+        id: nextId(),
+        owner_id: OWNER_ID,
+        class_id: line.matched_class_id,
+        assignment_id: null,
+        title: line.course_name?.trim() || 'Report card',
+        score: line.mark,
+        out_of: line.out_of,
+        letter: line.letter,
+        weight: 1,
+        category: 'Report card',
+        term: line.term,
+        recorded_on: now.slice(0, 10),
+        notes: line.remark,
+        source: 'report_card',
+        shared_with_parents: false,
+        created_at: now,
+        updated_at: now,
+      }
+      grades.push(row)
+      line.grade_id = row.id
+      created++
+    }
+
+    card.status = 'applied'
+    card.applied_at = now
+    return { created, skipped }
+  },
+
+  async deleteReportCard(id) {
+    for (let i = reportCardLines.length - 1; i >= 0; i--) {
+      if (reportCardLines[i]!.report_card_id === id) reportCardLines.splice(i, 1)
+    }
+    const i = reportCards.findIndex((r) => r.id === id)
+    if (i !== -1) reportCards.splice(i, 1)
+  },
+
+  // -------------------------------------------------------- attachments --
+
+  async listAttachments(classId) {
+    return attachments
+      .filter((f) => f.class_id === classId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
+  async uploadAttachment(classId, file) {
+    const row: Attachment = {
+      id: nextId(),
+      class_id: classId,
+      owner_id: OWNER_ID,
+      storage_path: `preview/${file.name}`,
+      filename: file.name,
+      mime_type: file.type || 'application/octet-stream',
+      size_bytes: file.size,
+      shared_with_parents: false,
+      created_at: new Date().toISOString(),
+    }
+    attachments.push(row)
+    return row
+  },
+
+  /**
+   * A blob URL for the file that is still in memory from the upload, or an
+   * empty string. Never a fabricated remote URL: a link that looks real and
+   * goes nowhere is worse than one that is plainly absent.
+   */
+  async attachmentUrl() {
+    return ''
+  },
+
+  async deleteAttachment(id) {
+    const i = attachments.findIndex((f) => f.id === id)
+    if (i !== -1) attachments.splice(i, 1)
+  },
+
+  // --------------------------------------------------------------- chat --
+
+  async listChatThreads() {
+    return [...chatThreads].sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  },
+
+  async createChatThread(title) {
+    const now = new Date().toISOString()
+    const row: ChatThread = {
+      id: nextId(),
+      owner_id: OWNER_ID,
+      title: title.slice(0, 80) || 'New chat',
+      created_at: now,
+      updated_at: now,
+    }
+    chatThreads.push(row)
+    return row
+  },
+
+  async deleteChatThread(id) {
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      if (chatMessages[i]!.thread_id === id) chatMessages.splice(i, 1)
+    }
+    const i = chatThreads.findIndex((t) => t.id === id)
+    if (i !== -1) chatThreads.splice(i, 1)
+  },
+
+  async listChatMessages(threadId) {
+    return chatMessages
+      .filter((m) => m.thread_id === threadId)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+  },
+
+  /**
+   * There is no model here, and the preview does not pretend there is one.
+   *
+   * It answers from the seeded data by reading it, which is honest about what
+   * it is: the reply says plainly that this is the preview and no model was
+   * asked. Inventing a fluent paragraph would demonstrate a feature that does
+   * not exist until a key is set, which is the one thing this project's rules
+   * forbid outright.
+   */
+  async sendChatMessage(threadId, text) {
+    const now = new Date().toISOString()
+    chatUsed++
+
+    chatMessages.push({
+      id: nextId(), thread_id: threadId, owner_id: OWNER_ID, role: 'user',
+      content: text, sources: [], error: null, created_at: now,
+    })
+
+    const soon = store
+      .filter((e) => e.start_date >= new Date().toISOString().slice(0, 10))
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+      .slice(0, 3)
+    const due = assignments
+      .filter((a) => a.status !== 'completed' && a.due_at)
+      .sort((a, b) => (a.due_at ?? '').localeCompare(b.due_at ?? ''))
+      .slice(0, 3)
+
+    const lines = [
+      'This is the preview, so nothing was asked of a model — this reply is'
+      + ' read straight out of the sample data.',
+    ]
+    if (soon.length) {
+      lines.push('', 'Coming up:', ...soon.map((e) => `• ${e.title} — ${e.start_date}`))
+    }
+    if (due.length) {
+      lines.push('', 'Due:', ...due.map((a) => `• ${a.title}`))
+    }
+
+    const reply: ChatMessage = {
+      id: nextId(),
+      thread_id: threadId,
+      owner_id: OWNER_ID,
+      role: 'assistant',
+      content: lines.join('\n'),
+      sources: [
+        ...soon.map((e) => ({ kind: 'event' as const, id: e.id, title: e.title })),
+        ...due.map((a) => ({ kind: 'assignment' as const, id: a.id, title: a.title })),
+      ],
+      error: null,
+      created_at: new Date().toISOString(),
+    }
+    chatMessages.push(reply)
+
+    const thread = chatThreads.find((t) => t.id === threadId)
+    if (thread) {
+      thread.updated_at = reply.created_at
+      if (thread.title === 'New chat') thread.title = text.slice(0, 60)
+    }
+    return reply
+  },
+
+  async chatQuotaRemaining() {
+    return { used: chatUsed, limit: 40 }
   },
 }

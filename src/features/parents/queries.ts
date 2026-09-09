@@ -43,6 +43,8 @@ export function useSetShared() {
       void qc.invalidateQueries({ queryKey: ['classes'] })
       void qc.invalidateQueries({ queryKey: ['pages'] })
       void qc.invalidateQueries({ queryKey: ['assignments'] })
+      void qc.invalidateQueries({ queryKey: ['grades'] })
+      void qc.invalidateQueries({ queryKey: ['attachments'] })
     },
   })
 }

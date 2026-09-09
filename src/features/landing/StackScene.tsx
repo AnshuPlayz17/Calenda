@@ -57,10 +57,10 @@ const LAYERS: Layer[] = [
   {
     Icon: NotebookPen,
     eyebrow: 'Reminders',
-    title: 'Warned early, and only once.',
+    title: 'Scheduled by you, and never doubled.',
     body: `Pick the timings per category — a week before an exam, an hour before a meeting —
-           and set quiet hours you will not be woken inside. A duplicate reminder is not
-           unlikely, it is impossible: the database refuses to store the second one.`,
+           and set quiet hours nothing is scheduled inside. A second reminder for the same
+           thing is not unlikely, it is impossible: the database refuses to store it.`,
     demo: 'reminders',
   },
 ]

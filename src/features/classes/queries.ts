@@ -99,12 +99,41 @@ export function useUpdatePage() {
   return useMutation({
     mutationFn: ({ id, patch }: {
       id: string
-      patch: { title?: string; content?: unknown; contentText?: string }
+      patch: {
+        title?: string
+        content?: unknown
+        contentText?: string
+        icon?: string | null
+        parentId?: string | null
+        position?: number
+      }
     }) => dataSource.updatePage(id, patch),
-    // Only the title shows in the tree, so a content save need not refetch it.
+    // The tree shows the title, the icon and the order, so a change to any of
+    // those has to refetch it -- but a content save, which happens every 900ms
+    // while somebody is typing, must not.
     onSuccess: (_d, vars) => {
-      if (vars.patch.title !== undefined) void qc.invalidateQueries({ queryKey: [PAGES] })
+      const { title, icon, parentId, position } = vars.patch
+      if (title !== undefined || icon !== undefined
+          || parentId !== undefined || position !== undefined) {
+        void qc.invalidateQueries({ queryKey: [PAGES] })
+      }
     },
+  })
+}
+
+/**
+ * Hides a page without destroying it.
+ *
+ * The reversible half of deleting, and the reason the bin is no longer the
+ * only thing on offer. `is_archived` has been in the schema since the first
+ * migration and nothing had ever set it.
+ */
+export function useSetPageArchived() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) =>
+      dataSource.setPageArchived(id, archived),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [PAGES] }),
   })
 }
 

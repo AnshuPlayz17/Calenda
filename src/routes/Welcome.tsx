@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 import { PinnedStory } from '@/features/welcome/PinnedStory'
+import { ClosingMark } from '@/features/welcome/ClosingMark'
 import type { Chapter } from '@/features/welcome/PinnedStory'
 
 const CHAPTERS: Chapter[] = [
@@ -60,12 +61,13 @@ const CHAPTERS: Chapter[] = [
 ]
 
 export function Welcome() {
-  const { session, profile } = useAuth()
+  const { session, profile, updateProfile } = useAuth()
   const preview = usePreview()
   const navigate = useNavigate()
   const reduce = useReducedMotion()
   const heroRef = useRef<HTMLDivElement>(null)
   const [started, setStarted] = useState(false)
+  const [closing, setClosing] = useState(false)
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -169,14 +171,32 @@ export function Welcome() {
           back to this walkthrough any time from Settings.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Button size="lg" onClick={() => navigate('/classes')}>
-            Add my classes
+          <Button size="lg" onClick={() => setClosing(true)}>
+            Start using Calenda
           </Button>
           <Button variant="secondary" size="lg" onClick={() => navigate('/dashboard')}>
-            Go to the dashboard
+            Skip to the dashboard
           </Button>
         </div>
       </section>
+
+      {/* The closing mark: their school, a beat, and out of the way. It is a
+          full-screen overlay rather than another section, because the point is
+          that the walkthrough ENDS -- a scene you can scroll back past is not
+          an ending, it is another chapter. */}
+      {closing && (
+        <ClosingMark
+          school={profile?.school}
+          onDone={() => {
+            // Recorded when the walkthrough is actually finished, not when it
+            // was opened. Failing to write it is not worth blocking on: the
+            // cost is being offered the tour again, which is recoverable, and
+            // stranding somebody on a fading overlay is not.
+            void updateProfile({ walkthrough_seen_at: new Date().toISOString() })
+            navigate('/classes', { replace: true })
+          }}
+        />
+      )}
     </div>
   )
 }

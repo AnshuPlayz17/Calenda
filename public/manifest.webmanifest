@@ -1,0 +1,19 @@
+{
+  "name": "Calenda",
+  "short_name": "Calenda",
+  "description": "Your school year, already in.",
+  "start_url": "./#/dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f8fa",
+  "theme_color": "#1e3765",
+  "icons": [
+    {
+      "src": "./brand/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

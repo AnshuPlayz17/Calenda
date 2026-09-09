@@ -66,9 +66,9 @@ const TOPICS: WheelCarouselItem[] = [
   },
   {
     label: 'What if I miss one?',
-    detail: `You can set how far ahead each kind of thing warns you, and quiet hours you will not
-             be woken inside. A reminder cannot arrive twice — the database refuses to store the
-             second one.`,
+    detail: `You can set how far ahead each kind of thing warns you, and quiet hours nothing is
+             scheduled inside. The same reminder cannot be scheduled twice — the database refuses
+             to store the second one.`,
   },
 ]
 

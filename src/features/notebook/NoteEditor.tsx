@@ -16,7 +16,19 @@ import { cn } from '@/lib/cn'
 /** Milliseconds of quiet before a save. Long enough not to save mid-word. */
 const AUTOSAVE_DELAY = 900
 
-export function NoteEditor({ page }: { page: NotebookPage }) {
+export function NoteEditor({ page, iconSlot }: {
+  page: NotebookPage
+  /**
+   * The page's icon control, rendered inline with the title.
+   *
+   * Passed in rather than built here because the icon is a property of the
+   * page in the rail, not of the document -- but it has to *sit* beside the
+   * title, or it floats above the toolbar where it reads as another toolbar
+   * button. The first version put it there and the seeded floppy-disk icon
+   * looked exactly like a save control.
+   */
+  iconSlot?: React.ReactNode
+}) {
   const save = useUpdatePage()
   const [title, setTitle] = useState(page.title)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -82,7 +94,8 @@ export function NoteEditor({ page }: { page: NotebookPage }) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
+        {iconSlot}
         <input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}

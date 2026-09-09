@@ -11,6 +11,10 @@ import { MagneticDock } from '@/components/motion/MagneticDock'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { categoryColor } from '@/components/ui/CategoryDot'
 import { EventDialog } from '@/features/events/EventDialog'
+import { NextUpCard } from '@/features/timetable/NextUpCard'
+import { FirstDay } from '@/features/welcome/FirstDay'
+import { useAllGrades } from '@/features/grades/queries'
+import { averageNote, averageOf } from '@/features/grades/average'
 import { useEvents } from '@/features/events/queries'
 import { useClasses, useRecentPages, useUpcomingAssignments } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
@@ -58,6 +62,29 @@ export function Dashboard() {
   const { data: assignments = [] } = useUpcomingAssignments(current?.id, 5)
   const { data: classes = [] } = useClasses(current?.id)
   const { data: recentNotes = [] } = useRecentPages(4)
+  const { data: allGrades = [] } = useAllGrades(current?.id)
+
+  /**
+   * One overall average, and one per class.
+   *
+   * Both computed here rather than stored, for the same reason the class page
+   * does it: a stored average is a second copy of a fact that goes stale
+   * silently, and a mark somebody did not expect is the worst thing for this
+   * app to be confidently wrong about.
+   */
+  const average = useMemo(() => averageOf(allGrades), [allGrades])
+  const byClass = useMemo(() => {
+    const groups = new Map<string, typeof allGrades>()
+    for (const g of allGrades) {
+      const list = groups.get(g.className)
+      if (list) list.push(g)
+      else groups.set(g.className, [g])
+    }
+    return [...groups.entries()]
+      .map(([className, rows]) => ({ className, percent: averageOf(rows).percent }))
+      .filter((row): row is { className: string; percent: number } => row.percent !== null)
+      .sort((a, b) => b.percent - a.percent)
+  }, [allGrades])
 
   const { todayEvents, upcoming } = useMemo(() => {
     const onToday = events.filter((e) => e.start_date <= today && e.end_date >= today)
@@ -68,6 +95,16 @@ export function Dashboard() {
   }, [events, today])
 
   const firstName = profile?.full_name?.split(' ')[0]
+
+  /**
+   * A genuinely new account, as opposed to a quiet week.
+   *
+   * All three, not just events: somebody who has classes but nothing on today
+   * is having an ordinary Tuesday and wants the normal dashboard, not a
+   * getting-started card telling them to do what they have already done.
+   */
+  const blank = !isLoading
+    && classes.length === 0 && events.length === 0 && assignments.length === 0
 
   const rise = (i: number) =>
     reduce
@@ -90,9 +127,26 @@ export function Dashboard() {
           {greeting()}{firstName ? <>, {firstName}.</> : '.'}
         </h1>
         <p className="mt-1.5 max-w-[52ch] text-[15px] text-text-muted">
-          {isLoading ? 'Checking your calendar…' : summarise(today, todayEvents, upcoming)}
+          {isLoading
+            ? 'Checking your calendar…'
+            // "You're all caught up" is what summarise() says with nothing to
+            // report, and on a brand-new account that is simply false: you are
+            // not caught up, you have not started. Congratulating somebody on
+            // the screen where they are meant to begin is worse than saying
+            // nothing.
+            : blank
+              ? 'Nothing in here yet — this is where your week will be.'
+              : summarise(today, todayEvents, upcoming)}
         </p>
       </motion.header>
+
+      {/* Above the dock, because "you have Functions in twenty minutes" is the
+          most time-sensitive thing on this page and the only one that is wrong
+          if you read it five minutes late. It renders nothing when there is no
+          timetable, and nothing once the school day is over. */}
+      <motion.div {...rise(1)}>
+        <NextUpCard />
+      </motion.div>
 
       {/* The four things somebody opens the dashboard to do. The dock magnifies
           under a cursor and is a plain row of buttons without one, which is the
@@ -138,6 +192,13 @@ export function Dashboard() {
           dashboard scrolled sideways and the Calendar and Classes links sat off
           the right edge. min-w-0 is what lets the truncation inside actually
           take effect. */}
+      {/* Day one gets one card with three steps instead of five cards each
+          correctly reporting that it is empty. See FirstDay for why. */}
+      {blank ? (
+        <motion.div {...rise(2)}>
+          <FirstDay />
+        </motion.div>
+      ) : (
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <motion.div {...rise(2)}>
@@ -282,6 +343,47 @@ export function Dashboard() {
               )}
             </Card>
           </motion.div>
+          {/* Marks, and only when there are any. A card headed "Marks" reading
+              "nothing yet" on a dashboard that already has four other empty
+              cards is the day-one problem again, one card at a time. */}
+          {average.percent !== null && (
+            <motion.div {...rise(5)}>
+              <Card>
+                <CardHeader
+                  title="Marks"
+                  action={
+                    <Link to="/classes"
+                          className="flex items-center gap-1 text-[12.5px] text-text-muted no-underline hover:text-text">
+                      Classes <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  }
+                />
+                <div className="px-5 pb-5">
+                  <p className="font-display text-[30px] font-medium leading-none tracking-tight text-text">
+                    {average.percent}%
+                  </p>
+                  {/* The working, same as the class page. A number without it
+                      is a claim; with it, it can be checked. */}
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-text-muted">
+                    {averageNote(average)}
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-1">
+                    {byClass.slice(0, 4).map(({ className, percent }) => (
+                      <li key={className} className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-[13px] text-text-muted">
+                          {className}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-[13px] font-medium text-text">
+                          {percent}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
           <motion.div {...rise(6)}>
             <Card>
               <CardHeader title="Recent notes" />
@@ -315,6 +417,7 @@ export function Dashboard() {
           </motion.div>
         </div>
       </div>
+      )}
 
       <EventDialog open={dialogOpen} onClose={() => setDialogOpen(false)} event={null} />
     </div>
