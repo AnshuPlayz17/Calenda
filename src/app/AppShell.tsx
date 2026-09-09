@@ -71,6 +71,7 @@ export function AppShell() {
   const reduce = useReducedMotion()
   const drawerRef = useRef<HTMLElement>(null)
   const drawerReturn = useRef<HTMLElement | null>(null)
+  const mainRef = useRef<HTMLElement>(null)
 
   // Only an admin has a review queue, so only an admin pays for the query.
   const { data: pending = [] } = usePendingReview(
@@ -269,6 +270,33 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh bg-bg">
+      {/*
+        The first thing Tab reaches, and invisible until it is reached.
+
+        The keyboard audit counted the rail: between twenty-two and a hundred
+        and thirty-one focusable controls per screen, and roughly fifteen of
+        them come before the content on every single one. Without this, reading
+        the dashboard by keyboard means passing the whole navigation first --
+        every time, on every screen.
+
+        Not `hidden`, because a hidden element cannot be focused to become
+        visible. It is positioned off-screen and comes back on focus.
+
+        A BUTTON, NOT AN ANCHOR, AND THAT IS NOT A STYLE CHOICE. The first
+        version was the textbook `<a href="#main">` -- and this app uses
+        HashRouter, so pressing it set the URL to `#main`, which the router
+        read as the route /main and rendered "This page doesn't exist". The
+        keyboard probe reported the skip as working, because the next Tab did
+        land in the content: the content of a 404.
+      */}
+      <button
+        type="button"
+        onClick={() => mainRef.current?.focus()}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-[13.5px] focus:font-medium focus:text-brand-contrast"
+      >
+        Skip to content
+      </button>
+
       {/* Offset by the sidebar width, which is fixed-positioned and would
           otherwise cover the first 232px of the banner. */}
       <div className="lg:pl-[232px]">
@@ -337,7 +365,15 @@ export function AppShell() {
         )}
       </AnimatePresence>
 
-      <main className="lg:pl-[232px]">
+      {/* tabIndex -1 so the skip link can move focus here. Without it the
+          browser scrolls to the anchor and leaves focus at the top of the
+          document, so the next Tab goes back into the rail -- which is the
+          failure mode that makes people think skip links do not work. */}
+      {/* tabIndex -1 so the skip button has somewhere to put focus. Without
+          it, focus would stay where it was and the next Tab would go straight
+          back into the rail -- the failure that makes people believe skip
+          links do not work. */}
+      <main ref={mainRef} tabIndex={-1} className="lg:pl-[232px] focus:outline-none">
         <div className="mx-auto w-full max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 lg:py-9">
           <Outlet />
         </div>

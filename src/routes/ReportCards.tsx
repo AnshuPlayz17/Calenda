@@ -93,6 +93,11 @@ export function ReportCards() {
           ref={fileRef}
           type="file"
           accept={ACCEPT}
+          // sr-only is clipped, not removed, so it stays focusable -- and a
+          // keyboard user was landing on an invisible, unnamed input. The
+          // button beside it is the control; this is only the mechanism.
+          tabIndex={-1}
+          aria-label="Report card file"
           className="sr-only"
           onChange={(e) => void pick(e.target.files?.[0])}
         />
