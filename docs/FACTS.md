@@ -48,12 +48,20 @@ access as the wrong user and requires it to fail:
 ## Notifications (schema and dispatcher verified; DELIVERY NOT YET VERIFIED)
 
 > **Corrected 2026-09-09.** This section was headed "verified live end-to-end",
-> and that was not true. No Edge Function had ever been deployed, and the
-> hourly workflow that pokes the dispatcher began with a guard on a repository
-> secret that was never set -- so it ran every hour, printed "skipping", and
-> passed. Nothing has ever been delivered to anybody. The sender was also
-> `onboarding@resend.dev`, which reaches only the project owner, so even a
-> working dispatcher would have reached nobody else.
+> and that was not true. The hourly workflow that pokes the dispatcher began
+> with a guard on a repository secret that was never set -- so it ran every
+> hour, printed "skipping", and passed. Nothing has ever been delivered to
+> anybody on a schedule. The sender was also `onboarding@resend.dev`, which
+> reaches only the project owner, so even a working dispatcher would have
+> reached nobody else.
+>
+> **A correction to the correction, same day.** This first read "No Edge
+> Function had ever been deployed", which was itself wrong: the deploy that ran
+> on merge listed `notify-dispatch` at version 10, so it had been deployed nine
+> times already, and three `notification_deliveries` rows dated 5 September are
+> it running from a manual invocation. The workflow guard is the whole
+> explanation. Both statements are kept because a file of verified claims that
+> silently edits its own mistakes is not a file of verified claims.
 >
 > Everything below about the *schema* is still true and still checkable. What
 > was not true was the claim that mail had arrived. **Nothing on the marketing

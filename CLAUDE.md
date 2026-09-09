@@ -663,21 +663,34 @@ version. `schoolMark()` never derives initials — a school on the list gets its
 curated monogram, one typed into the "another school" box gets its own name.
 Two tests hold the line, one on invented initials and one on the separator.
 
-**Reminders had never sent anything, and FACTS.md said they had.** Two
-independent reasons: `reminders.yml` opened with `if [ -z
-"$SUPABASE_FUNCTION_URL" ]; then exit 0` and that secret was never set, so it
-ran hourly, printed one line and passed; and no Edge Function had ever been
-deployed. Sixty green checks a day for a feature that had never delivered
-anything, under a landing panel about reminders. The workflow now **fails**
-when unconfigured — a job that passes without doing its work is worse than one
-that fails, because nothing will ever prompt you to look. The sender moved off
+**Reminders had never sent anything on a schedule, and FACTS.md said they had.**
+`reminders.yml` opened with `if [ -z "$SUPABASE_FUNCTION_URL" ]; then exit 0`
+and that secret was never set, so it ran hourly, printed one line and passed.
+Sixty green checks a day for a feature that had never delivered anything, under
+a landing panel about reminders. The workflow now **fails** when unconfigured —
+a job that passes without doing its work is worse than one that fails, because
+nothing will ever prompt you to look. The sender moved off
 `onboarding@resend.dev`, which only ever reached the account owner.
+
+**Corrected on 2026-09-09 after merging.** This paragraph also said "no Edge
+Function had ever been deployed", and that was wrong. The deploy that ran on
+merge listed `notify-dispatch` at **version 10** while the two new functions
+came out at version 1 — so it had been deployed nine times before, and three
+`notification_deliveries` rows dated 5 September are it actually running, from
+a manual invocation. The workflow guard is the whole reason nothing arrived on
+a schedule; a missing function was never part of it.
+
+It is recorded rather than quietly edited because the claim was the headline of
+a pull request, and because it is exactly the failure this file exists to
+prevent: a satisfying story stated more strongly than the evidence supported.
+The evidence was one `supabase functions list` away the whole time.
 
 `docs/FACTS.md` line 48 read "Notifications (verified live end-to-end)". It now
 says delivery is not yet verified and explains how the claim came to be false.
 **Nothing on the marketing pages may claim reminders are delivered until one
-has been.** The landing page's Reminders panel is still written as though they
-are; that is the owner's call and it is flagged, not quietly rewritten.
+has been.** The two landing panels that read as though reminders arrive were
+reworded on 2026-09-09 to describe the *schedule* instead — "Scheduled by you,
+and never doubled" — which is true whether or not one has ever been sent.
 
 **The mobile drawer was lying about being a modal.** It has carried
 `role="dialog" aria-modal="true"` since it was written and never moved focus
