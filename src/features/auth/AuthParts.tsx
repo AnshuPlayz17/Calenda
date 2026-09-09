@@ -131,7 +131,11 @@ export function StepMark({ at, of, label }: { at: number; of: number; label?: st
           />
         ))}
       </span>
-      <span className="text-[12px] font-medium tracking-tight text-text-subtle">
+      {/* leading-none, and that is a measurement. The row inherits the body's
+          1.6 line height otherwise, which makes a 12px string a 19px row --
+          seven pixels of nothing, and enough to put the sign-up form's Back
+          link four pixels below the fold at 375x667. */}
+      <span className="text-[12px] font-medium leading-none tracking-tight text-text-subtle">
         Step {at} of {of}{label ? ` · ${label}` : ''}
       </span>
     </div>
