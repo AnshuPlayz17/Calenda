@@ -449,6 +449,20 @@ long frame in fifteen hundred, with p95 unchanged, is the container. Three
 consecutive runs failing the same configuration is the page. Do not spend a
 round on the former, and do not write off the latter.
 
+**Three full runs on 2026-09-09 put four different configurations in the fail
+column and never the same one twice** — `sign-in 414x736 [form]`, then `sign-up
+1440x900 [step2]`, then `sign-in 1440x900 [form]` and `sign-up 1440x900 [dark]`
+together. Every one was a single frame with p95 still 17ms, and both that were
+re-measured alone came back clean. **Which configuration fails is better
+evidence than how many do:** a page defect sits still, and this walks around.
+
+**Do not run the npm gates beside the harness.** `sign-up 1440x900 [step2]`
+came back p95 33ms with seven long frames in the middle run, which is not the
+container's usual signature and cost a round of suspicion — `typecheck`, `lint`,
+`test` and `build` were running against the same cores. Measured alone
+immediately afterwards it was 17ms. A measurement taken while something else is
+compiling is not a measurement.
+
 **Parent invites were already the best-built thing in this area** and only
 needed calling: `create_parent_invite()` makes eight characters with no
 `0/O/1/I` so a code survives being read down a phone, and
