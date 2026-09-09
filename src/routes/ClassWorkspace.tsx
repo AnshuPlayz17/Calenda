@@ -2,18 +2,23 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import {
-  ArrowLeft, CheckSquare, ClipboardList, FileText, NotebookPen, Plus, Trash2,
+  ArrowLeft, Archive, CheckSquare, ClipboardList, FileText, NotebookPen, Plus,
+  Smile, Trash2,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Dialog } from '@/components/ui/Dialog'
 import { NoteEditor } from '@/features/notebook/NoteEditor'
+import { PageTree } from '@/features/notebook/PageTree'
+import { descendantsOf, positionBetween } from '@/features/notebook/pageTree'
 import { AssignmentDialog } from '@/features/assignments/AssignmentDialog'
 import {
   useAssignments, useClass, useCreatePage, useCreateTask, useDeletePage,
-  useDeleteTask, usePages, useSetAssignmentStatus, useTasks, useToggleTask,
+  useDeleteTask, usePages, useSetAssignmentStatus, useSetPageArchived, useTasks,
+  useToggleTask, useUpdatePage,
 } from '@/features/classes/queries'
 import type { Assignment, NotebookPage } from '@/lib/types'
 import { ShareToggle } from '@/features/parents/ShareToggle'
@@ -131,10 +136,14 @@ function NotesTab({ classId }: { classId: string }) {
   const { data: pages = [], isLoading, isError, refetch, isFetching } = usePages(classId)
   const createPage = useCreatePage(classId)
   const deletePage = useDeletePage()
+  const archivePage = useSetPageArchived()
+  const updatePage = useUpdatePage()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<NotebookPage | null>(null)
+  const [undo, setUndo] = useState<NotebookPage | null>(null)
 
-  // Follow the list rather than holding a stale id: after a delete, or on
-  // first load, land on something that actually exists.
+  // Follow the list rather than holding a stale id: after a delete, an
+  // archive, or on first load, land on something that actually exists.
   useEffect(() => {
     if (pages.length === 0) { setSelectedId(null); return }
     if (!selectedId || !pages.some((p) => p.id === selectedId)) {
@@ -144,11 +153,49 @@ function NotesTab({ classId }: { classId: string }) {
 
   const selected = pages.find((p) => p.id === selectedId) ?? null
 
+  /**
+   * Moves a page among its own siblings, rewriting one row.
+   *
+   * The neighbour it swaps with is found in the sibling group rather than in
+   * the flat list: the row visually above a page can be its own child or an
+   * unrelated branch, and taking that row's position would file it somewhere
+   * nobody asked for.
+   */
+  async function move(page: NotebookPage, direction: -1 | 1) {
+    const siblings = pages
+      .filter((p) => p.parent_page_id === page.parent_page_id)
+      .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+    const i = siblings.findIndex((p) => p.id === page.id)
+    const target = i + direction
+    if (i === -1 || target < 0 || target >= siblings.length) return
+
+    // Land between the neighbour being passed and the one beyond it, so the
+    // move is a single row rewritten and never a renumbering.
+    const passing = siblings[target]!
+    const beyond = siblings[target + direction]
+    const position = positionBetween(
+      direction === 1 ? passing.position : beyond?.position,
+      direction === 1 ? beyond?.position : passing.position,
+    )
+    await updatePage.mutateAsync({ id: page.id, patch: { position } })
+  }
+
+  async function archive(page: NotebookPage) {
+    await archivePage.mutateAsync({ id: page.id, archived: true })
+    // Archiving is reversible and the offer to reverse it belongs next to the
+    // action, not in a settings screen somebody has to go and find.
+    setUndo(page)
+  }
+
   if (isLoading) return <Skeleton className="h-64 w-full rounded-xl" />
   if (isError) return <ErrorState what="these notes" retrying={isFetching} onRetry={() => void refetch()} />
 
+  // Counted here rather than inside the dialog so the dialog cannot render
+  // before it knows, and briefly say "and 0 pages inside it".
+  const doomed = confirming ? descendantsOf(pages, confirming.id) : []
+
   return (
-    <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-1">
         <div className="flex items-center justify-between px-1 pb-1">
           <span className="label-caps">Pages</span>
@@ -161,36 +208,38 @@ function NotesTab({ classId }: { classId: string }) {
           </button>
         </div>
 
+        {undo && (
+          <div className="mb-1 flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-2.5 py-2">
+            <p className="min-w-0 truncate text-[12.5px] text-text-muted">
+              Archived “{undo.title || 'Untitled'}”
+            </p>
+            <button
+              onClick={async () => {
+                await archivePage.mutateAsync({ id: undo.id, archived: false })
+                setUndo(null)
+              }}
+              className="shrink-0 text-[12.5px] font-medium text-brand underline-offset-2 hover:underline"
+            >
+              Undo
+            </button>
+          </div>
+        )}
+
         {pages.length === 0 ? (
           <Button variant="secondary" size="sm"
                   onClick={() => void createPage.mutateAsync({ parentId: null })}>
             <Plus className="h-4 w-4" aria-hidden /> First page
           </Button>
         ) : (
-          <ul className="flex flex-col gap-0.5">
-            {pages.map((p) => (
-              <li key={p.id} className="group flex items-center gap-1">
-                <button
-                  onClick={() => setSelectedId(p.id)}
-                  className={cn(
-                    'min-w-0 flex-1 truncate rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors duration-150',
-                    p.id === selectedId
-                      ? 'bg-brand-subtle font-medium text-brand'
-                      : 'text-text-muted hover:bg-surface-2 hover:text-text',
-                  )}
-                >
-                  {p.title || 'Untitled'}
-                </button>
-                <button
-                  onClick={() => void deletePage.mutateAsync(p.id)}
-                  aria-label={`Delete ${p.title}`}
-                  className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-text-subtle opacity-0 transition-opacity hover:bg-surface-2 hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <PageTree
+            pages={pages}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onAddChild={(parentId) => void createPage.mutateAsync({ parentId })}
+            onArchive={(p) => void archive(p)}
+            onDelete={setConfirming}
+            onMove={(p, d) => void move(p, d)}
+          />
         )}
       </aside>
 
@@ -205,7 +254,17 @@ function NotesTab({ classId }: { classId: string }) {
                   label={`The page “${selected.title || 'Untitled'}”`}
                 />
               </div>
-              <NoteEditor key={selected.id} page={selected as NotebookPage} />
+              <NoteEditor
+                key={selected.id}
+                page={selected as NotebookPage}
+                iconSlot={
+                  <IconPicker
+                    value={selected.icon}
+                    onChange={(icon) =>
+                      void updatePage.mutateAsync({ id: selected.id, patch: { icon } })}
+                  />
+                }
+              />
             </>
           : <EmptyState
               icon={NotebookPen}
@@ -213,6 +272,134 @@ function NotesTab({ classId }: { classId: string }) {
               description="Create your first page and start writing."
             />}
       </Card>
+
+      {/*
+        Deleting cascades to every page inside, so the confirmation counts them
+        and says so. The old control was a hover-revealed bin with no
+        confirmation at all: one mis-click destroyed a page and its whole
+        branch, with no undo anywhere in the app. Deleting a CLASS already made
+        you type its name; a term of notes was a single click.
+      */}
+      <Dialog
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title="Delete this page?"
+        description={
+          doomed.length > 0
+            ? `“${confirming?.title || 'Untitled'}” and the ${doomed.length} page${doomed.length === 1 ? '' : 's'} inside it will be gone. This cannot be undone.`
+            : `“${confirming?.title || 'Untitled'}” will be gone. This cannot be undone.`
+        }
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setConfirming(null)}>
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={deletePage.isPending}
+              onClick={async () => {
+                if (!confirming) return
+                await deletePage.mutateAsync(confirming.id)
+                setConfirming(null)
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        }
+      >
+        {/* Archiving is offered inside the delete dialog rather than only in
+            the menu, because this is the moment somebody has decided they want
+            it out of the way -- which is usually not the same as wanting it
+            destroyed. */}
+        <p className="text-[13px] text-text-muted">
+          Archiving hides it and keeps everything, and can be undone.
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          onClick={async () => {
+            if (!confirming) return
+            const page = confirming
+            setConfirming(null)
+            await archive(page)
+          }}
+        >
+          <Archive className="h-4 w-4" aria-hidden /> Archive instead
+        </Button>
+      </Dialog>
+    </div>
+  )
+}
+
+/**
+ * One emoji for a page, chosen from a short list rather than typed.
+ *
+ * A free text field here accepts anything, and "icon: hello" renders as the
+ * word hello in the rail. The list is small on purpose: it is a visual marker
+ * so a page can be found at a glance, not an expressive medium.
+ */
+const PAGE_ICONS = ['📝', '📐', '🧪', '📚', '💾', '🌀', '✅', '⭐', '🗓️', '💡', '🎯', '🔬']
+
+function IconPicker({
+  value, onChange,
+}: {
+  value: string | null
+  onChange: (icon: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={value ? 'Change page icon' : 'Add a page icon'}
+        aria-expanded={open}
+        className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-transparent text-[20px] leading-none transition-colors duration-150 hover:border-border hover:bg-surface-2"
+      >
+        {value ?? <Smile className="h-4 w-4 text-text-subtle" aria-hidden />}
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div className="absolute left-0 top-9 z-30 w-[184px] rounded-lg border border-border bg-surface p-2 shadow-lg">
+            <div className="grid grid-cols-6 gap-1">
+              {PAGE_ICONS.map((icon) => (
+                <button
+                  key={icon}
+                  type="button"
+                  onClick={() => { onChange(icon); setOpen(false) }}
+                  aria-label={`Use ${icon}`}
+                  className={cn(
+                    'grid h-6 w-6 place-items-center rounded text-[14px] transition-colors duration-150 hover:bg-surface-2',
+                    value === icon && 'bg-brand-subtle',
+                  )}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+            {value && (
+              <button
+                type="button"
+                onClick={() => { onChange(null); setOpen(false) }}
+                className="mt-2 w-full rounded px-2 py-1 text-[12.5px] text-text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+              >
+                Remove icon
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

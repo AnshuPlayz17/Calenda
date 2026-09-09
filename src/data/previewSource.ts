@@ -222,7 +222,7 @@ function seedNotebook() {
   pages.push(page(fn.id, 'Test 2 review', null, 2000, '✅',
     'Transformations, then rationals. Bring the formula sheet.', ago(4)))
 
-  const arrays = page(cs.id, 'Arrays and lists', null, 1000, '💾',
+  const arrays = page(cs.id, 'Arrays and lists', null, 1000, '📗',
     'An array is fixed length. A list grows, and that growth is not free.',
     ago(2))
   pages.push(arrays)
