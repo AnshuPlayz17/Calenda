@@ -1,5 +1,5 @@
 import { addDays, todayPlain } from '@/lib/datetime'
-import type { SeedEvent } from './schoolCalendar'
+import type { SeedEvent } from './seedEvent'
 
 /**
  * Invented events for the landing page's screenshots.

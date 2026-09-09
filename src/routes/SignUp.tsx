@@ -9,6 +9,7 @@ import { AuthError, NotConnected, ProviderButtons, Separator } from '@/features/
 import {
   HeardFrom, ParentFields, RolePicker, StudentFields,
 } from '@/features/auth/aboutYou'
+import { schoolValue } from '@/features/auth/schoolChoice'
 import type { Relation, Role } from '@/features/auth/aboutYou'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
@@ -53,6 +54,8 @@ export function SignUp() {
   const [last, setLast] = useState('')
   const [school, setSchool] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [noCode, setNoCode] = useState(false)
+  const [schoolOther, setSchoolOther] = useState('')
   const [heardFrom, setHeardFrom] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')
   const [role, setRole] = useState<Role>('student')
@@ -109,8 +112,8 @@ export function SignUp() {
       // has no grade, and passing a field's last value because it was typed
       // before the answer changed would file a parent in year eleven.
       grade: role === 'student' ? grade.trim() : undefined,
-      school: role === 'student' ? school.trim() : undefined,
-      inviteCode: role === 'parent' ? inviteCode.trim() : undefined,
+      school: role === 'student' ? schoolValue(school, schoolOther) : undefined,
+      inviteCode: role === 'parent' && !noCode ? inviteCode.trim() : undefined,
       relation: role === 'parent' ? relation : undefined,
       // Asked of everybody, because how somebody arrived does not depend on
       // which of the two they are.
@@ -124,6 +127,20 @@ export function SignUp() {
     // way, not swallowed.
     navigate('/welcome', { replace: true, state: warning ? { warning } : undefined })
   }
+
+
+  /**
+   * Whether the last step has everything it asks for.
+   *
+   * The browser's own `required` handles most of this, and this is the belt to
+   * that pair of braces: it disables the button so the state is visible before
+   * anybody presses anything, and it covers the two controls `required` cannot
+   * -- a select whose real answer lives in a second box, and a code that is
+   * required unless the person has said they cannot get one yet.
+   */
+  const detailsReady = role === 'student'
+    ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
+    : Boolean((noCode || inviteCode.trim()) && heardFrom.trim())
 
   const mismatch = confirm.length > 0 && password !== confirm
 
@@ -217,11 +234,15 @@ export function SignUp() {
             autoComplete="additional-name"
             value={middle}
             onChange={(e) => setMiddle(e.target.value)}
+            // The one field still optional, and it is optional because the
+            // request said "if applicable". Plenty of people have no middle
+            // name, and requiring one would stop them signing up.
             hint="If you have one."
           />
           <Input
             label="Last name"
             autoComplete="family-name"
+            required
             value={last}
             onChange={(e) => setLast(e.target.value)}
           />
@@ -236,22 +257,31 @@ export function SignUp() {
       )}
 
       {step === 'details' && (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+        // gap-3 rather than gap-4, on this step alone. It is the tallest -- a
+        // four-option fieldset, two fields and a checkbox -- and at 375x667 the
+        // Back link sat thirteen pixels below the fold. Six gaps at four pixels
+        // less is twenty-four, which clears it without taking a field out or
+        // disturbing the steps that already fit.
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
           <StepMark at={3} />
 
           {role === 'student' ? (
             <StudentFields
               school={school}
+              schoolOther={schoolOther}
               grade={grade}
               onSchool={setSchool}
+              onSchoolOther={setSchoolOther}
               onGrade={setGrade}
             />
           ) : (
             <ParentFields
               relation={relation}
               code={inviteCode}
+              noCode={noCode}
               onRelation={setRelation}
               onCode={setInviteCode}
+              onNoCode={setNoCode}
             />
           )}
 
@@ -259,7 +289,13 @@ export function SignUp() {
               for Calenda rather than for the person answering it. */}
           <HeardFrom value={heardFrom} onChange={setHeardFrom} />
 
-          <Button type="submit" size="lg" fullWidth loading={busy === 'password'}>
+          <Button
+            type="submit"
+            size="lg"
+            fullWidth
+            loading={busy === 'password'}
+            disabled={!detailsReady}
+          >
             Create account
           </Button>
           <BackLink onClick={() => { setStep('name'); setError(null) }}>

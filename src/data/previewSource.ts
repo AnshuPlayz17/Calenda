@@ -12,7 +12,7 @@ import type {
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
-import { SCHOOL_YEAR_2026_27, schoolEvents2026_27 } from './schoolCalendar'
+import { SAMPLE_SCHOOL_YEAR, sampleSchoolYear } from './sampleSchoolYear'
 import {
   matchesFilters, type DataSource, type EventFilters, type ImportOptions,
   type ImportWrite, type ReviewAction, type SearchHit,
@@ -52,9 +52,9 @@ const bySlug = new Map(categories.map((c) => [c.slug, c]))
 
 const schoolYear: SchoolYear = {
   id: YEAR_ID,
-  label: SCHOOL_YEAR_2026_27.label,
-  starts_on: SCHOOL_YEAR_2026_27.startsOn,
-  ends_on: SCHOOL_YEAR_2026_27.endsOn,
+  label: SAMPLE_SCHOOL_YEAR.label,
+  starts_on: SAMPLE_SCHOOL_YEAR.startsOn,
+  ends_on: SAMPLE_SCHOOL_YEAR.endsOn,
   is_current: true,
 }
 
@@ -63,7 +63,7 @@ const nextId = () => `preview-event-${++counter}`
 
 function seed(): EventWithCategory[] {
   const now = new Date().toISOString()
-  return schoolEvents2026_27.map((e) => {
+  return sampleSchoolYear.map((e) => {
     const category = bySlug.get(e.category) ?? null
     return {
       id: nextId(),

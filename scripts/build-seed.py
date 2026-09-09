@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Generates src/data/schoolCalendar.ts from the extracted PDF data.
+Generates the real-calendar test fixture from the extracted PDF data.
+
+The output is a TEST FIXTURE and lives under src/test for that reason -- it is
+one school's actual calendar and must not reach the bundle. The app uses the
+invented sampleSchoolYear instead.
 
 Run from the repo root:  python3 scripts/build-seed.py
 
@@ -20,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "docs/discovery/school-dates-2026-27.json"
-TARGET = ROOT / "src/data/schoolCalendar.ts"
+TARGET = ROOT / "src/test/fixtures/realCalendar2026_27.ts"
 
 # Phrases that mark a half as a schedule note rather than the event's name.
 SCHEDULE_NOTE = re.compile(

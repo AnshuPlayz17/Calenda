@@ -287,6 +287,18 @@ first name and shows your name to a linked parent. Only the first is required:
 plenty of people have one name, and a required surname turns them away at the
 door.
 
+**Every answer is required, and two of them needed a way out that is not a
+loophole.** A list of fifteen schools with no alternative is a door shut on
+everyone else, so the picker's last option reveals a required text box. A
+parent's invite code comes from the *student's* settings, so requiring it
+outright would deadlock every parent whose child has no account yet — a
+checkbox says so, because an explicit "I cannot get one" is a real answer and a
+blank field is not. Middle name stays optional; plenty of people have none.
+
+**The school picker names the fifteen schools on the sign-up page**, reversing
+an earlier instruction to keep those names on the landing page only. Asked for
+explicitly; recorded here because it was reversed, not forgotten.
+
 **`profiles.school` is free text and nothing reads it.** There is no school
 entity, so a picker of the fifteen names would read as "these are supported"
 while a `community` event is still visible to every account. The field says
@@ -381,14 +393,22 @@ inside a 343px parent and every card inherited it. `min-w-0` on the grid
 children is what lets the truncation already in there take effect. **If a
 column will not shrink, it is `min-width: auto` before it is anything else.**
 
-**Preview ships one school's real calendar and says so.** `previewSource.ts`
-reads `schoolEvents2026_27`, generated from that school's PDF, and the banner
-reads "Showing the real 2026–27 school calendar as sample data." No school is
-named, so the name guard passes — but the landing page moved to invented data
-precisely because one school's dates are somebody else's dates. Flagged for the
-owner rather than changed: swapping it for `sampleSchoolYear` would make the
-preview consistent with the landing page, at the cost of the import fixtures
-that legitimately need the real document.
+**The real calendar is a test fixture and must not reach the app.** It used to
+live in `src/data/schoolCalendar.ts` and was imported by *two* shipping files —
+`previewSource.ts` and the import screen — so one school's actual 2026–27
+calendar was in the production bundle twice, under a banner announcing it. No
+school was named, so the name guard passed the whole time.
+
+It now lives at `src/test/fixtures/realCalendar2026_27.ts`, where shipping it
+takes an import across that boundary, and `noRealCalendar.test.ts` fails on one.
+The app uses `sampleSchoolYear` — invented, same shape, same span. The fixture
+stays because the import and duplicate-review work needs a real document to be
+honest about. **`docs/discovery/source/` still holds the source PDF**; it is not
+bundled, but it is in a public repo.
+
+That guard strips comments before searching, because `sampleSchoolYear`'s own
+doc comment names the real calendar to explain that it exists instead of it —
+the first version failed on exactly that.
 
 ## The landing page
 

@@ -7,6 +7,7 @@ import { AuthError } from '@/features/auth/AuthParts'
 import {
   HeardFrom, ParentFields, RolePicker, StudentFields,
 } from '@/features/auth/aboutYou'
+import { schoolValue } from '@/features/auth/schoolChoice'
 import type { Relation, Role } from '@/features/auth/aboutYou'
 import { useAuth } from '@/lib/auth'
 
@@ -42,6 +43,8 @@ export function FirstRun() {
   const [grade, setGrade] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')
   const [code, setCode] = useState('')
+  const [noCode, setNoCode] = useState(false)
+  const [schoolOther, setSchoolOther] = useState('')
   const [heardFrom, setHeardFrom] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,8 +73,8 @@ export function FirstRun() {
       fullName: fullName.trim(),
       role,
       grade: role === 'student' ? grade.trim() : undefined,
-      school: role === 'student' ? school.trim() : undefined,
-      inviteCode: role === 'parent' ? code.trim() : undefined,
+      school: role === 'student' ? schoolValue(school, schoolOther) : undefined,
+      inviteCode: role === 'parent' && !noCode ? code.trim() : undefined,
       relation: role === 'parent' ? relation : undefined,
       heardFrom: heardFrom.trim(),
     })
@@ -82,6 +85,20 @@ export function FirstRun() {
     navigate('/welcome', { replace: true, state: warning ? { warning } : undefined })
   }
 
+
+  /**
+   * Whether the last step has everything it asks for.
+   *
+   * The browser's own `required` handles most of this, and this is the belt to
+   * that pair of braces: it disables the button so the state is visible before
+   * anybody presses anything, and it covers the two controls `required` cannot
+   * -- a select whose real answer lives in a second box, and a code that is
+   * required unless the person has said they cannot get one yet.
+   */
+  const detailsReady = role === 'student'
+    ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
+    : Boolean((noCode || code.trim()) && heardFrom.trim())
+
   const greeting = fullName.trim().split(' ')[0]
 
   return (
@@ -89,7 +106,7 @@ export function FirstRun() {
       title={step === 'name' ? 'One more thing' : `Thanks${greeting ? `, ${greeting}` : ''}`}
       subtitle={step === 'name'
         ? 'You are signed in. Two questions and Calenda knows what to show you.'
-        : 'Last one, and both of these are optional.'}
+        : 'These decide what Calenda shows you, so it asks for all of them.'}
     >
       <AuthError message={error} />
 
@@ -113,26 +130,32 @@ export function FirstRun() {
           <Button type="submit" size="lg" fullWidth>Continue</Button>
         </form>
       ) : (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+        // gap-3 for the same reason as sign-up's last step: it is the tallest
+        // screen here and the parent branch is the tallest version of it.
+        <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
           {role === 'student' ? (
             <StudentFields
               school={school}
+              schoolOther={schoolOther}
               grade={grade}
               onSchool={setSchool}
+              onSchoolOther={setSchoolOther}
               onGrade={setGrade}
             />
           ) : (
             <ParentFields
               relation={relation}
               code={code}
+              noCode={noCode}
               onRelation={setRelation}
               onCode={setCode}
+              onNoCode={setNoCode}
             />
           )}
 
           <HeardFrom value={heardFrom} onChange={setHeardFrom} />
 
-          <Button type="submit" size="lg" fullWidth loading={busy}>
+          <Button type="submit" size="lg" fullWidth loading={busy} disabled={!detailsReady}>
             Finish setting up
           </Button>
           <button

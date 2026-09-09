@@ -1,4 +1,5 @@
-import type { SeedEvent } from './schoolCalendar'
+import type { PlainDate } from '@/lib/events'
+import type { SeedEvent } from './seedEvent'
 
 /**
  * An invented school year, for the landing page.
@@ -26,6 +27,19 @@ import type { SeedEvent } from './schoolCalendar'
 
 /** Repeated deliberately: the collision the identity key exists to survive. */
 const REPEATED = 'Late Start'
+
+/**
+ * The span the invented year covers, in the shape a school year row wants.
+ *
+ * Preview used the real calendar's dates for this and the real calendar's
+ * events beneath them. Both are invented now, and they agree: the first entry
+ * below is in September 2026 and the last is at the end of June 2027.
+ */
+export const SAMPLE_SCHOOL_YEAR = {
+  label: '2026\u201327',
+  startsOn: '2026-09-01' as PlainDate,
+  endsOn: '2027-06-30' as PlainDate,
+}
 
 export const sampleSchoolYear: SeedEvent[] = [
   { title: 'First Day of Classes', description: null, startDate: '2026-09-08', endDate: '2026-09-08', category: 'academic' },

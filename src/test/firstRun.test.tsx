@@ -69,9 +69,45 @@ describe('the first-run screen', () => {
     renderFirstRun()
     await user.click(await screen.findByRole('button', { name: 'Continue' }))
 
-    expect(screen.getByLabelText('Your school')).toBeInTheDocument()
+    expect(screen.getByLabelText('School')).toBeInTheDocument()
     expect(screen.getByLabelText('Grade')).toBeInTheDocument()
     expect(screen.queryByLabelText("Your student's code")).not.toBeInTheDocument()
+  })
+
+  it('will not finish until every answer is there', async () => {
+    const user = userEvent.setup()
+    renderFirstRun()
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+
+    const finish = screen.getByRole('button', { name: /Finish setting up/ })
+    expect(finish).toBeDisabled()
+
+    await user.selectOptions(screen.getByLabelText('School'), 'Another school')
+    await user.type(screen.getByLabelText('Which school?'), 'Somewhere High')
+    expect(finish).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Grade'), '11')
+    expect(finish).toBeDisabled()
+
+    await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
+    expect(finish).toBeEnabled()
+  })
+
+  it('lets a parent through only once they have a code or have said they have none', async () => {
+    const user = userEvent.setup()
+    renderFirstRun()
+    await user.click(await screen.findByText("I'm a parent"))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'school newsletter')
+
+    const finish = screen.getByRole('button', { name: /Finish setting up/ })
+    expect(finish).toBeDisabled()
+
+    // The way past a code they cannot get yet, which is not a loophole: it
+    // comes from the student's settings, so requiring it outright would
+    // deadlock every parent whose child has no account.
+    await user.click(screen.getByLabelText(/don't have a code yet/i))
+    expect(finish).toBeEnabled()
   })
 
   it('asks a parent for a relation and a code, and never for a grade', async () => {
@@ -92,7 +128,8 @@ describe('the first-run screen', () => {
     const user = userEvent.setup()
     renderFirstRun()
     await user.click(await screen.findByRole('button', { name: 'Continue' }))
-    await user.type(screen.getByLabelText('Your school'), 'Somewhere High')
+    await user.selectOptions(screen.getByLabelText('School'), 'Another school')
+    await user.type(screen.getByLabelText('Which school?'), 'Somewhere High')
     await user.type(screen.getByLabelText('Grade'), '11')
     await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
     await user.click(screen.getByRole('button', { name: /Finish setting up/ }))
@@ -115,6 +152,7 @@ describe('the first-run screen', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByText('guardian'))
     await user.type(screen.getByLabelText("Your student's code"), 'abcd2345')
+    await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
     await user.click(screen.getByRole('button', { name: /Finish setting up/ }))
 
     expect(completeFirstRun).toHaveBeenCalledWith({
@@ -123,7 +161,7 @@ describe('the first-run screen', () => {
       // Uppercased as it is typed, because the function upper()s it anyway.
       inviteCode: 'ABCD2345',
       relation: 'guardian',
-      heardFrom: '',
+      heardFrom: 'a friend',
       school: undefined,
       grade: undefined,
     })
@@ -133,6 +171,10 @@ describe('the first-run screen', () => {
     const user = userEvent.setup()
     renderFirstRun()
     await user.click(await screen.findByRole('button', { name: 'Continue' }))
+    await user.selectOptions(screen.getByLabelText('School'), 'Another school')
+    await user.type(screen.getByLabelText('Which school?'), 'Somewhere High')
+    await user.type(screen.getByLabelText('Grade'), '11')
+    await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
     await user.click(screen.getByRole('button', { name: /Finish setting up/ }))
     expect(await screen.findByText('welcome')).toBeInTheDocument()
   })
@@ -143,6 +185,8 @@ describe('the first-run screen', () => {
     renderFirstRun()
     await user.click(await screen.findByText("I'm a parent"))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.type(screen.getByLabelText("Your student's code"), 'abcd2345')
+    await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
     await user.click(screen.getByRole('button', { name: /Finish setting up/ }))
 
     // The account exists by now, so it must not stop here -- but the message
