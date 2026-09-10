@@ -114,6 +114,36 @@ access as the wrong user and requires it to fail:
 - SMS is a real dormant adapter, NOT shipping. Carrier email-to-SMS gateways are
   dead and Twilio has no free tier. Do not claim SMS on the page.
 
+## Report card reading (VERIFIED ON ONE DOCUMENT, 2026-09-10)
+
+> A real report card was uploaded as a screenshot, decoded, and **every mark it
+> read was correct**. The first and so far only document this feature has ever
+> met.
+>
+> **What that does and does not establish.** It establishes that the pipeline
+> works end to end -- upload, ownership check, storage download, vision model,
+> JSON parse, per-line review -- and that on one real document the model read
+> the marks accurately. It does not establish accuracy in general, and one
+> document is a sample of one.
+>
+> **The confidence scores are untested.** Every line was correct, so nothing
+> was wrong for a low score to have caught. The review screen sorts
+> least-confident first on the assumption that a low score means "look harder
+> at this one", and that assumption has not been checked against a line the
+> model actually got wrong. Until it has, treat the sorting as a convenience
+> rather than as a signal.
+>
+> This is why nothing a model reads is written to a mark without being accepted
+> individually, with a class chosen. That design was not caution about a
+> hypothetical -- it is the only reason a wrong line is a nuisance rather than a
+> corrupted gradebook.
+>
+> Two things had to be fixed before it worked at all, both on 2026-09-10:
+> `meta-llama/llama-4-scout-17b-16e-instruct` was no longer on the account, and
+> `max_tokens: 2000` was refused by Groq's free tier, which enforces its
+> per-minute output allowance against what a request *declares* it might
+> produce rather than against what comes back.
+
 ## Classes (docs/SPEC.md §9)
 - course_code (e.g. ICS3U) matches Google Calendar event titles by pattern with a
   confidence score; low-confidence matches are proposed, never applied
