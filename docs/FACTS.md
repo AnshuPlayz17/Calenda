@@ -45,7 +45,31 @@ access as the wrong user and requires it to fail:
   `shared_with_parents`, default false.
 - A parent viewing a shared class still cannot see private notebook pages inside it.
 
-## Notifications (schema and dispatcher verified; DELIVERY NOT YET VERIFIED)
+## Notifications (WEB PUSH DELIVERY VERIFIED 2026-09-10; email still not)
+
+> **A reminder was delivered to a person on 2026-09-10 at 16:47 UTC.** The
+> first one in this project's life. It read *"In 12 days: Curriculum Night"* --
+> a real event from a real account, with the lead-in phrasing `leadIn()`
+> produces, decrypted and drawn by the app's own service worker on macOS
+> Chrome. Dispatcher run `{"sent":1,"failed":0,"skipped":0}`, GitHub Actions
+> run 43.
+>
+> **What that verifies, exactly: web push, one device, one account.** Email has
+> still never been delivered to anybody. `BREVO_API_KEY` and `MAIL_FROM` are
+> set and the sender is a Brevo-owned subdomain with real SPF/DKIM, but no
+> reminder has gone out over that channel, because every queued reminder on
+> the account is `web_push` -- migration `20260904000800` made that the default
+> precisely because email had no sender at the time. **Do not claim email
+> reminders work.**
+>
+> **Which fix made it work is not established.** Between the last failing
+> attempt and this one, both the push subscription and the service worker were
+> replaced. The likeliest cause is the old worker's `if (!event.data) return`
+> exiting silently, since that is the line that would produce exactly this
+> symptom -- but two things changed at once and only one of them can be
+> credited, so neither is. A theory that fits is not a cause that is proven,
+> and this file has already been wrong twice this week by preferring the
+> tidier story.
 
 > **Corrected 2026-09-09.** This section was headed "verified live end-to-end",
 > and that was not true. The hourly workflow that pokes the dispatcher began
@@ -69,7 +93,12 @@ access as the wrong user and requires it to fail:
 > deployment checklist in README/CLAUDE.md; the workflow now fails loudly when
 > unconfigured, precisely so this cannot go quiet again.
 >
-> **The two landing panels were reworded the same day** to describe the
+> **The constraint below is now satisfied and the copy may say so.** The two
+> landing panels currently describe only the schedule; that was correct while
+> nothing had ever arrived and is now merely modest. Changing them is the
+> owner's call, not a requirement.
+>
+> **The two landing panels were reworded on 2026-09-09** to describe the
 > schedule rather than the arrival — "Scheduled by you, and never doubled"
 > in place of "Warned early, and only once". Everything they now claim is in
 > the list below and is true whether or not a reminder has ever been sent, so
