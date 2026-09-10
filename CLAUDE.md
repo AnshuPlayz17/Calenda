@@ -858,6 +858,94 @@ shared-secret header would need a new secret set in two places before reminders
 worked at all, and would buy protection against wasted compute rather than
 against a wrong send.
 
+## The founder panel counts itself now
+
+Every figure on it had drifted: **27 tables against 33, 54 policies against 72,
+117 tests against 318**, on the one page whose argument is that its contents are
+checkable. The rule to prevent exactly this was already written here -- "anything
+that counts them reads the array rather than repeating a number in prose" -- and
+had only ever been applied to the sample calendar, never to the numbers
+describing the project.
+
+**The numbers now have two sources, because they answer to two things.**
+Everything countable from the files (tables, policies, migrations, SQL
+assertions, lines) is substituted by `vite.config.ts` at build time through a
+`define`, so it is exact on every build and there is nothing to keep in step.
+
+A generated, committed file was tried first and is worse: the line counts move
+on **every edit to any source file**, so `npm test` went red on work that had
+nothing to do with the panel. **A check that goes red on unrelated work gets
+deleted rather than obeyed.**
+
+**The count of tests is the exception and has to be committed.** A regex over
+the source gives 314 where vitest gives 318 -- `edgeFunctions.test.ts` has one
+`it.each` over five files, which is one match and five tests, and knowing that
+means evaluating the argument. So it comes from vitest's own JSON report
+(`node_modules/.vitest-report.json`, set in the test config) and lives in
+`src/data/testCount.ts`, checked by `posttest` after the run it describes. It
+changes when tests change and not otherwise.
+
+**`readTestCount()` refuses a partial report.** `npx vitest run one.test.ts`
+leaves behind a perfectly well-formed report saying 8, and writing that into the
+panel is this project's recurring bug in its purest form -- a number taken from
+something that was not the thing being measured. It compares the report's file
+count against the test files on disk and returns null rather than a number it
+cannot stand behind.
+
+`founderFigures.test.ts` guards the substitution itself: drop the `define` and
+every figure is `undefined`, `CountUp` renders NaN on the live page, and nothing
+else fails.
+
+## A pinned scene that cannot hold its content should not pin
+
+Found while measuring the panel above. The founder chapter's hinge is pinned:
+one window tall, `overflow-hidden`, and nothing below the fold can be scrolled
+to. On `main` it was **already cutting the bottom 84px off the disclaimer at
+375x667 and 22px at 414x736** -- the one paragraph on the page that has to be
+readable, cropped on the two smallest screens, because an overflow inside a
+pinned frame looks like nothing at all.
+
+`FounderScene` now measures the panel against the window and pins only where the
+whole thing fits; where it does not, the same card scrolls past like any other
+section. Measured rather than guessed at with a breakpoint, because the panel's
+height depends on how its text wraps and **the windows that fail are not the
+narrow ones -- 1280x700 is a laptop.** Read once on mount, like every other
+mechanism switch on this page.
+
+Of the six harness viewports it pins at 1440x900 and 1024x760 and scrolls at the
+other four. 1280x700 misses by 21px and 390x844 by 3px, and neither was bought
+back by trimming padding: squeezing under by three pixels means the next copy
+edit unpins it anyway, and the fallback is the same card, readable.
+
+**Six figures at display size did not fit.** It pushed the panel 223px past the
+bottom at 375x667. Three are set large (tests, security policies, lines) and
+three are inside the sentence that was already describing what was built.
+Numbers a reader weighs are set large; numbers that are evidence read fine in a
+line of prose.
+
+## Two probes measured themselves, in one afternoon
+
+Both while checking the panel above, and both caught by the rule already here.
+
+**The fit probe failed 12/12** -- which by this file's own standard means the
+probe. It was measuring the reduced-motion path, where the section is a plain
+scrolling block and content above the fold is the reader's next scroll rather
+than a defect; and it called anything wider than the viewport a failure on a
+chapter whose mechanism magnifies content by up to 1.26.
+
+**The scroll probe reported p95 33ms and failed 8/9 on `main` as well.** Stepping
+the scroll from the test runner and awaiting between wheel events paced the page
+at 30fps, so it was reporting its own cadence. **The same numbers before and
+after a change is the tell.** Driven from inside the page with one `scrollBy`
+per animation frame it reports p95 17ms and 910 frames, which is the bar this
+file records.
+
+That rewrite left one real finding: **1440x900 dark fails three consecutive runs
+with one to four frames over 50ms** while p95 stays 17ms. It does the same on
+`main`, so it is not new and is not this work's -- but by the repetition standard
+it is the page and not the container, and it is the first configuration to meet
+that standard. Worth a look on its own.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
