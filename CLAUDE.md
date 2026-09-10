@@ -945,11 +945,28 @@ after a change is the tell.** Driven from inside the page with one `scrollBy`
 per animation frame it reports p95 17ms and 910 frames, which is the bar this
 file records.
 
-That rewrite left one real finding: **1440x900 dark fails three consecutive runs
-with one to four frames over 50ms** while p95 stays 17ms. It does the same on
-`main`, so it is not new and is not this work's -- but by the repetition standard
-it is the page and not the container, and it is the first configuration to meet
-that standard. Worth a look on its own.
+That rewrite appeared to leave one real finding: **1440x900 dark failed three
+consecutive runs** with one to four frames over 50ms while p95 stayed 17ms. It
+did the same on `main`, so it was never this work's -- but by the repetition
+standard it read as the page rather than the container, and it was written up
+here as the first configuration to meet that standard.
+
+**Retracted on the same day, by the standard's other half.** Measured again
+after the two branches were merged, `1440x900 dark` came back clean and
+`1440x900` *light* failed instead -- twice in three runs, and `main` does the
+same thing at that configuration, three long frames on one run and none on the
+other two. **Which configuration fails is better evidence than how many do,**
+and this one walked. Three consecutive failures are necessary and are not
+sufficient; a run of three on a container that produces one long frame in nine
+hundred at random is not rare enough to mean anything on its own. What would
+mean something is the *same* configuration failing while its neighbours stay
+clean, across measurements taken at different times. That has still never
+happened here.
+
+It is left in rather than deleted because the wrong conclusion is the useful
+part: this file has now stated a satisfying story more strongly than the
+evidence supported four times, and every one of them was one more measurement
+away from being caught.
 
 **The third is the most useful of them.** The teaching screens measured
 **21/21 clean** at six viewports -- no unnamed controls, no overflow, no
