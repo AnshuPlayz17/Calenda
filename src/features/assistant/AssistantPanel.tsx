@@ -149,7 +149,13 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
               <h2 className="flex-1 text-[14px] font-medium text-text">Assistant</h2>
               {quota && (
                 <span className="text-[11.5px] tabular-nums text-text-subtle">
-                  {Math.max(quota.limit - quota.used, 0)} left today
+                  {/* An admin is recorded but never refused, so a countdown
+                      would reach "0 left today" beside a box that carries on
+                      working. What is shown instead is what is true: how many
+                      have been spent against the shared free tier. */}
+                  {quota.unlimited
+                    ? `${quota.used} today`
+                    : `${Math.max(quota.limit - quota.used, 0)} left today`}
                 </span>
               )}
               {/* A conversation about your own marks and notes with no way to

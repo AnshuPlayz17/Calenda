@@ -1111,9 +1111,29 @@ export const supabaseSource: DataSource = {
     // A counter that cannot be read is not worth an error on the page it sits
     // in the corner of.
     if (error) return null
+
+    /**
+     * An admin is recorded but never refused (20260910000100), so a countdown
+     * would tick down to "0 left today" beside a box that keeps working. A
+     * number that contradicts the thing it sits next to is worse than no
+     * number.
+     *
+     * The role is read here rather than trusted from the client's own state
+     * because this is the only place the two facts meet -- and it is a
+     * display decision either way. The limit that matters is the one in
+     * `claim_chat_message()`, which no client can influence.
+     */
+    const { data: me } = await supabase.auth.getUser()
+    let unlimited = false
+    if (me.user) {
+      const { data: profile } = await supabase
+        .from('profiles').select('role').eq('id', me.user.id).maybeSingle()
+      unlimited = profile?.role === 'admin'
+    }
+
     // Kept in step with claim_chat_message() by hand, because the function
     // deliberately takes no arguments -- see 20260909000500.
-    return { used: (data?.used as number | undefined) ?? 0, limit: 40 }
+    return { used: (data?.used as number | undefined) ?? 0, limit: 40, unlimited }
   },
 }
 
