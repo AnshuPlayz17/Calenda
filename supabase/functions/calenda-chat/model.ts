@@ -24,8 +24,28 @@ const MODEL = Deno.env.get('MODEL_NAME') ?? ''
 /** Only used by 'openai-compatible', for a provider not listed here. */
 const BASE = Deno.env.get('MODEL_BASE_URL') ?? ''
 
+/**
+ * Defaults, and the reason they are only defaults.
+ *
+ * `llama-3.3-70b-versatile` was here until 2026-09-10, when it turned out
+ * Groq had retired it: the assistant answered "Something went wrong reaching
+ * the assistant" and the real message -- `model 404: does not exist or you do
+ * not have access to it` -- was only in the Edge Function log.
+ *
+ * `openai/gpt-oss-20b` replaces it because it was confirmed present and
+ * working on a real free Groq account that same day, which is better evidence
+ * than the last one had. It is still a guess about the future. **A hosted
+ * model list is somebody else's decision and it changes without warning**, so
+ * `MODEL_NAME` overrides this without a deploy, and the failure now says so on
+ * screen rather than in a log nobody is reading.
+ *
+ * The small model is deliberate, not thrift. The assistant answers in two or
+ * three sentences from a context it is handed; that is instruction-following,
+ * not reasoning, and the larger model spends a shared free-tier allowance
+ * several times faster for an answer of the same length.
+ */
 const DEFAULT_MODEL: Record<Provider, string> = {
-  groq: 'llama-3.3-70b-versatile',
+  groq: 'openai/gpt-oss-20b',
   gemini: 'gemini-2.5-flash',
   'openai-compatible': 'gpt-4o-mini',
 }

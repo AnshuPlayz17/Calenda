@@ -32,11 +32,26 @@ word. `MODEL_PROVIDER` also accepts `gemini` or `openai-compatible`; the latter
 reads `MODEL_BASE_URL`. Optional: `MODEL_NAME` and `MODEL_VISION_NAME` override
 the defaults without a redeploy.
 
-**One limit worth knowing before you rely on it:** report-card reading needs a
-model that can look at an image. Groq reads images, so a photo or a screenshot
-works. It cannot read PDFs — the app says "take a photo of it instead" rather
-than failing obscurely. Gemini reads PDFs directly if that matters more than
-speed.
+**Report-card reading needs a model that can look at an image, and Groq may not
+have one.** This section used to say "Groq reads images, so a photo or a
+screenshot works." That was true when it was written on 2026-09-09 and was not
+true of a real free account on 2026-09-10: the model list held two `gpt-oss`
+text models, two `qwen3.x-27b`, speech-to-text, text-to-speech and two safety
+classifiers, and nothing that reads an image.
+
+**Check your own list before relying on it** — console.groq.com, Playground,
+the model dropdown. A hosted model list is somebody else's decision and it
+changes without notice; that is exactly how the assistant's default
+(`llama-3.3-70b-versatile`) became a 404.
+
+If there is no vision model on the account, the honest options are to point
+`MODEL_VISION_NAME` at one that exists, or to set `MODEL_PROVIDER=gemini` for
+its free tier, which reads PDFs directly as well as images. Report cards are
+the one feature that needs it; the assistant is text-only and unaffected.
+
+**The assistant's model is also worth setting explicitly.** `MODEL_NAME`
+overrides the built-in default without a redeploy. `openai/gpt-oss-20b` was
+confirmed working on 2026-09-10.
 
 ---
 
