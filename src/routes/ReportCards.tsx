@@ -106,9 +106,17 @@ export function ReportCards() {
           <Upload className="h-4 w-4" aria-hidden /> Choose a file
         </Button>
         {/* Said before the picker opens, not after a rejection. A storage 400
-            means nothing to somebody holding a phone. */}
+            means nothing to somebody holding a phone.
+
+            The PDF caveat is here rather than in the error, because it read
+            "A photo, a screenshot or a PDF" as a flat promise and whether a
+            PDF can actually be read depends on a model chosen in a server
+            secret this page cannot see. Promising it and then refusing after
+            the upload is the wrong order to find out. */}
         <p className="text-[12px] text-text-subtle">
-          A photo, a screenshot or a PDF. Up to 10MB.
+          A photo or a screenshot, up to 10MB. PDFs depend on the reader
+          configured for this project — if yours cannot take one, it says so and
+          nothing is lost.
         </p>
       </Card>
 

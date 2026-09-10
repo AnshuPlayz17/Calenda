@@ -190,6 +190,51 @@ begin
   perform feat_expect('the quota refuses a caller with no session', allowed, false);
 end $$;
 
+-- ======================================= the admin's allowance is not capped ===
+-- Lifting a limit for one person is one line away from lifting it for
+-- everybody, so the non-admin case is asserted in the same breath.
+do $$
+declare allowed boolean; spent integer;
+begin
+  insert into auth.users (id, email)
+    values ('00000000-0000-0000-0000-0000000000d1', 'boss@x.test')
+    on conflict do nothing;
+  update profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000d1';
+
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000d1', true);
+
+  -- Straight past forty. The forty-first is the one a normal account is
+  -- refused on, so the loop deliberately runs past it rather than to it.
+  for i in 1..45 loop
+    select claim_chat_message() into allowed;
+  end loop;
+  perform feat_expect('an admin is not refused past the daily limit', allowed, true);
+
+  select used into spent from chat_usage
+   where owner_id = '00000000-0000-0000-0000-0000000000d1' and day = current_date;
+  -- Recorded, not exempted from counting. chat_usage has to stay an honest
+  -- account of what was spent against a shared free tier, and the admin is the
+  -- person most likely to be spending it.
+  perform feat_expect('...and every one of them was still counted', spent, 45);
+end $$;
+
+do $$
+declare allowed boolean; refused_at integer := 0;
+begin
+  insert into auth.users (id, email)
+    values ('00000000-0000-0000-0000-0000000000d2', 'pupil@x.test')
+    on conflict do nothing;
+  perform set_config('request.jwt.claim.sub',
+    '00000000-0000-0000-0000-0000000000d2', true);
+
+  for i in 1..45 loop
+    select claim_chat_message() into allowed;
+    if not allowed and refused_at = 0 then refused_at := i; end if;
+  end loop;
+  perform feat_expect('a student is still refused on the forty-first', refused_at, 41);
+end $$;
+
 -- ================================================== set_my_role, both ways ===
 -- It had never worked. The trigger meant to be its belt was blocking it, and
 -- only a student -- who changes nothing -- got through. See 20260909000700.

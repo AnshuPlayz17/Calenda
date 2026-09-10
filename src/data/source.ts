@@ -224,7 +224,7 @@ export interface DataSource {
   /** Asks. Returns the assistant's reply row, already saved. */
   sendChatMessage(threadId: string, text: string): Promise<ChatMessage>
   /** How many of today's allowance are left, for an honest counter. */
-  chatQuotaRemaining(): Promise<{ used: number; limit: number } | null>
+  chatQuotaRemaining(): Promise<{ used: number; limit: number; unlimited?: boolean } | null>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first
