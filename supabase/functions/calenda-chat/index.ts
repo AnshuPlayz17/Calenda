@@ -255,7 +255,31 @@ Deno.serve(async (req) => {
     answer = await ask({ system, user: message })
   } catch (err) {
     failure = String(err).slice(0, 400)
-    answer = 'Something went wrong reaching the assistant. Nothing was changed.'
+    /**
+     * A configuration fault says so, rather than apologising vaguely.
+     *
+     * On 2026-09-10 Groq retired the model this defaulted to. The reply read
+     * "Something went wrong reaching the assistant", which is true, useless,
+     * and indistinguishable from the model being down -- while the actual
+     * message, `model 404: does not exist or you do not have access to it`,
+     * sat in a log that only somebody who knew to open the Supabase dashboard
+     * would ever see.
+     *
+     * These two are worth naming because both are fixed by editing one secret
+     * and neither is anybody's fault at the time it happens: a hosted model
+     * list changes without warning, and a key can be revoked. The rest stay
+     * generic, because a stack trace on a student's screen helps nobody.
+     */
+    const lower = failure.toLowerCase()
+    if (lower.includes('model') && lower.includes('404')) {
+      answer = 'The assistant is set to a model that no longer exists. '
+        + 'Whoever set this up needs to change MODEL_NAME to a model the '
+        + 'account can use.'
+    } else if (lower.includes('401') || lower.includes('invalid_api_key')) {
+      answer = 'The assistant\'s key was refused. It needs to be replaced.'
+    } else {
+      answer = 'Something went wrong reaching the assistant. Nothing was changed.'
+    }
     console.error('[calenda-chat]', providerName(), failure)
   }
 

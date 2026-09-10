@@ -9,6 +9,7 @@ import {
 } from './queries'
 import type { ChatMessage } from '@/lib/types'
 import { isPreview } from '@/data'
+import { inlineSegments } from './richText'
 import { cn } from '@/lib/cn'
 
 const FOCUSABLE =
@@ -275,7 +276,21 @@ function Bubble({ message }: { message: ChatMessage }) {
         'max-w-[85%] rounded-xl px-3 py-2 text-[13.5px] leading-relaxed',
         mine ? 'bg-brand text-brand-contrast' : 'border border-border bg-surface-2 text-text',
       )}>
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {/* Segments, not HTML. The model reaches for `**bold**` on dates
+            whether or not it is asked to, and its context is this user's own
+            notes -- which anyone sharing a class can write into. See
+            richText.ts for why nothing here is ever parsed as markup. */}
+        <p className="whitespace-pre-wrap">
+          {inlineSegments(message.content).map((seg, i) =>
+            seg.bold ? <strong key={i} className="font-semibold">{seg.text}</strong>
+            : seg.code ? (
+              <code key={i} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[12.5px] dark:bg-white/10">
+                {seg.text}
+              </code>
+            )
+            : <span key={i}>{seg.text}</span>,
+          )}
+        </p>
 
         {/* What it read, under what it said. An assistant that cannot show its
             sources is one whose answers cannot be checked, and checkable is the
