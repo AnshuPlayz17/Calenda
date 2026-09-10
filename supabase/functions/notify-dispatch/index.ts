@@ -167,29 +167,66 @@ function parseFrom(value: string): { name: string; email: string } {
   return { name: 'Calenda', email: value.trim() }
 }
 
-async function sendPush(profileId: string, title: string, body: string, tag: string) {
+/**
+ * Pushes to every subscription this person has, and REPORTS HOW MANY LANDED.
+ *
+ * It used to return nothing, and the caller counted `sent++` regardless. Two
+ * ways that lied, both found on 2026-09-10 while chasing a reminder that the
+ * logs insisted had been delivered:
+ *
+ *   - A person with no subscriptions at all: the loop ran zero times, threw
+ *     nothing, and the run reported a delivery.
+ *   - A subscription the browser had discarded: Google answers 404/410, this
+ *     tidily deleted the row -- and then also reported a delivery, because
+ *     handling an error is not the same as succeeding at the thing.
+ *
+ * Returning a count makes the caller able to tell "nobody was reached" from
+ * "somebody was reached", which is the only distinction that number exists to
+ * draw.
+ *
+ * One dead subscription also no longer takes down the live ones beside it. The
+ * old `throw err` abandoned the rest of the loop, so a stale row on a second
+ * device could silence the phone in your hand.
+ */
+async function sendPush(
+  profileId: string, title: string, body: string, tag: string,
+): Promise<{ delivered: number; reason: string | null }> {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) throw new Error('push not configured')
 
   const { data: subs } = await supabase
     .from('push_subscriptions').select('*').eq('profile_id', profileId)
 
-  for (const sub of subs ?? []) {
+  if (!subs || subs.length === 0) {
+    return { delivered: 0, reason: 'no device is subscribed to push' }
+  }
+
+  let delivered = 0
+  let lastError: string | null = null
+
+  for (const sub of subs) {
     try {
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         JSON.stringify({ title, body, tag }),
       )
+      delivered++
     } catch (err) {
       // 404/410 means the browser threw the subscription away -- remove it
-      // rather than retrying forever.
+      // rather than retrying forever. It is not a delivery.
       const status = (err as { statusCode?: number }).statusCode
       if (status === 404 || status === 410) {
         await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+        lastError = 'the subscription had expired and was removed'
       } else {
-        throw err
+        // Recorded and carried past, not thrown: the next subscription in the
+        // list may be the one the person is actually looking at.
+        lastError = String(err).slice(0, 200)
+        console.error('[notify-dispatch] push failed', lastError)
       }
     }
   }
+
+  return { delivered, reason: delivered > 0 ? null : (lastError ?? 'push was not delivered') }
 }
 
 /** Parks a reminder that cannot be delivered, without counting it a failure. */
@@ -238,13 +275,25 @@ Deno.serve(async () => {
 
       if (r.channel === 'email') {
         const { data: user } = await supabase.auth.admin.getUserById(r.profile_id)
-        if (user.user?.email) {
-          await sendEmail(user.user.email, `Calenda — ${title}`, body)
+        // An account with no address is not a delivery. This used to fall
+        // through the `if` and count as one.
+        if (!user.user?.email) {
+          await skip(r.id, 'the account has no email address')
+          skipped++
+          continue
         }
+        await sendEmail(user.user.email, `Calenda — ${title}`, body)
       } else if (r.channel === 'web_push') {
         // Same tag for the same subject, so a re-send replaces rather than
         // stacks on the lock screen.
-        await sendPush(r.profile_id, 'Calenda', body, `${r.subject_type}:${r.subject_id}`)
+        const push = await sendPush(
+          r.profile_id, 'Calenda', body, `${r.subject_type}:${r.subject_id}`,
+        )
+        if (push.delivered === 0) {
+          await skip(r.id, push.reason ?? 'push was not delivered')
+          skipped++
+          continue
+        }
       } else {
         // SMS has no free sender. Skipped rather than failed, for the same
         // reason as above.
