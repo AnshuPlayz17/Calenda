@@ -219,10 +219,15 @@ function seedTeaching() {
     notified: true, created_at: now,
   })
 
+  // Joined, and nothing linked or shared -- which is the state a student is
+  // actually in the moment after they type a code. Seeding it already linked
+  // would hide the one control this screen exists to explain: sharing is off
+  // and cannot even be switched on until they say which of their own classes
+  // this is.
   myGroups.push({
     id: 'preview-membership-1', group_id: 'preview-group-2',
     group_name: 'Functions 11', subject: 'Mathematics',
-    teacher_name: 'Ms. Patel', class_id: classes[1]?.id ?? null,
+    teacher_name: 'Ms. Patel', class_id: null,
     share_progress: false, joined_at: now,
   })
 }

@@ -2,6 +2,7 @@ import { GraduationCap, Presentation, Users } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { SCHOOLS } from '@/data/schools'
 import { OTHER_SCHOOL } from './schoolChoice'
+import type { ChosenRole } from './roleCopy'
 
 /**
  * The questions Calenda asks about a person, wherever it asks them.
@@ -14,27 +15,9 @@ import { OTHER_SCHOOL } from './schoolChoice'
  * and the other way does not.
  */
 
-export type Role = 'student' | 'parent' | 'teacher'
 export type Relation = 'mother' | 'father' | 'guardian' | 'other'
 
 const RELATIONS: Relation[] = ['mother', 'father', 'guardian', 'other']
-
-/**
- * What the last step's marker says, per role.
- *
- * Here rather than in either screen, for the same reason the questions
- * themselves are: a copy in the sign-up form and a copy in first-run is how a
- * teacher signing up one way is told what the screen is about and the other way
- * is told they are about to enter their student's details.
- *
- * A map rather than a nested ternary, because the third role turned one into
- * two and a fourth would turn two into three.
- */
-export const DETAIL_LABEL: Record<Role, string> = {
-  student: 'Your school',
-  parent: 'Your student',
-  teacher: 'Your classes',
-}
 
 /**
  * Three answers now, so the labels lost their "I'm a".
@@ -101,8 +84,8 @@ function Choice({ on, name, value, onPick, compact, children }: {
  * database accepts it only through `set_my_role()` and refuses `admin` by name.
  */
 export function RolePicker({ value, onChange }: {
-  value: Role
-  onChange: (v: Role) => void
+  value: ChosenRole
+  onChange: (v: ChosenRole) => void
 }) {
   return (
     <fieldset>

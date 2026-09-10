@@ -8,6 +8,7 @@ import { ParentsSection } from '@/features/parents/ParentsSection'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import { CycleCard } from '@/features/timetable/CycleCard'
 import { AccountCard } from '@/features/settings/AccountCard'
+import { JoinedClassesCard } from '@/features/teaching/JoinedClassesCard'
 import { agendaLabel } from '@/lib/datetime'
 
 export function SettingsPage() {
@@ -122,6 +123,10 @@ export function SettingsPage() {
       </motion.section>
 
       <motion.section {...rise(7)}>
+        <JoinedClassesCard />
+      </motion.section>
+
+      <motion.section {...rise(8)}>
         <AccountCard />
       </motion.section>
     </div>

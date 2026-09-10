@@ -41,6 +41,8 @@ const NotificationsPage = lazy(() => import('@/routes/Notifications').then((m) =
 const ClassesPage = lazy(() => import('@/routes/Classes').then((m) => ({ default: m.ClassesPage })))
 const ClassWorkspace = lazy(() => import('@/routes/ClassWorkspace').then((m) => ({ default: m.ClassWorkspace })))
 const SettingsPage = lazy(() => import('@/routes/Settings').then((m) => ({ default: m.SettingsPage })))
+const TeachingPage = lazy(() => import('@/routes/Teaching').then((m) => ({ default: m.Teaching })))
+const TeachingGroupPage = lazy(() => import('@/routes/TeachingGroup').then((m) => ({ default: m.TeachingGroup })))
 const SuggestionsPage = lazy(() => import('@/routes/Suggestions').then((m) => ({ default: m.SuggestionsPage })))
 const AdminPage = lazy(() => import('@/routes/Admin').then((m) => ({ default: m.AdminPage })))
 const CalendarPage = lazy(() => import('@/routes/Calendar').then((m) => ({ default: m.CalendarPage })))
@@ -154,6 +156,8 @@ export function App() {
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="suggestions" element={<SuggestionsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="teaching" element={<TeachingPage />} />
+                <Route path="teaching/:groupId" element={<TeachingGroupPage />} />
                 <Route
                   path="admin"
                   element={

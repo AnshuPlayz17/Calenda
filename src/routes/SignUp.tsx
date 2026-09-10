@@ -9,10 +9,12 @@ import {
   AuthError, BackLink, NotConnected, ProviderButtons, Separator, StepMark,
 } from '@/features/auth/AuthParts'
 import {
-  DETAIL_LABEL, HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
+  HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
 } from '@/features/auth/aboutYou'
+import { DETAIL_LABEL } from '@/features/auth/roleCopy'
 import { schoolValue } from '@/features/auth/schoolChoice'
-import type { Relation, Role } from '@/features/auth/aboutYou'
+import type { Relation } from '@/features/auth/aboutYou'
+import type { ChosenRole } from '@/features/auth/roleCopy'
 import { useAuth, SIGN_UP_BLOCKED } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
@@ -110,7 +112,7 @@ export function SignUp() {
   const [schoolOther, setSchoolOther] = useState('')
   const [heardFrom, setHeardFrom] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')
-  const [role, setRole] = useState<Role>('student')
+  const [role, setRole] = useState<ChosenRole>('student')
   const [grade, setGrade] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

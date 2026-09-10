@@ -3,7 +3,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { Role } from '@/features/auth/aboutYou'
+import type { ChosenRole } from '@/features/auth/roleCopy'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -35,7 +35,7 @@ import { supabase } from '@/lib/supabase'
  * it. Written once because it was two ternaries that had to agree, and the
  * second one silently filed a teacher as a student.
  */
-function pickerRole(stored: string | undefined): Role {
+function pickerRole(stored: string | undefined): ChosenRole {
   return stored === 'parent' || stored === 'teacher' ? stored : 'student'
 }
 
@@ -43,7 +43,7 @@ export function AccountCard() {
   const { profile, user, refreshProfile } = useAuth()
 
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<Role>('student')
+  const [role, setRole] = useState<ChosenRole>('student')
   const [grade, setGrade] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)

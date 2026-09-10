@@ -24,6 +24,7 @@ import { ThemeProvider } from '@/lib/theme'
 vi.mock('@/features/google/GoogleImport', () => ({ GoogleImport: () => null }))
 vi.mock('@/features/parents/ParentsSection', () => ({ ParentsSection: () => null }))
 vi.mock('@/features/settings/AccountCard', () => ({ AccountCard: () => null }))
+vi.mock('@/features/teaching/JoinedClassesCard', () => ({ JoinedClassesCard: () => null }))
 vi.mock('@/features/schoolYear/SchoolYearProvider', () => ({
   useSchoolYear: () => ({ current: null, years: [], setCurrent: () => {} }),
 }))

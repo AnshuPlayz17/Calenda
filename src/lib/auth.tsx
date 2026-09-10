@@ -4,7 +4,17 @@ import type { Provider, Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { env } from './env'
 
-export type Role = 'student' | 'parent' | 'admin'
+/**
+ * The role as the database stores it: every value `user_role` has.
+ *
+ * Not the same thing as `ChosenRole` in aboutYou.tsx, which is what a person
+ * may pick -- that one has teacher and not admin, because admin is granted in
+ * SQL by somebody who already has the database and is never chosen from a
+ * radio. Two types with the same name and different membership is the trap
+ * this project already has written down for the `shareable` enum, so they are
+ * named apart.
+ */
+export type Role = 'student' | 'parent' | 'teacher' | 'admin'
 
 export type Profile = {
   id: string

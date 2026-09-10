@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
 import { AuthError, BackLink, StepMark } from '@/features/auth/AuthParts'
 import {
-  DETAIL_LABEL, HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
+  HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
 } from '@/features/auth/aboutYou'
+import { DETAIL_LABEL } from '@/features/auth/roleCopy'
 import { schoolValue } from '@/features/auth/schoolChoice'
-import type { Relation, Role } from '@/features/auth/aboutYou'
+import type { Relation } from '@/features/auth/aboutYou'
+import type { ChosenRole } from '@/features/auth/roleCopy'
 import { useAuth } from '@/lib/auth'
 
 /**
@@ -38,7 +40,7 @@ export function FirstRun() {
 
   const [step, setStep] = useState<'name' | 'details'>('name')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<Role>('student')
+  const [role, setRole] = useState<ChosenRole>('student')
   const [school, setSchool] = useState('')
   const [grade, setGrade] = useState('')
   const [relation, setRelation] = useState<Relation>('mother')

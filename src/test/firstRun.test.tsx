@@ -96,7 +96,7 @@ describe('the first-run screen', () => {
   it('lets a parent through only once they have a code or have said they have none', async () => {
     const user = userEvent.setup()
     renderFirstRun()
-    await user.click(await screen.findByText("I'm a parent"))
+    await user.click(await screen.findByRole("radio", { name: "Parent" }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'school newsletter')
 
@@ -113,7 +113,7 @@ describe('the first-run screen', () => {
   it('asks a parent for a relation and a code, and never for a grade', async () => {
     const user = userEvent.setup()
     renderFirstRun()
-    await user.click(await screen.findByText("I'm a parent"))
+    await user.click(await screen.findByRole("radio", { name: "Parent" }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(screen.getByLabelText("Your student's code")).toBeInTheDocument()
@@ -148,7 +148,7 @@ describe('the first-run screen', () => {
   it("records a parent's answers and nothing belonging to a student", async () => {
     const user = userEvent.setup()
     renderFirstRun()
-    await user.click(await screen.findByText("I'm a parent"))
+    await user.click(await screen.findByRole("radio", { name: "Parent" }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByText('guardian'))
     await user.type(screen.getByLabelText("Your student's code"), 'abcd2345')
@@ -183,7 +183,7 @@ describe('the first-run screen', () => {
     completeFirstRun.mockResolvedValueOnce({ warning: 'That code is not valid.' })
     const user = userEvent.setup()
     renderFirstRun()
-    await user.click(await screen.findByText("I'm a parent"))
+    await user.click(await screen.findByRole("radio", { name: "Parent" }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.type(screen.getByLabelText("Your student's code"), 'abcd2345')
     await user.type(screen.getByLabelText('How did you hear about Calenda?'), 'a friend')
