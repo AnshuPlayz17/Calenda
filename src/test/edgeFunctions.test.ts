@@ -158,6 +158,46 @@ describe('the Edge Functions', () => {
     expect(inspected).toBeGreaterThanOrEqual(7)
   })
 
+  it('the dispatcher only counts a delivery when something was delivered', () => {
+    // `sent` is the number the reminders workflow reads and the number a
+    // person trusts when they ask whether this works. On 2026-09-10 it said 1
+    // three times over while nothing reached anybody: sendPush returned void,
+    // so the caller counted a success whether the loop had zero subscriptions,
+    // deleted an expired one, or actually delivered.
+    const src = readFileSync(join(ROOT, 'notify-dispatch', 'index.ts'), 'utf8')
+
+    // It has to report a count back...
+    expect(src).toMatch(/Promise<\{\s*delivered: number/)
+    // ...and the caller has to branch on it rather than assume.
+    expect(src).toMatch(/push\.delivered === 0/)
+
+    // A per-subscription failure must not abandon the ones after it. A stale
+    // row on an old laptop silenced the phone in your hand.
+    const fn = src.slice(src.indexOf('async function sendPush'), src.indexOf('Deno.serve'))
+    expect(fn).not.toMatch(/throw err/)
+  })
+
+  it('the service worker notifies even when the payload is unreadable', () => {
+    // A silent exit there makes three different faults -- no push, an empty
+    // push, an undecryptable push -- indistinguishable from everything
+    // working.
+    //
+    // Comments are stripped before searching, because the handler's own
+    // doc comment quotes the line it replaced in order to explain why. The
+    // first version of this assertion failed on exactly that, which is the
+    // trap CLAUDE.md records two paragraphs above where this was written:
+    // anchor on the code, never on a name that also appears in the prose.
+    const sw = readFileSync(join(process.cwd(), 'public', 'sw.js'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+    expect(sw).not.toMatch(/if \(!event\.data\)\s*return/)
+    expect(sw).toMatch(/showNotification/)
+    // And it takes over promptly, or a fixed worker waits for every tab on the
+    // origin to close before it replaces the broken one.
+    expect(sw).toMatch(/skipWaiting/)
+  })
+
   it('no function hardcodes a credential', () => {
     for (const file of files) {
       const src = readFileSync(file, 'utf8')
