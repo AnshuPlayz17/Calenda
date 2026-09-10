@@ -124,3 +124,39 @@ describe('what a teacher is never asked', () => {
     }
   })
 })
+
+describe('the teaching links go somewhere', () => {
+  it('only points at routes the app declares', () => {
+    // Every link on these screens said /app/teaching, and the app has no /app.
+    // Typecheck, lint and 325 tests all passed on it: a route path is a string,
+    // and nothing in this project was checking the strings. It was caught by a
+    // browser probe, which is a slow way to find a typo.
+    const app = readFileSync('src/app/App.tsx', 'utf8')
+    const declared = new Set(
+      [...app.matchAll(/<Route\s+path="([^"]+)"/g)]
+        .map((m) => m[1] as string)
+        .filter((p) => p !== '*')
+        // Nested under a pathless parent, so a declared "teaching/:groupId" is
+        // reached at "/teaching/:groupId".
+        .map((p) => (p.startsWith('/') ? p : `/${p}`)),
+    )
+
+    const links = new Set<string>()
+    for (const file of ['src/routes/Teaching.tsx', 'src/routes/TeachingGroup.tsx']) {
+      const text = readFileSync(file, 'utf8')
+      for (const m of text.matchAll(/to=(?:"([^"]+)"|\{`([^`]+)`\})/g)) {
+        links.add((m[1] ?? m[2] ?? '').replace(/\$\{[^}]+\}/g, ':param'))
+      }
+    }
+    // A guard that found nothing would pass forever.
+    expect(links.size).toBeGreaterThan(0)
+
+    for (const link of links) {
+      const matched = [...declared].some((route) => {
+        const pattern = route.replace(/:[^/]+/g, '[^/]+')
+        return new RegExp(`^${pattern}$`).test(link.replace(/:param/g, 'x'))
+      })
+      expect(matched, `${link} is not a declared route`).toBe(true)
+    }
+  })
+})

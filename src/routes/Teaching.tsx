@@ -115,7 +115,7 @@ export function Teaching() {
           {groups.map((g) => (
             <li key={g.id} className="min-w-0">
               <Link
-                to={`/app/teaching/${g.id}`}
+                to={`/teaching/${g.id}`}
                 className="surface-card block min-w-0 p-5 transition-colors duration-150 hover:border-border-strong"
               >
                 <p className="truncate text-[15px] font-semibold tracking-tight text-text">

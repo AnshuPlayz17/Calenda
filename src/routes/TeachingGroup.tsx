@@ -46,7 +46,7 @@ export function TeachingGroup() {
           icon={Users}
           title="That class is not here"
           description="It may have been archived, or it was never yours."
-          action={<Link to="/app/teaching"><Button variant="secondary">Back to your classes</Button></Link>}
+          action={<Link to="/teaching"><Button variant="secondary">Back to your classes</Button></Link>}
         />
       </div>
     )
@@ -55,7 +55,7 @@ export function TeachingGroup() {
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6">
       <Link
-        to="/app/teaching"
+        to="/teaching"
         className="inline-flex items-center gap-1.5 text-[13px] text-text-muted hover:text-text"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
