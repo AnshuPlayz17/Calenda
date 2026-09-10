@@ -38,8 +38,18 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
 const PROVIDER = (Deno.env.get('MODEL_PROVIDER') ?? 'groq').toLowerCase()
 const KEY = Deno.env.get('MODEL_API_KEY') ?? ''
+/**
+ * `meta-llama/llama-4-scout-17b-16e-instruct` was the Groq default until
+ * 2026-09-10 and was not on a real free account that day -- the same way the
+ * chat default had been retired. Qwen 3.8 27B is what Groq's own console lists
+ * under Vision, so it is what this reaches for now.
+ *
+ * Still only a default. A hosted model list is somebody else's decision:
+ * `MODEL_VISION_NAME` overrides it without a deploy, and the account's own
+ * dropdown is the only authority on what exists today.
+ */
 const VISION_MODEL = Deno.env.get('MODEL_VISION_NAME')
-  ?? (PROVIDER === 'gemini' ? 'gemini-2.5-flash' : 'meta-llama/llama-4-scout-17b-16e-instruct')
+  ?? (PROVIDER === 'gemini' ? 'gemini-2.5-flash' : 'qwen/qwen3.8-27b')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
