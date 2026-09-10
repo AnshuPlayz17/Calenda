@@ -706,6 +706,64 @@ caught up" to somebody who had not started and then showed five cards each
 correctly reporting that it was empty. Day one now gets one card and three
 steps, gated on classes *and* events *and* assignments all being empty.
 
+## Reminders arrive, and what it took to find out
+
+**One was delivered on 2026-09-10 at 16:47 UTC** -- "In 12 days: Curriculum
+Night", web push, macOS Chrome. The first in the project's life. `docs/FACTS.md`
+holds the evidence and, more importantly, the limits: web push only, one
+device, one account. **Email has still never reached anybody**, because every
+queued reminder is `web_push` by default (`20260904000800`).
+
+**Four separate things reported success while delivering nothing**, and finding
+each one cost a round:
+
+1. The hourly workflow exited early on `SUPABASE_FUNCTION_URL`, a secret nobody
+   had set. Sixty green checks a day, five days.
+2. `sendPush` returned void and the caller counted `sent++` regardless -- so a
+   profile with zero subscriptions, and an expired subscription that had just
+   been deleted, both recorded as deliveries.
+3. `if (!event.data) return` in the service worker: a silent exit that makes
+   "no push arrived", "an empty push arrived" and "an undecryptable push
+   arrived" indistinguishable from everything working.
+4. `schedule-notifications.sql` scheduled a pg_cron job POSTing to the literal
+   string `https://<PROJECT-REF>.supabase.co/...`, and its own confirmation
+   query selected `jobid, jobname, schedule, active` -- four columns, none of
+   which can see that.
+
+The shape is one thing wearing four costumes: **a success signal that is not
+downstream of the actual success.** A workflow that reports on its own
+invocation rather than on delivery. A counter incremented next to the attempt
+rather than by it. A handler whose silence means both "fine" and "broken". A
+setup file whose check reads the row it just wrote instead of what the row
+points at.
+
+The rule that would have caught all four: **make the signal come from the far
+end.** `sent` now counts only what `sendPush` reports as delivered. The cron
+check now reads the URL inside the command. The worker now notifies even when
+it cannot read the payload, so silence means "no push" and nothing else.
+
+**Which fix made it finally work is not established, deliberately.** The
+subscription and the service worker were both replaced between the last failure
+and the success. The old worker's silent return is the likeliest cause and is
+not written down as the cause, because two things changed and only one can be
+credited. This file has been wrong twice this week by preferring the tidier
+story; a theory that fits is not a cause that is proven.
+
+**`VITE_VAPID_PUBLIC_KEY` (GitHub repo variable, baked into the bundle) and
+`VAPID_PUBLIC_KEY` (Supabase secret) must be the same key.** The browser
+subscribes with the first and the server signs with the second; Chrome silently
+discards a push signed with a different one, and FCM returns success either way
+because it does not check. Suspected here and ruled out -- the payload
+decrypted -- but it is the one remaining way to get an accepted push that never
+appears, and it is invisible from every log.
+
+**pg_cron replaced the Actions schedule as the primary trigger.** GitHub's
+scheduled runs fired at 12:17, 16:44, 19:49, 22:36, 01:08, 06:03 and 11:28 --
+gaps of three to five hours, not the hour the cron expression asks for. A
+reminder set for 9am could arrive at noon. `supabase/schedule-notifications.sql`
+runs every 15 minutes from inside Postgres. Both paths are safe together;
+claiming is under `for update skip locked`.
+
 ## The timetable cycle
 
 Some schools run Day 1 to Day 6 rather than Monday to Friday, carrying the
