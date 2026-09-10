@@ -431,3 +431,81 @@ export type ChatMessage = {
   error: string | null
   created_at: string
 }
+
+// ------------------------------------------------------------ teaching ----
+
+/**
+ * A class as the teacher of it sees it: one row that many students join.
+ *
+ * Deliberately not a `SchoolClass`. That is a student's own row -- their
+ * notebook, their marks, their name for the subject -- and folding the two
+ * together would put a teacher's roster inside a student's record or a
+ * student's notes inside a teacher's.
+ */
+export type TeachingGroup = {
+  id: string
+  owner_id: string
+  school_year_id: string
+  name: string
+  subject: string | null
+  room: string | null
+  color_token: string | null
+  /** Null means closed: members stay, nobody new can join. */
+  join_code: string | null
+  is_archived: boolean
+  created_at: string
+  /** Current members. Counted on read rather than stored, so it cannot drift. */
+  member_count: number
+}
+
+/** One student in a teacher's roster. */
+export type GroupMember = {
+  id: string
+  group_id: string
+  student_id: string
+  student_name: string | null
+  /** The student's own class they linked, if any. Only they can set it. */
+  class_id: string | null
+  /** Off until the student turns it on, for this group only. */
+  share_progress: boolean
+  joined_at: string
+}
+
+/** A membership as the student sees it. */
+export type StudentGroup = {
+  id: string
+  group_id: string
+  group_name: string
+  subject: string | null
+  teacher_name: string | null
+  class_id: string | null
+  share_progress: boolean
+  joined_at: string
+}
+
+export type GroupAnnouncement = {
+  id: string
+  group_id: string
+  group_name: string
+  body: string
+  /** Whether reminders were queued. A fact about what happened, not a plan. */
+  notified: boolean
+  created_at: string
+}
+
+/**
+ * What a teacher can see of one student's work, which is only ever the marks
+ * for the class that student linked and only while they are sharing.
+ *
+ * `marks` is the count the average was computed from, so the screen can show
+ * its working rather than a bare number -- the same rule the student's own
+ * grades tab follows.
+ */
+export type GroupProgress = {
+  student_id: string
+  student_name: string | null
+  sharing: boolean
+  marks: number
+  /** Percent, or null when nothing is marked yet. Never zero for "unmarked". */
+  average: number | null
+}

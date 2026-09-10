@@ -4,7 +4,17 @@ import type { Provider, Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { env } from './env'
 
-export type Role = 'student' | 'parent' | 'admin'
+/**
+ * The role as the database stores it: every value `user_role` has.
+ *
+ * Not the same thing as `ChosenRole` in aboutYou.tsx, which is what a person
+ * may pick -- that one has teacher and not admin, because admin is granted in
+ * SQL by somebody who already has the database and is never chosen from a
+ * radio. Two types with the same name and different membership is the trap
+ * this project already has written down for the `shareable` enum, so they are
+ * named apart.
+ */
+export type Role = 'student' | 'parent' | 'teacher' | 'admin'
 
 export type Profile = {
   id: string
@@ -32,10 +42,14 @@ export type Profile = {
 /** Everything the sign-up form collects beyond an address and a password. */
 export type SignUpDetails = {
   fullName: string
-  role: 'student' | 'parent'
-  /** Students only. A parent has no grade and none is sent for them. */
+  role: 'student' | 'parent' | 'teacher'
+  /** Students only. A parent and a teacher have no grade; none is sent. */
   grade?: string
-  /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
+  /**
+   * Students only, free text, self-declared, and nothing reads it yet. See
+   * 20260907000300. Deliberately not asked of a teacher: "Teacher at <school>"
+   * is an institutional claim, and this app is never any school's product.
+   */
   school?: string
   /** How they found Calenda. Asked once, never shown back, optional. */
   heardFrom?: string

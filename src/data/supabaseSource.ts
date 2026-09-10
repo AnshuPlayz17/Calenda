@@ -10,6 +10,7 @@ import type {
   QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
   Attachment, ChatMessage, ChatThread, ClassMeeting, Grade,
   NewGradeInput, NewMeetingInput, ReportCard, ReportCardLine,
+  GroupAnnouncement, TeachingGroup,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -1135,6 +1136,299 @@ export const supabaseSource: DataSource = {
     // deliberately takes no arguments -- see 20260909000500.
     return { used: (data?.used as number | undefined) ?? 0, limit: 40, unlimited }
   },
+
+  // ----------------------------------------------------------- teaching --
+
+  async listTeachingGroups(schoolYearId) {
+    const { data, error } = await supabase
+      .from('teacher_groups')
+      // The count is a related-table aggregate rather than a stored column, so
+      // it cannot drift from the roster. `left_at` is null for current members
+      // only -- somebody who left is kept on the row and is not a member.
+      .select('*, teacher_group_members(count)')
+      .eq('school_year_id', schoolYearId)
+      .eq('is_archived', false)
+      .is('teacher_group_members.left_at', null)
+      .order('created_at')
+    if (error) fail('load the classes you teach', error)
+    return (data ?? []).map(withMemberCount)
+  },
+
+  async createTeachingGroup(schoolYearId, input) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { data, error } = await supabase
+      .from('teacher_groups')
+      .insert({ ...groupRow(input), school_year_id: schoolYearId, owner_id: auth.user.id })
+      .select('*')
+      .single()
+    if (error) fail('make that class', error)
+    return { ...(data as TeachingGroup), member_count: 0 }
+  },
+
+  async updateTeachingGroup(id, input) {
+    const { data, error } = await supabase
+      .from('teacher_groups').update(groupRow(input)).eq('id', id).select('*').single()
+    if (error) fail('save that class', error)
+    return { ...(data as TeachingGroup), member_count: 0 }
+  },
+
+  async setTeachingGroupArchived(id, archived) {
+    const { error } = await supabase
+      .from('teacher_groups')
+      .update({ is_archived: archived, archived_at: archived ? new Date().toISOString() : null })
+      .eq('id', id)
+    if (error) fail('archive that class', error)
+  },
+
+  async rotateJoinCode(groupId) {
+    // A function, not an update. It checks ownership itself, which is the
+    // permission boundary -- a definer function does not consult RLS.
+    const { data, error } = await supabase.rpc('rotate_group_join_code', { target_group: groupId })
+    if (error) fail('make a join code', error)
+    return data as string
+  },
+
+  async closeJoinCode(groupId) {
+    const { error } = await supabase.rpc('close_group_join_code', { target_group: groupId })
+    if (error) fail('close that class', error)
+  },
+
+  async listGroupMembers(groupId) {
+    const { data, error } = await supabase
+      .from('teacher_group_members')
+      .select('*, student:profiles!teacher_group_members_student_id_fkey(full_name)')
+      .eq('group_id', groupId)
+      .is('left_at', null)
+      .order('joined_at')
+    if (error) fail('load your class list', error)
+    return (data ?? []).map((r) => {
+      const row = r as Record<string, unknown>
+      const student = row.student as { full_name: string | null } | null
+      return {
+        id: row.id as string,
+        group_id: row.group_id as string,
+        student_id: row.student_id as string,
+        student_name: student?.full_name ?? null,
+        class_id: (row.class_id as string | null) ?? null,
+        share_progress: Boolean(row.share_progress),
+        joined_at: row.joined_at as string,
+      }
+    })
+  },
+
+  async removeGroupMember(memberId) {
+    // Leaving is stamped, not deleted, so a teacher's record of who was in the
+    // class in March is not rewritten by a removal in June.
+    const { error } = await supabase
+      .from('teacher_group_members')
+      .update({ left_at: new Date().toISOString() })
+      .eq('id', memberId)
+    if (error) fail('remove that student', error)
+  },
+
+  async listGroupEvents(groupId) {
+    const { data, error } = await supabase
+      .from('events').select(EVENT_COLUMNS).eq('group_id', groupId).order('start_date')
+    if (error) fail('load the dates for that class', error)
+    return (data ?? []) as unknown as EventWithCategory[]
+  },
+
+  async publishGroupEvent(groupId, schoolYearId, input) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth.user) throw new Error('You need to be signed in.')
+    const { data, error } = await supabase
+      .from('events')
+      // An ordinary event with the class on it. Members read it through a
+      // policy; it is not copied into anybody's calendar, so editing the date
+      // later changes it for everyone rather than for whoever gets re-synced.
+      .insert({ ...toRow(input, schoolYearId), owner_id: auth.user.id, group_id: groupId })
+      .select(EVENT_COLUMNS)
+      .single()
+    if (error) fail('publish that date', error)
+    return data as unknown as CalendarEvent
+  },
+
+  async listGroupAnnouncements(groupId) {
+    const { data, error } = await supabase
+      .from('announcement_messages')
+      .select('*')
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false })
+    if (error) fail('load your announcements', error)
+    return (data ?? []).map(toAnnouncement)
+  },
+
+  async announceToGroup(groupId, body, notify) {
+    const { error } = await supabase.rpc('announce_to_group', {
+      target_group: groupId, message: body, also_notify: notify,
+    })
+    if (error) fail('post that announcement', error)
+  },
+
+  async listGroupProgress(groupId) {
+    const members = await supabaseSource.listGroupMembers(groupId)
+    const sharing = members.filter((m) => m.share_progress && m.class_id)
+    if (sharing.length === 0) {
+      return members.map((m) => ({
+        student_id: m.student_id,
+        student_name: m.student_name,
+        sharing: false,
+        marks: 0,
+        average: null,
+      }))
+    }
+
+    // One query for every sharing member rather than one per member. The policy
+    // is what decides which rows come back -- this filter is a narrowing, not
+    // the control, and a member who turned sharing off between the two calls
+    // simply returns nothing here.
+    const { data, error } = await supabase
+      .from('grades')
+      .select('owner_id, class_id, score, out_of, weight')
+      .in('owner_id', sharing.map((m) => m.student_id))
+      .in('class_id', sharing.map((m) => m.class_id as string))
+    if (error) fail('load how the class is doing', error)
+
+    const byStudent = new Map<string, Array<{ score: number; outOf: number; weight: number }>>()
+    for (const row of data ?? []) {
+      const r = row as Record<string, unknown>
+      const member = sharing.find((m) => m.student_id === r.owner_id && m.class_id === r.class_id)
+      // A mark for a class this student did not link to THIS group is not this
+      // teacher's to count, even if the policy let it through some other way.
+      if (!member) continue
+      // An unmarked row is excluded, never counted as zero. An upcoming test is
+      // not a test you failed.
+      const score = r.score as number | null
+      const outOf = r.out_of as number | null
+      if (score === null || outOf === null || outOf <= 0) continue
+      const list = byStudent.get(member.student_id) ?? []
+      list.push({ score, outOf, weight: (r.weight as number | null) ?? 1 })
+      byStudent.set(member.student_id, list)
+    }
+
+    return members.map((m) => {
+      const marks = byStudent.get(m.student_id) ?? []
+      const weight = marks.reduce((t, x) => t + x.weight, 0)
+      return {
+        student_id: m.student_id,
+        student_name: m.student_name,
+        sharing: Boolean(m.share_progress && m.class_id),
+        marks: marks.length,
+        average: weight > 0
+          ? marks.reduce((t, x) => t + (x.score / x.outOf) * 100 * x.weight, 0) / weight
+          : null,
+      }
+    })
+  },
+
+  // ------------------------------------------- teaching, student side --
+
+  async listMyGroups() {
+    const { data, error } = await supabase
+      .from('teacher_group_members')
+      .select('*, group:teacher_groups(name, subject, owner_id)')
+      .is('left_at', null)
+      .order('joined_at')
+    if (error) fail('load the classes you have joined', error)
+
+    const rows = (data ?? []) as Array<Record<string, unknown>>
+    // The teacher's name is a second read because it comes through a different
+    // policy: a member may read the group, and the profile arm that lets them
+    // read the person who owns it is the one on `profiles`. Batched, so this is
+    // one request however many classes somebody is in.
+    const ownerIds = [...new Set(rows.map((r) => (r.group as { owner_id?: string })?.owner_id)
+      .filter((x): x is string => Boolean(x)))]
+    const names = new Map<string, string | null>()
+    if (ownerIds.length) {
+      const { data: people } = await supabase
+        .from('profiles').select('id, full_name').in('id', ownerIds)
+      for (const p of people ?? []) names.set(p.id as string, (p.full_name as string) ?? null)
+    }
+
+    return rows.map((r) => {
+      const group = r.group as { name: string; subject: string | null; owner_id: string } | null
+      return {
+        id: r.id as string,
+        group_id: r.group_id as string,
+        group_name: group?.name ?? 'A class',
+        subject: group?.subject ?? null,
+        teacher_name: group ? (names.get(group.owner_id) ?? null) : null,
+        class_id: (r.class_id as string | null) ?? null,
+        share_progress: Boolean(r.share_progress),
+        joined_at: r.joined_at as string,
+      }
+    })
+  },
+
+  async joinGroup(code) {
+    const { data, error } = await supabase.rpc('redeem_group_join_code', { code_text: code })
+    if (error) {
+      // The function raises a sentence written for a person -- "That code is
+      // not valid. Ask your teacher for a new one." -- so it is passed through
+      // rather than replaced with something vaguer.
+      throw new Error(error.message)
+    }
+    const row = (data as Array<Record<string, unknown>> | null)?.[0]
+    return {
+      groupName: (row?.out_group_name as string) ?? 'that class',
+      teacherName: (row?.out_teacher_name as string | null) ?? null,
+    }
+  },
+
+  async updateMyGroup(membershipId, patch) {
+    const row: Record<string, unknown> = {}
+    if (patch.classId !== undefined) row.class_id = patch.classId
+    if (patch.shareProgress !== undefined) row.share_progress = patch.shareProgress
+    const { error } = await supabase
+      .from('teacher_group_members').update(row).eq('id', membershipId)
+    if (error) fail('save that', error)
+  },
+
+  async leaveGroup(membershipId) {
+    const { error } = await supabase
+      .from('teacher_group_members')
+      .update({ left_at: new Date().toISOString() })
+      .eq('id', membershipId)
+    if (error) fail('leave that class', error)
+  },
+
+  async listMyAnnouncements(limit) {
+    const { data, error } = await supabase
+      .from('announcement_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) fail('load your announcements', error)
+    return (data ?? []).map(toAnnouncement)
+  },
+}
+
+/** Shared between create and update so the two cannot drift apart. */
+function groupRow(input: { name: string; subject?: string; room?: string }) {
+  return {
+    name: input.name.trim(),
+    subject: input.subject?.trim() || null,
+    room: input.room?.trim() || null,
+  }
+}
+
+function withMemberCount(row: unknown): TeachingGroup {
+  const r = row as Record<string, unknown>
+  const counts = r.teacher_group_members as Array<{ count: number }> | undefined
+  return { ...(r as unknown as TeachingGroup), member_count: counts?.[0]?.count ?? 0 }
+}
+
+function toAnnouncement(row: unknown): GroupAnnouncement {
+  const r = row as Record<string, unknown>
+  return {
+    id: r.id as string,
+    group_id: r.group_id as string,
+    group_name: (r.group_name as string) ?? 'A class',
+    body: r.body as string,
+    notified: Boolean(r.notified),
+    created_at: r.created_at as string,
+  }
 }
 
 /** Shared between create and update so the two cannot drift apart. */

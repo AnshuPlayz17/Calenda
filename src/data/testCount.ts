@@ -6,4 +6,4 @@
 // the runner knows. `npm test` checks this file on the way out.
 
 /** Tests vitest ran, as vitest counted them. */
-export const testCount = 326
+export const testCount = 334

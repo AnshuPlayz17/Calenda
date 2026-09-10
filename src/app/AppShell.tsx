@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   CalendarClock, CalendarDays, GraduationCap, LayoutDashboard, Bell, Lightbulb,
   Settings, ShieldCheck, Menu, X, LogOut, Search, Info, UserRound, Sparkles,
-  FileText,
+  FileText, Presentation,
 } from 'lucide-react'
 import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -62,6 +62,7 @@ const GROUPS: Array<{
 
 export function AppShell() {
   const { profile, isAdmin, signOut } = useAuth()
+  const isTeacher = profile?.role === 'teacher'
   const preview = usePreview()
   const { current } = useSchoolYear()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -205,6 +206,23 @@ export function AppShell() {
             ))}
           </div>
         ))}
+
+        {/* A teacher's own group, for the same reason as the admin one below:
+            the policies are the real guard, and this only avoids showing a door
+            that will not open. Preview shows it because preview is the only way
+            these screens can be looked at from a container that cannot reach
+            Supabase -- it is not a claim that the account is a teacher. */}
+        {(isTeacher || preview.active) && (
+          <div className="flex flex-col gap-0.5">
+            <p className="label-caps px-3 pb-1">Teaching</p>
+            <NavItem
+              to="/teaching"
+              label="Classes you teach"
+              Icon={Presentation}
+              reduce={reduce}
+            />
+          </div>
+        )}
 
         {/* Admin surfaces exist only for an admin. The RLS policies are the
             real guard; this simply avoids showing a door that will not open. */}
