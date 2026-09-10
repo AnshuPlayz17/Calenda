@@ -11,6 +11,7 @@ import type {
   Attachment, ChatMessage, ChatThread, ClassMeeting, Grade, MeetingWithClass,
   ReportCard, ReportCardLine,
   SchoolClass, SchoolYear, Shareable, Task,
+  GroupAnnouncement, GroupMember, StudentGroup, TeachingGroup,
 } from '@/lib/types'
 import { contentHash } from '@/lib/events'
 import { toInstant } from '@/lib/datetime'
@@ -169,6 +170,63 @@ function seedClasses() {
   classes.push(make('Functions', 'MCR3U', 'Ms. Patel'))
 }
 seedClasses()
+
+// ------------------------------------------------------------ teaching ----
+//
+// Preview signs in as one person, and a teaching group needs two: somebody who
+// teaches it and somebody who joined. So this seeds both sides at once -- a
+// class this account teaches with two students in it, and a class this account
+// has joined as a student. That is not a real account being in two places; it
+// is the only way both screens can be looked at and measured from a container
+// that cannot reach Supabase.
+//
+// Every name here is invented, like everything else in preview.
+
+const teachingGroups: TeachingGroup[] = []
+const groupMembers: GroupMember[] = []
+const groupAnnouncements: GroupAnnouncement[] = []
+const myGroups: StudentGroup[] = []
+const groupEventIds = new Map<string, string[]>()
+
+function seedTeaching() {
+  const now = new Date().toISOString()
+  const taught: TeachingGroup = {
+    id: 'preview-group-1', owner_id: OWNER_ID, school_year_id: YEAR_ID,
+    name: 'Computer Science 11', subject: 'Computer Science', room: '214',
+    color_token: null, join_code: 'HQ4MTBWK', is_archived: false,
+    created_at: now, member_count: 2,
+  }
+  teachingGroups.push(taught)
+
+  groupMembers.push(
+    {
+      id: 'preview-member-1', group_id: taught.id, student_id: 'preview-student-1',
+      student_name: 'Rosa Delgado', class_id: classes[0]?.id ?? null,
+      // One sharing and one not, because a roster where everybody shares makes
+      // the screen look like sharing is the default. It is not.
+      share_progress: true, joined_at: now,
+    },
+    {
+      id: 'preview-member-2', group_id: taught.id, student_id: 'preview-student-2',
+      student_name: 'Amir Haddad', class_id: null,
+      share_progress: false, joined_at: now,
+    },
+  )
+
+  groupAnnouncements.push({
+    id: 'preview-announcement-1', group_id: taught.id, group_name: taught.name,
+    body: 'Bring a calculator on Tuesday. The unit test is the week after.',
+    notified: true, created_at: now,
+  })
+
+  myGroups.push({
+    id: 'preview-membership-1', group_id: 'preview-group-2',
+    group_name: 'Functions 11', subject: 'Mathematics',
+    teacher_name: 'Ms. Patel', class_id: classes[1]?.id ?? null,
+    share_progress: false, joined_at: now,
+  })
+}
+seedTeaching()
 
 /**
  * A notebook with something in it.
@@ -1274,4 +1332,165 @@ export const previewSource: DataSource = {
   async chatQuotaRemaining() {
     return { used: chatUsed, limit: 40 }
   },
+
+  // ----------------------------------------------------------- teaching --
+
+  async listTeachingGroups(schoolYearId) {
+    return teachingGroups
+      .filter((g) => g.school_year_id === schoolYearId && !g.is_archived)
+      .map((g) => ({
+        ...g,
+        // Counted from the roster on read, exactly as the real source does, so
+        // the number cannot disagree with the list under it.
+        member_count: groupMembers.filter((m) => m.group_id === g.id).length,
+      }))
+  },
+
+  async createTeachingGroup(schoolYearId, input) {
+    const now = new Date().toISOString()
+    const group: TeachingGroup = {
+      id: nextId(), owner_id: OWNER_ID, school_year_id: schoolYearId,
+      name: input.name.trim(), subject: input.subject?.trim() || null,
+      room: input.room?.trim() || null, color_token: null,
+      // No code until the teacher asks for one. A class made and not yet shared
+      // is a real state, and handing out a code nobody asked for makes "who can
+      // join" a question the teacher never got to answer.
+      join_code: null, is_archived: false, created_at: now, member_count: 0,
+    }
+    teachingGroups.push(group)
+    return group
+  },
+
+  async updateTeachingGroup(id, input) {
+    const group = teachingGroups.find((g) => g.id === id)
+    if (!group) throw new Error('That class no longer exists.')
+    group.name = input.name.trim()
+    group.subject = input.subject?.trim() || null
+    group.room = input.room?.trim() || null
+    return group
+  },
+
+  async setTeachingGroupArchived(id, archived) {
+    const group = teachingGroups.find((g) => g.id === id)
+    if (group) group.is_archived = archived
+  },
+
+  async rotateJoinCode(groupId) {
+    const group = teachingGroups.find((g) => g.id === groupId)
+    if (!group) throw new Error('That class no longer exists.')
+    // Same alphabet as create_parent_invite(): no 0/O/1/I, so a code survives
+    // being read down a phone.
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+    let code = ''
+    for (let i = 0; i < 8; i++) {
+      code += alphabet[Math.floor(Math.random() * alphabet.length)]
+    }
+    group.join_code = code
+    return code
+  },
+
+  async closeJoinCode(groupId) {
+    const group = teachingGroups.find((g) => g.id === groupId)
+    if (group) group.join_code = null
+  },
+
+  async listGroupMembers(groupId) {
+    return groupMembers.filter((m) => m.group_id === groupId)
+  },
+
+  async removeGroupMember(memberId) {
+    const at = groupMembers.findIndex((m) => m.id === memberId)
+    if (at >= 0) groupMembers.splice(at, 1)
+  },
+
+  async listGroupEvents(groupId) {
+    const ids = groupEventIds.get(groupId) ?? []
+    return store.filter((e) => ids.includes(e.id))
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+  },
+
+  async publishGroupEvent(groupId, schoolYearId, input) {
+    const created = await previewSource.createEvent(input, schoolYearId)
+    groupEventIds.set(groupId, [...(groupEventIds.get(groupId) ?? []), created.id])
+    return created
+  },
+
+  async listGroupAnnouncements(groupId) {
+    return groupAnnouncements
+      .filter((a) => a.group_id === groupId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
+  async announceToGroup(groupId, body, notify) {
+    const group = teachingGroups.find((g) => g.id === groupId)
+    groupAnnouncements.push({
+      id: nextId(), group_id: groupId, group_name: group?.name ?? 'A class',
+      body: body.trim(), notified: notify, created_at: new Date().toISOString(),
+    })
+  },
+
+  async listGroupProgress(groupId) {
+    // A row for every member, including the ones sharing nothing -- an absence
+    // would read as a class of nobody rather than as a class that has not
+    // shared. The averages are invented, like everything else here.
+    const invented: Record<string, { marks: number; average: number }> = {
+      'preview-member-1': { marks: 5, average: 84.2 },
+    }
+    return groupMembers
+      .filter((m) => m.group_id === groupId)
+      .map((m) => {
+        const sharing = Boolean(m.share_progress && m.class_id)
+        const stats = sharing ? invented[m.id] : undefined
+        return {
+          student_id: m.student_id,
+          student_name: m.student_name,
+          sharing,
+          marks: stats?.marks ?? 0,
+          average: stats?.average ?? null,
+        }
+      })
+  },
+
+  // ------------------------------------------- teaching, student side --
+
+  async listMyGroups() {
+    return myGroups
+  },
+
+  async joinGroup(code) {
+    const trimmed = code.trim().toUpperCase()
+    if (trimmed.length !== 8) {
+      // The same sentence the database raises, for the same reason: a distinct
+      // "no such class" would confirm a guess.
+      throw new Error('That code is not valid. Ask your teacher for a new one.')
+    }
+    const now = new Date().toISOString()
+    myGroups.push({
+      id: nextId(), group_id: nextId(), group_name: 'Biology 11',
+      subject: 'Biology', teacher_name: 'Mr. Osei', class_id: null,
+      share_progress: false, joined_at: now,
+    })
+    return { groupName: 'Biology 11', teacherName: 'Mr. Osei' }
+  },
+
+  async updateMyGroup(membershipId, patch) {
+    const row = myGroups.find((g) => g.id === membershipId)
+    if (!row) return
+    if (patch.classId !== undefined) row.class_id = patch.classId
+    if (patch.shareProgress !== undefined) row.share_progress = patch.shareProgress
+  },
+
+  async leaveGroup(membershipId) {
+    const at = myGroups.findIndex((g) => g.id === membershipId)
+    if (at >= 0) myGroups.splice(at, 1)
+  },
+
+  async listMyAnnouncements(limit) {
+    const joined = new Set(myGroups.map((g) => g.group_id))
+    return groupAnnouncements
+      .filter((a) => joined.has(a.group_id))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+  },
 }
+

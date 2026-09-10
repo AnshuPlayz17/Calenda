@@ -12,6 +12,7 @@ import type {
   ParentLink, QueuedReminder, SchoolClass, SchoolYear, Shareable, Task,
   Attachment, ChatMessage, ChatThread, ClassMeeting, Grade, MeetingWithClass,
   NewGradeInput, NewMeetingInput, ReportCard, ReportCardLine,
+  GroupAnnouncement, GroupMember, GroupProgress, StudentGroup, TeachingGroup,
 } from '@/lib/types'
 import type { PlainDate } from '@/lib/events'
 
@@ -225,6 +226,71 @@ export interface DataSource {
   sendChatMessage(threadId: string, text: string): Promise<ChatMessage>
   /** How many of today's allowance are left, for an honest counter. */
   chatQuotaRemaining(): Promise<{ used: number; limit: number; unlimited?: boolean } | null>
+
+  // ----------------------------------------------------------- teaching --
+  //
+  // A teaching group is one row many students join. Everything a teacher does
+  // to somebody else's account goes through a database function rather than a
+  // table write, for the same reason parent invites do: the function checks
+  // ownership itself, so the caller never needs read access to the table it
+  // would otherwise have to be trusted with.
+
+  /** The classes this account teaches. */
+  listTeachingGroups(schoolYearId: string): Promise<TeachingGroup[]>
+  createTeachingGroup(
+    schoolYearId: string,
+    input: { name: string; subject?: string; room?: string },
+  ): Promise<TeachingGroup>
+  updateTeachingGroup(
+    id: string,
+    input: { name: string; subject?: string; room?: string },
+  ): Promise<TeachingGroup>
+  setTeachingGroupArchived(id: string, archived: boolean): Promise<void>
+
+  /** Makes or replaces the code students type. Returns the new one. */
+  rotateJoinCode(groupId: string): Promise<string>
+  /** Closes the class to new members, keeping everyone already in it. */
+  closeJoinCode(groupId: string): Promise<void>
+
+  listGroupMembers(groupId: string): Promise<GroupMember[]>
+  /** Removes somebody from a class. Recorded as leaving, not deleted. */
+  removeGroupMember(memberId: string): Promise<void>
+
+  /** Dates this teacher has published to a class. */
+  listGroupEvents(groupId: string): Promise<EventWithCategory[]>
+  publishGroupEvent(
+    groupId: string,
+    schoolYearId: string,
+    input: NewEventInput,
+  ): Promise<CalendarEvent>
+
+  listGroupAnnouncements(groupId: string): Promise<GroupAnnouncement[]>
+  /** Posts to a class, and optionally reminds every member it happened. */
+  announceToGroup(groupId: string, body: string, notify: boolean): Promise<void>
+
+  /**
+   * What each member is sharing, and what they are not.
+   *
+   * Returns a row for every member including the ones sharing nothing, so the
+   * screen shows "not sharing" rather than an absence -- an empty list would
+   * read as a class of nobody.
+   */
+  listGroupProgress(groupId: string): Promise<GroupProgress[]>
+
+  // ---------------------------------------------- teaching, student side --
+
+  /** The classes this account has joined. */
+  listMyGroups(): Promise<StudentGroup[]>
+  /** Joins by code. Returns the class, so the screen can name what happened. */
+  joinGroup(code: string): Promise<{ groupName: string; teacherName: string | null }>
+  /** Links one of the student's own classes, and turns sharing on or off. */
+  updateMyGroup(
+    membershipId: string,
+    patch: { classId?: string | null; shareProgress?: boolean },
+  ): Promise<void>
+  leaveGroup(membershipId: string): Promise<void>
+  /** Announcements across every class this student is in, newest first. */
+  listMyAnnouncements(limit: number): Promise<GroupAnnouncement[]>
 
   /**
    * Empties the calendar. Present only on the preview source, so the first

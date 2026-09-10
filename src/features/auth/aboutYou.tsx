@@ -1,4 +1,4 @@
-import { GraduationCap, Users } from 'lucide-react'
+import { GraduationCap, Presentation, Users } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { SCHOOLS } from '@/data/schools'
 import { OTHER_SCHOOL } from './schoolChoice'
@@ -14,14 +14,39 @@ import { OTHER_SCHOOL } from './schoolChoice'
  * and the other way does not.
  */
 
-export type Role = 'student' | 'parent'
+export type Role = 'student' | 'parent' | 'teacher'
 export type Relation = 'mother' | 'father' | 'guardian' | 'other'
 
 const RELATIONS: Relation[] = ['mother', 'father', 'guardian', 'other']
 
+/**
+ * What the last step's marker says, per role.
+ *
+ * Here rather than in either screen, for the same reason the questions
+ * themselves are: a copy in the sign-up form and a copy in first-run is how a
+ * teacher signing up one way is told what the screen is about and the other way
+ * is told they are about to enter their student's details.
+ *
+ * A map rather than a nested ternary, because the third role turned one into
+ * two and a fourth would turn two into three.
+ */
+export const DETAIL_LABEL: Record<Role, string> = {
+  student: 'Your school',
+  parent: 'Your student',
+  teacher: 'Your classes',
+}
+
+/**
+ * Three answers now, so the labels lost their "I'm a".
+ *
+ * Two long labels fit one row; three do not, and the alternative was a
+ * dropdown that hides two thirds of the question behind a tap. The legend
+ * above already says "You are", so the pronoun was doing no work.
+ */
 const ROLES = [
-  { id: 'student' as const, label: "I'm a student", Icon: GraduationCap },
-  { id: 'parent' as const, label: "I'm a parent", Icon: Users },
+  { id: 'student' as const, label: 'Student', Icon: GraduationCap },
+  { id: 'parent' as const, label: 'Parent', Icon: Users },
+  { id: 'teacher' as const, label: 'Teacher', Icon: Presentation },
 ]
 
 /**
@@ -65,12 +90,12 @@ function Choice({ on, name, value, onPick, compact, children }: {
 }
 
 /**
- * Student or parent.
+ * Student, parent or teacher.
  *
- * Two buttons rather than a select: there are exactly two answers and both fit
- * on one line, so a dropdown would hide half the question behind a tap. Radios
- * in a group, so arrow keys move between them and a screen reader announces it
- * as one question rather than two unrelated checkboxes.
+ * Buttons rather than a select: there are three answers and they fit on one
+ * line, so a dropdown would hide two thirds of the question behind a tap.
+ * Radios in a group, so arrow keys move between them and a screen reader
+ * announces it as one question rather than three unrelated checkboxes.
  *
  * The value is stored in the same column `is_admin()` reads, which is why the
  * database accepts it only through `set_my_role()` and refuses `admin` by name.
@@ -82,7 +107,7 @@ export function RolePicker({ value, onChange }: {
   return (
     <fieldset>
       <legend className="text-[13px] font-medium text-text">You are</legend>
-      <div className="mt-1.5 grid grid-cols-2 gap-2">
+      <div className="mt-1.5 grid grid-cols-3 gap-2">
         {ROLES.map((r) => (
           <Choice
             key={r.id}
@@ -95,7 +120,7 @@ export function RolePicker({ value, onChange }: {
               className={'h-4 w-4 shrink-0 ' + (value === r.id ? 'text-brand' : 'text-text-subtle')}
               aria-hidden
             />
-            {r.label}
+            <span className="truncate">{r.label}</span>
           </Choice>
         ))}
       </div>
@@ -291,5 +316,37 @@ export function HeardFrom({ value, onChange }: {
       onChange={(e) => onChange(e.target.value)}
       hint="A sentence is fine."
     />
+  )
+}
+
+/**
+ * What a teacher is told, and what they are not asked.
+ *
+ * They are asked nothing. A school name is the obvious third question and it is
+ * the one question this app must not ask a teacher: `profiles.school` is free
+ * text that nothing reads, harmless beside a student's own record and quite
+ * different beside somebody who teaches -- "Teacher at <school>" is an
+ * institutional claim, and the rule this project keeps is that Calenda is never
+ * implied to be any school's product. A subject is not asked either, because a
+ * teacher makes a class next and names it there; asking twice is how the two
+ * end up disagreeing.
+ *
+ * So this step says what happens next instead. It is a real step rather than a
+ * skipped one because the sign-up form promises three and arriving at a screen
+ * that is missing is worse than arriving at a short one.
+ */
+export function TeacherFields() {
+  return (
+    <div className="rounded-lg border border-border bg-surface-subtle p-4">
+      <p className="text-[13.5px] font-medium text-text">Next: make a class</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
+        You will get an eight-character code to give your students. Anyone with the
+        code can join, and you can change it or close it at any time.
+      </p>
+      <p className="mt-2.5 text-[12.5px] leading-relaxed text-text-subtle">
+        A class here is not connected to any school&apos;s systems. Students join
+        because you gave them the code, and they choose what they share back.
+      </p>
+    </div>
   )
 }

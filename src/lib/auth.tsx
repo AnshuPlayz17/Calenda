@@ -32,10 +32,14 @@ export type Profile = {
 /** Everything the sign-up form collects beyond an address and a password. */
 export type SignUpDetails = {
   fullName: string
-  role: 'student' | 'parent'
-  /** Students only. A parent has no grade and none is sent for them. */
+  role: 'student' | 'parent' | 'teacher'
+  /** Students only. A parent and a teacher have no grade; none is sent. */
   grade?: string
-  /** Free text, self-declared, and nothing reads it yet. See 20260907000300. */
+  /**
+   * Students only, free text, self-declared, and nothing reads it yet. See
+   * 20260907000300. Deliberately not asked of a teacher: "Teacher at <school>"
+   * is an institutional claim, and this app is never any school's product.
+   */
   school?: string
   /** How they found Calenda. Asked once, never shown back, optional. */
   heardFrom?: string

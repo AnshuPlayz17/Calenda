@@ -9,7 +9,7 @@ import {
   AuthError, BackLink, NotConnected, ProviderButtons, Separator, StepMark,
 } from '@/features/auth/AuthParts'
 import {
-  HeardFrom, ParentFields, RolePicker, StudentFields,
+  DETAIL_LABEL, HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
 } from '@/features/auth/aboutYou'
 import { schoolValue } from '@/features/auth/schoolChoice'
 import type { Relation, Role } from '@/features/auth/aboutYou'
@@ -205,9 +205,14 @@ export function SignUp() {
    * -- a select whose real answer lives in a second box, and a code that is
    * required unless the person has said they cannot get one yet.
    */
-  const detailsReady = role === 'student'
-    ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
-    : Boolean((noCode || inviteCode.trim()) && heardFrom.trim())
+  const detailsReady =
+    role === 'student'
+      ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
+      : role === 'parent'
+        ? Boolean((noCode || inviteCode.trim()) && heardFrom.trim())
+        // A teacher is asked nothing on this step but the question that is for
+        // Calenda rather than for them, so that is all there is to check.
+        : Boolean(heardFrom.trim())
 
   const mismatch = confirm.length > 0 && password !== confirm
 
@@ -349,9 +354,9 @@ export function SignUp() {
         // less is twenty-four, which clears it without taking a field out or
         // disturbing the steps that already fit.
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
-          <StepMark at={3} of={3} label={role === 'student' ? 'Your school' : 'Your student'} />
+          <StepMark at={3} of={3} label={DETAIL_LABEL[role]} />
 
-          {role === 'student' ? (
+          {role === 'student' && (
             <StudentFields
               school={school}
               schoolOther={schoolOther}
@@ -360,7 +365,8 @@ export function SignUp() {
               onSchoolOther={setSchoolOther}
               onGrade={setGrade}
             />
-          ) : (
+          )}
+          {role === 'parent' && (
             <ParentFields
               relation={relation}
               code={inviteCode}
@@ -370,6 +376,7 @@ export function SignUp() {
               onNoCode={setNoCode}
             />
           )}
+          {role === 'teacher' && <TeacherFields />}
 
           {/* Last, and optional, because it is the only question here that is
               for Calenda rather than for the person answering it. */}

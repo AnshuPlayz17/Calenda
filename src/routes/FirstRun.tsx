@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
 import { AuthError, BackLink, StepMark } from '@/features/auth/AuthParts'
 import {
-  HeardFrom, ParentFields, RolePicker, StudentFields,
+  DETAIL_LABEL, HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
 } from '@/features/auth/aboutYou'
 import { schoolValue } from '@/features/auth/schoolChoice'
 import type { Relation, Role } from '@/features/auth/aboutYou'
@@ -95,9 +95,14 @@ export function FirstRun() {
    * -- a select whose real answer lives in a second box, and a code that is
    * required unless the person has said they cannot get one yet.
    */
-  const detailsReady = role === 'student'
-    ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
-    : Boolean((noCode || code.trim()) && heardFrom.trim())
+  const detailsReady =
+    role === 'student'
+      ? Boolean(schoolValue(school, schoolOther) && grade.trim() && heardFrom.trim())
+      : role === 'parent'
+        ? Boolean((noCode || code.trim()) && heardFrom.trim())
+        // A teacher is asked nothing here but the one question that is for
+        // Calenda rather than for them.
+        : Boolean(heardFrom.trim())
 
   const greeting = fullName.trim().split(' ')[0]
 
@@ -143,9 +148,9 @@ export function FirstRun() {
         // gap-3 for the same reason as sign-up's last step: it is the tallest
         // screen here and the parent branch is the tallest version of it.
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
-          <StepMark at={2} of={2} label={role === 'student' ? 'Your school' : 'Your student'} />
+          <StepMark at={2} of={2} label={DETAIL_LABEL[role]} />
 
-          {role === 'student' ? (
+          {role === 'student' && (
             <StudentFields
               school={school}
               schoolOther={schoolOther}
@@ -154,7 +159,8 @@ export function FirstRun() {
               onSchoolOther={setSchoolOther}
               onGrade={setGrade}
             />
-          ) : (
+          )}
+          {role === 'parent' && (
             <ParentFields
               relation={relation}
               code={code}
@@ -164,6 +170,7 @@ export function FirstRun() {
               onNoCode={setNoCode}
             />
           )}
+          {role === 'teacher' && <TeacherFields />}
 
           <HeardFrom value={heardFrom} onChange={setHeardFrom} />
 
