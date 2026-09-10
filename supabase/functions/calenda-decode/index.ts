@@ -51,6 +51,31 @@ const KEY = Deno.env.get('MODEL_API_KEY') ?? ''
 const VISION_MODEL = Deno.env.get('MODEL_VISION_NAME')
   ?? (PROVIDER === 'gemini' ? 'gemini-2.5-flash' : 'qwen/qwen3.8-27b')
 
+/**
+ * How much the model is allowed to write back, and why it is this small.
+ *
+ * This asked for 2000 and Groq's free tier refused the request outright before
+ * looking at the image:
+ *
+ *   429: Request too large ... on output tokens per minute (OTPM):
+ *        Limit 1000, Requested 2000
+ *
+ * It is a *rate* limit, not a size limit, and it is enforced on what the
+ * request SAYS it might produce rather than on what it does produce -- so
+ * asking for headroom nobody uses is enough to be rejected. 900 leaves a
+ * little under the free tier's ceiling for the request itself.
+ *
+ * What that buys, concretely: a line of the JSON below is about 60 tokens, so
+ * 900 is comfortably more than a dozen courses, and a report card with more
+ * subjects than that is not a thing. If a longer one ever turns up, the model
+ * stops mid-array and `JSON.parse` fails -- which surfaces as "we could not
+ * read that report card" rather than as half a transcript silently accepted.
+ *
+ * Overridable because a paid tier has no reason to be held to a free tier's
+ * ceiling.
+ */
+const MAX_OUTPUT = Number(Deno.env.get('MODEL_MAX_OUTPUT') ?? '900')
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -162,7 +187,40 @@ Deno.serve(async (req) => {
       ? await readWithGemini(base64, mime)
       : await readWithOpenAiShaped(base64, mime)
   } catch (err) {
-    console.error('[calenda-decode]', String(err))
+    const detail = String(err)
+    console.error('[calenda-decode]', detail)
+
+    /**
+     * The provider's own reason, when it is one somebody can act on.
+     *
+     * "The model could not read that" was the only thing this ever said, and
+     * on 2026-09-10 it said it about a 429 that had nothing to do with the
+     * image: Groq's free tier refuses a request whose *declared* output
+     * ceiling exceeds its per-minute allowance, so the model never saw the
+     * screenshot at all. The message sent the reader off to type a transcript
+     * by hand over a limit that clears by itself in sixty seconds.
+     *
+     * Three named, because each has a different next step and none of them is
+     * "give up and type it in": wait, change one secret, replace one secret.
+     */
+    const lower = detail.toLowerCase()
+    if (lower.includes('429') || lower.includes('rate limit') || lower.includes('too large')) {
+      return await fail(
+        'The reader has hit its limit for the minute. Wait a minute and try '
+        + 'again -- nothing is wrong with the file.',
+        429,
+      )
+    }
+    if (lower.includes('404') && lower.includes('model')) {
+      return await fail(
+        'The reader is set to a model that no longer exists. Whoever set this '
+        + 'up needs to change MODEL_VISION_NAME to one the account can use.',
+        503,
+      )
+    }
+    if (lower.includes('401') || lower.includes('invalid_api_key')) {
+      return await fail('The reader\'s key was refused. It needs to be replaced.', 503)
+    }
     return await fail('The model could not read that. You can add the marks by hand.')
   }
 
@@ -296,7 +354,7 @@ async function readWithOpenAiShaped(base64: string, mime: string): Promise<strin
           { type: 'image_url', image_url: { url: `data:${mime};base64,${base64}` } },
         ],
       }],
-      max_tokens: 2000,
+      max_tokens: MAX_OUTPUT,
       temperature: 0,
     }),
   })
@@ -319,7 +377,7 @@ async function readWithGemini(base64: string, mime: string): Promise<string> {
             { inline_data: { mime_type: mime, data: base64 } },
           ],
         }],
-        generationConfig: { maxOutputTokens: 2000, temperature: 0 },
+        generationConfig: { maxOutputTokens: MAX_OUTPUT, temperature: 0 },
       }),
     },
   )
