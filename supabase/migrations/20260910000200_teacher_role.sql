@@ -1,0 +1,22 @@
+-- ============================================================================
+-- A third role: teacher.
+--
+-- ALONE IN ITS OWN FILE, DELIBERATELY.
+--
+-- `alter type ... add value` cannot be used in the same transaction that adds
+-- it. Postgres will accept the statement inside a transaction block and then
+-- refuse every use of the new label until that transaction commits, with an
+-- error ("unsafe use of new value") that points at the *use* rather than at
+-- the cause. This project applies migrations two ways -- a GitHub integration
+-- on merge, and hands in the SQL editor -- and neither promises where a
+-- transaction begins or ends.
+--
+-- So the label is added here and used only by later files. This is the same
+-- family of trap already recorded for the `shareable` enum, and the cheapest
+-- possible insurance against it.
+--
+-- `if not exists` because the SQL in this repo gets pasted twice as often as
+-- it gets applied once.
+-- ============================================================================
+
+alter type user_role add value if not exists 'teacher';
