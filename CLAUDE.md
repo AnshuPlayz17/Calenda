@@ -1118,6 +1118,69 @@ obvious question and the one that must not be asked: `profiles.school` is free
 text nothing reads, harmless beside a student's own record and an institutional
 claim beside somebody who teaches.
 
+## What the first real use of teaching found
+
+Three things, from the first person to make a class for a real reason rather
+than to test that a screen renders. All three were invisible to every check in
+this repo, because all three are about what happens between screens.
+
+**Typing half a class name and clicking the sidebar threw the typing away.**
+The form's state lived in a component, and leaving the screen unmounts it. That
+is an implementation detail the person has no way to know about, and "it lost
+my work" is the worst sentence an app can produce. `src/lib/draft.ts` keeps
+these in `sessionStorage` -- the same choice as the sign-in reel's position, and
+for the same reason: closing the tab is deliberate and should end the draft,
+while a stray navigation is not and should not. Cancel now hides the form and
+keeps the draft; **Discard** is the one that throws it away and says so, and the
+button that reopens the form says "Finish your class" while something is
+waiting, or "it lost my work" merely becomes "it hid my work".
+
+**The class page was four cards and it was "really congested".** This is a
+reversal and is recorded as one. The reasoning written at the time was that a
+teacher opening it is answering one of exactly four questions, so tabs would put
+three of them a click away from an answer they could otherwise see. It reads
+well and it was wrong, because **the four are not equals**: the stream and the
+dates are read constantly, the roster occasionally, and the join code once at
+the start of a term -- and the code had the top-left corner, which is the most
+expensive space on the page.
+
+It is a header band and four tabs now, in the order they are actually reached,
+with the code under Settings beside the other things done once. **The tab is in
+the address**, for the reason the sign-up step is: with it in state the
+browser's own Back button leaves the class entirely.
+
+The structural cues come from the tool every student and teacher already knows,
+which was asked for by name. The look stays Calenda's -- none of the colours,
+type or marks are anyone else's, and nothing here suggests the two are related.
+
+**A join code belongs where the classes are.** It was only in Settings, which is
+where somebody goes to change something rather than to start something. It is on
+the Classes page now, and joining asks the question it raises rather than
+leaving it: the group is the teacher's and the class is yours, so it offers to
+link one you already have, or to make one named after the group when you have
+none. **The name match is exact**, trimmed and lower-cased, deliberately not
+fuzzier -- offering to link "Physics" to "Phys Ed" because they share four
+letters would be the app deciding something it was not asked to decide.
+
+**The lesson under all three is the same.** Every audit this project runs
+measures a screen: its layout, its frame times, its console. None of them
+measures *leaving* a screen, and two of these three defects live in exactly
+that gap. The third was a judgement about attention that no probe could have
+had an opinion on. **Ship it to one real user and watch, because the failures
+that survive a good harness are the ones the harness has no shape for.**
+
+**And fixing them put a new defect in that the harness did catch**: a third
+button in the Classes header made that row 37px wider than a 375px screen and
+scrolled the whole page sideways. It is the dashboard's `min-width: auto` bug
+from the other direction -- **a flex row with no `flex-wrap` is exactly as
+unshrinkable as a grid item that refuses to go below its content.** Both are a
+default that only shows itself on a narrow screen.
+
+`scripts/screencheck.mjs` is committed now, because it has been rebuilt from
+scratch three times and caught something every time. Playwright is deliberately
+not a dependency -- `npm i -D playwright && node scripts/screencheck.mjs`, the
+same arrangement `build-world-dots.mjs` already has.
+
 ## The landing page
 
 Eleven chapters, and the rule that governs them is that no two adjacent ones
