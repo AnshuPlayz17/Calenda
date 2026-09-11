@@ -198,6 +198,55 @@ describe('the Edge Functions', () => {
     expect(sw).toMatch(/skipWaiting/)
   })
 
+  it('the dispatcher can never answer 500 with nothing to say', () => {
+    // On 2026-09-11 at 06:04 UTC the hourly workflow got
+    //
+    //   curl: (22) The requested URL returned error: 500
+    //
+    // and that was the whole record. The per-reminder loop catches its own
+    // errors, so a 500 can only come from the three calls outside it -- and an
+    // unhandled throw among them produces a response with no body at all, so
+    // there was nothing to read even once `--fail` stopped deleting it.
+    //
+    // Comments are stripped first. The ones written to explain all of this
+    // name `schedule_reminders`, `500` and `try` in prose, so a search over the
+    // raw file would match the explanation rather than the code -- the trap
+    // CLAUDE.md records, hit twice already by guards in this same file.
+    const src = readFileSync(join(ROOT, 'notify-dispatch', 'index.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+
+    // The handler body is wrapped, so a throw becomes a named answer.
+    //
+    // Scoped to the Deno.serve callback alone. Slicing from `Deno.serve` to the
+    // end of the file was tried first and passed with the wrap deleted, because
+    // the per-reminder loop further down has a try/catch of its own -- the
+    // assertion was matching a different try/catch entirely. Proven by removing
+    // the wrap and watching it still pass.
+    const serveBody = src.slice(src.indexOf('Deno.serve'), src.indexOf('async function dispatch'))
+    expect(serveBody).toMatch(/try\s*\{/)
+    expect(serveBody).toMatch(/catch/)
+
+    // And the top-up's result is read rather than discarded. It was called and
+    // thrown away, so a failure there meant the queue was silently not topped
+    // up while the run still reported a healthy {"sent":0}.
+    const call = src.indexOf("rpc('schedule_reminders')")
+    expect(call, 'schedule_reminders is no longer called').toBeGreaterThan(-1)
+    expect(src.slice(call, call + 200)).toMatch(/\.error/)
+
+    // Every 500 comes from the one helper, and that helper names where it got
+    // to. Searching near each `status: 500` for the word `where` was tried and
+    // passed with `where` deleted from the response -- it was matching the
+    // helper's own parameter list three lines up.
+    const problemFn = src.slice(src.indexOf('function problem'), src.indexOf('Deno.serve'))
+    expect(problemFn, 'the one place a 500 is written').toMatch(/status:\s*500/)
+    expect(problemFn).toMatch(/JSON\.stringify\(\{[^}]*\bwhere\b[^}]*\}\)/)
+    expect(
+      [...src.matchAll(/status:\s*500/g)].length,
+      'a 500 written somewhere other than problem()',
+    ).toBe(1)
+  })
+
   it('no function hardcodes a credential', () => {
     for (const file of files) {
       const src = readFileSync(file, 'utf8')

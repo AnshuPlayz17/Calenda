@@ -768,6 +768,55 @@ reminder set for 9am could arrive at noon. `supabase/schedule-notifications.sql`
 runs every 15 minutes from inside Postgres. Both paths are safe together;
 claiming is under `for update skip locked`.
 
+## A failure signal detached from its cause
+
+The hourly reminder workflow failed on 2026-09-11 at 06:04 UTC with the whole
+of its evidence being:
+
+    curl: (22) The requested URL returned error: 500
+
+The secrets were set, the request reached the function, and the function
+answered 500. **`curl --fail` discards the body** -- and the dispatcher's own
+500 branch answers `{"error": "..."}` naming the cause, so the one sentence
+that would have explained the failure was deleted by the step reporting it.
+
+This project's recurring bug is a success signal that is not downstream of the
+success. This is the same thing from the other side: **a failure signal
+detached from its cause.** Both leave you with a status and no way to act on
+it. The workflow writes the body to a file and prints it before judging
+anything now.
+
+**And there was nothing to read even once `--fail` stopped deleting it**, for
+three of the possible causes. The per-reminder loop catches its own errors, so
+a 500 can only come from the three calls outside it -- and an unhandled throw
+there produces a response with no body at all. `Deno.serve` now wraps
+`dispatch()` and every 500 goes through one `problem(where, detail)` helper
+that names the point it got to.
+
+**`schedule_reminders()` was called and its result discarded.** A failure
+topping up the queue meant nothing was queued and the run still answered a
+perfectly healthy `{"sent":0}` -- the original bug, still present in the one
+call nobody had looked at.
+
+**The cause of that particular 500 is not established and must not be
+guessed.** The body was destroyed; what is fixed is that the next one will say.
+
+**Three of the four assertions guarding this were vacuous when first written**,
+and the mutation test is the only reason that is known. Breaking each protected
+property and re-running found that:
+
+- `src.slice(src.indexOf('Deno.serve'))` runs to the end of the file, so
+  "the handler has a try/catch" was matching the **per-reminder loop's**
+  try/catch. It passed with the wrap deleted.
+- "a `where` appears near each `status: 500`" was matching
+  `function problem(where: string, ...)` three lines above. It passed with
+  `where` removed from the response.
+
+Both are the trap this file already records -- anchored on a name that also
+appears nearby -- hit inside the guard written to prevent it. **Write the
+guard, then break the thing on purpose and watch it fail.** An assertion that
+has never been seen to fail is a comment.
+
 ## The timetable cycle
 
 Some schools run Day 1 to Day 6 rather than Monday to Friday, carrying the
