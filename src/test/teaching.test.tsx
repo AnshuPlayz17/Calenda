@@ -3,8 +3,11 @@ import { readFileSync } from 'node:fs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { JoinClassDialog } from '@/features/teaching/JoinClassDialog'
 import { JoinedClassesCard } from '@/features/teaching/JoinedClassesCard'
+import { Teaching } from '@/routes/Teaching'
+import { TeachingGroup } from '@/routes/TeachingGroup'
 import { RolePicker } from '@/features/auth/aboutYou'
 
 /**
@@ -31,6 +34,17 @@ vi.mock('@/features/schoolYear/SchoolYearProvider', () => ({
 vi.mock('@/data', async () => ({
   dataSource: (await import('@/data/previewSource')).previewSource,
 }))
+
+function renderTeaching() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <Teaching />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 function renderCard() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -158,5 +172,144 @@ describe('the teaching links go somewhere', () => {
       })
       expect(matched, `${link} is not a declared route`).toBe(true)
     }
+  })
+})
+
+describe('a half-typed class', () => {
+  it('survives leaving the screen and coming back', async () => {
+    const user = userEvent.setup()
+    sessionStorage.clear()
+
+    const first = renderTeaching()
+    await user.click(await screen.findByRole('button', { name: /new class/i }))
+    await user.type(await screen.findByLabelText(/^name/i), 'Physics 11')
+    // Unmounting is what happens when somebody clicks the sidebar. The whole
+    // complaint was that this threw the typing away.
+    first.unmount()
+
+    renderTeaching()
+    // The button says so before the panel is even open, or "it lost my work"
+    // only becomes "it hid my work".
+    await user.click(await screen.findByRole('button', { name: /finish your class/i }))
+    expect(await screen.findByLabelText(/^name/i)).toHaveValue('Physics 11')
+  })
+
+  it('is thrown away only when somebody says to', async () => {
+    const user = userEvent.setup()
+    sessionStorage.clear()
+
+    const first = renderTeaching()
+    await user.click(await screen.findByRole('button', { name: /new class/i }))
+    await user.type(await screen.findByLabelText(/^name/i), 'Physics 11')
+    await user.click(screen.getByRole('button', { name: 'Discard' }))
+    first.unmount()
+
+    renderTeaching()
+    // Back to the plain label, because there is nothing waiting.
+    expect(await screen.findByRole('button', { name: /new class/i })).toBeInTheDocument()
+  })
+})
+
+/** Prints the address, so a test can assert on it rather than on a rendering. */
+function Where() {
+  const location = useLocation()
+  return <span data-testid="where">{location.pathname + location.search}</span>
+}
+
+describe('one class, as its teacher', () => {
+  function renderGroup(at = '/teaching/preview-group-1') {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[at]}>
+          <Routes>
+            <Route path="/teaching/:groupId" element={<TeachingGroup />} />
+          </Routes>
+          <Where />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('opens on the stream, not on the join code', async () => {
+    renderGroup()
+    // The code was in the top-left corner and is read once a term. Four cards
+    // on one page was called "really congested" by the first person to make a
+    // real class, which is what this rearrangement came from.
+    expect(await screen.findByLabelText(/tell the class something/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^copy$/i })).toBeNull()
+  })
+
+  it('puts the tab in the address, so Back leaves the tab and not the class', async () => {
+    const user = userEvent.setup()
+    renderGroup()
+    await user.click(await screen.findByRole('button', { name: /settings/i }))
+    expect(await screen.findByRole('button', { name: /^copy$/i })).toBeInTheDocument()
+
+    // The address, read from the router rather than inferred from the screen.
+    // The first version of this ended with `screen.unmount?.()` -- which is not
+    // a function on `screen`, so optional chaining made the whole line a no-op
+    // and the assertion tested nothing at all.
+    expect(screen.getByTestId('where')).toHaveTextContent('tab=settings')
+  })
+
+  it('lands on the tab the address names', async () => {
+    renderGroup('/teaching/preview-group-1?tab=people')
+    expect(await screen.findByText(/not sharing marks/i)).toBeInTheDocument()
+  })
+
+  it('says who is in the class without saying it twice', async () => {
+    renderGroup('/teaching/preview-group-1?tab=people')
+    // A student sharing shows the average WITH its count, and one who is not
+    // still appears -- an absence would read as a class of nobody rather than
+    // as a class that has not shared.
+    expect(await screen.findByText(/from 5 marks/i)).toBeInTheDocument()
+    expect(screen.getByText(/not sharing marks/i)).toBeInTheDocument()
+  })
+})
+
+describe('joining from the Classes page', () => {
+  function renderJoin() {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <JoinClassDialog open onClose={() => {}} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('offers to make the class when there is nothing to link to', async () => {
+    const user = userEvent.setup()
+    renderJoin()
+    await user.type(await screen.findByLabelText(/join code/i), 'HQ4MTBWK')
+    await user.click(screen.getByRole('button', { name: 'Join' }))
+
+    // Preview joins "Biology 11", which no seeded class matches. The offer is
+    // to make one, not to link one -- and it names it, because a button that
+    // says "create" without saying what leaves you to find out by pressing it.
+    expect(await screen.findByRole('button', { name: /Make .Biology 11./i })).toBeInTheDocument()
+    // Never silently. Nothing in Calenda links or creates without being asked.
+    expect(screen.getByRole('button', { name: /not now/i })).toBeInTheDocument()
+  })
+
+  it('asks before linking, and only links what it was told to', async () => {
+    const user = userEvent.setup()
+    renderJoin()
+    await user.type(await screen.findByLabelText(/join code/i), 'HQ4MTBWK')
+    await user.click(screen.getByRole('button', { name: 'Join' }))
+    await user.click(await screen.findByRole('button', { name: /Make .Biology 11./i }))
+
+    expect(await screen.findByText(/linked/i)).toBeInTheDocument()
+    // And it says what linking did not do. Sharing marks is a separate act.
+    expect(screen.getByText(/marks stay private/i)).toBeInTheDocument()
+  })
+
+  it('will not send a code that is not eight characters', async () => {
+    const user = userEvent.setup()
+    renderJoin()
+    await user.type(await screen.findByLabelText(/join code/i), 'ABC')
+    expect(screen.getByRole('button', { name: 'Join' })).toBeDisabled()
   })
 })

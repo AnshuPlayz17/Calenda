@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useCreateTeachingGroup, useTeachingGroups } from '@/features/teaching/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
+import { useDraft } from '@/lib/draft'
 
 /**
  * The classes this account teaches.
@@ -23,18 +24,19 @@ export function Teaching() {
   const { current } = useSchoolYear()
   const { data: groups = [], isLoading, isError, refetch } = useTeachingGroups(current?.id)
   const create = useCreateTeachingGroup(current?.id)
+  // Kept across leaving the screen. Typing half a class name, clicking
+  // something in the sidebar and coming back to an empty form is losing
+  // somebody's work to a component unmounting -- an implementation detail they
+  // have no way to know about. Reported from real use on the first day anybody
+  // made a class for a real reason.
+  const draft = useDraft('calenda.newclass', { name: '', subject: '', room: '' })
   const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [subject, setSubject] = useState('')
-  const [room, setRoom] = useState('')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    await create.mutateAsync({ name, subject, room })
-    setName('')
-    setSubject('')
-    setRoom('')
+    if (!draft.value.name.trim()) return
+    await create.mutateAsync(draft.value)
+    draft.clear()
     setAdding(false)
   }
 
@@ -51,7 +53,7 @@ export function Teaching() {
         {!adding && (
           <Button onClick={() => setAdding(true)}>
             <Plus className="h-4 w-4" aria-hidden />
-            New class
+            {draft.value.name.trim() ? 'Finish your class' : 'New class'}
           </Button>
         )}
       </div>
@@ -63,20 +65,40 @@ export function Teaching() {
               label="Name"
               required
               autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="Physics 11"
+              value={draft.value.name}
+              onChange={(e) => draft.set('name', e.target.value)}
               hint="What your students call it. They will see this."
             />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <Input label="Room" value={room} onChange={(e) => setRoom(e.target.value)} />
+              <Input
+                label="Subject"
+                value={draft.value.subject}
+                onChange={(e) => draft.set('subject', e.target.value)}
+              />
+              <Input
+                label="Room"
+                value={draft.value.room}
+                onChange={(e) => draft.set('room', e.target.value)}
+              />
             </div>
-            <div className="flex gap-2">
-              <Button type="submit" loading={create.isPending} disabled={!name.trim()}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" loading={create.isPending} disabled={!draft.value.name.trim()}>
                 Make the class
               </Button>
+              {/* Hiding the form is not discarding what is in it. Cancel closes
+                  the panel and the draft survives; Discard is the one that
+                  throws typing away, and it says so. */}
               <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
                 Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-text-subtle"
+                onClick={() => { draft.clear(); setAdding(false) }}
+              >
+                Discard
               </Button>
             </div>
           </form>

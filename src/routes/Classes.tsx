@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
-import { Archive, GraduationCap, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Archive, GraduationCap, KeyRound, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ClassDialog } from '@/features/classes/ClassDialog'
+import { JoinClassDialog } from '@/features/teaching/JoinClassDialog'
 import { useArchiveClass, useClasses } from '@/features/classes/queries'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import type { SchoolClass } from '@/lib/types'
@@ -22,6 +23,9 @@ export function ClassesPage() {
   const reduce = useReducedMotion()
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  // A code belongs where the classes are. It was only in Settings, which is
+  // where somebody goes to change something rather than to start something.
+  const [joinOpen, setJoinOpen] = useState(false)
   const [editing, setEditing] = useState<SchoolClass | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -41,10 +45,18 @@ export function ClassesPage() {
             A workspace for each class — notes, assignments, tasks and deadlines together.
           </p>
         </div>
-        <div className="flex gap-2">
+        {/* Wraps. A third button here put the row 37px past a 375px screen and
+            scrolled the whole page sideways -- the same defect as the dashboard's
+            `min-width: auto` columns, from the other direction: a flex row with
+            no wrap is as unshrinkable as a grid item that refuses to. */}
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowArchived((v) => !v)}>
             <Archive className="h-4 w-4" aria-hidden />
             {showArchived ? 'Hide archived' : 'Show archived'}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setJoinOpen(true)}>
+            <KeyRound className="h-4 w-4" aria-hidden />
+            Join with a code
           </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true) }}>
             <Plus className="h-4 w-4" aria-hidden />
@@ -66,12 +78,17 @@ export function ClassesPage() {
           <EmptyState
             icon={GraduationCap}
             title="No classes yet"
-            description="Add your first class to start keeping notes, assignments and deadlines in one place."
+            description="Add your first class to start keeping notes, assignments and deadlines in one place — or join one with a code from your teacher."
             action={
-              <Button size="sm" variant="secondary"
-                      onClick={() => { setEditing(null); setDeleting(false); setDialogOpen(true) }}>
-                Add a class
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button size="sm" variant="secondary"
+                        onClick={() => { setEditing(null); setDeleting(false); setDialogOpen(true) }}>
+                  Add a class
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setJoinOpen(true)}>
+                  Join with a code
+                </Button>
+              </div>
             }
           />
         </Card>
@@ -136,6 +153,8 @@ export function ClassesPage() {
           ))}
         </div>
       )}
+
+      <JoinClassDialog open={joinOpen} onClose={() => setJoinOpen(false)} />
 
       <ClassDialog
         open={dialogOpen}
