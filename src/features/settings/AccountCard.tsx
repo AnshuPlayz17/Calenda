@@ -3,6 +3,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import type { ChosenRole } from '@/features/auth/roleCopy'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -24,11 +25,25 @@ import { supabase } from '@/lib/supabase'
  * picker would be offering a setting the app then overwrites on next load, so
  * it says where the value comes from instead.
  */
+/**
+ * The stored role, as one of the three the picker offers.
+ *
+ * `user_role` has a fourth value the picker does not and must not: an admin is
+ * granted in SQL by somebody who already has the database, never chosen from a
+ * radio. So an admin's radios show 'student' and the dirty check below excludes
+ * them, or Save would sit permanently lit for the one account that must not use
+ * it. Written once because it was two ternaries that had to agree, and the
+ * second one silently filed a teacher as a student.
+ */
+function pickerRole(stored: string | undefined): ChosenRole {
+  return stored === 'parent' || stored === 'teacher' ? stored : 'student'
+}
+
 export function AccountCard() {
   const { profile, user, refreshProfile } = useAuth()
 
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<'student' | 'parent'>('student')
+  const [role, setRole] = useState<ChosenRole>('student')
   const [grade, setGrade] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -38,7 +53,7 @@ export function AccountCard() {
   useEffect(() => {
     if (!profile) return
     setFullName(profile.full_name ?? '')
-    setRole(profile.role === 'parent' ? 'parent' : 'student')
+    setRole(pickerRole(profile.role))
     setGrade(profile.grade ?? '')
   }, [profile])
 
@@ -48,7 +63,7 @@ export function AccountCard() {
     || grade !== (profile?.grade ?? '')
     // An admin's radios never match their stored role, so counting that as an
     // edit would leave Save permanently lit for them.
-    || (!isAdmin && role !== (profile?.role === 'parent' ? 'parent' : 'student'))
+    || (!isAdmin && role !== pickerRole(profile?.role))
   )
 
   async function save(e: React.FormEvent) {
@@ -100,8 +115,8 @@ export function AccountCard() {
 
         <div>
           <span className="text-[13px] font-medium text-text">You are</span>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            {(['student', 'parent'] as const).map((r) => (
+          <div className="mt-1.5 grid grid-cols-3 gap-2">
+            {(['student', 'parent', 'teacher'] as const).map((r) => (
               <label
                 key={r}
                 className={

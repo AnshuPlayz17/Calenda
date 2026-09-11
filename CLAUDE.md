@@ -1,6 +1,6 @@
 # Calenda — working notes
 
-A school productivity app for students and parents. React 19 + Vite +
+A school productivity app for students, parents and teachers. React 19 + Vite +
 Tailwind v4 on GitHub Pages; Supabase (Postgres,
 Auth, Edge Functions) behind it. `docs/SPEC.md` holds the architecture and the
 reasoning behind each decision; `docs/DATA-MODEL.md` the schema and RLS design;
@@ -21,9 +21,13 @@ These came from the project owner and hold unless he says otherwise.
   crest. The disclaimers are load-bearing; keep them, keep them generic.
 - **No secrets in frontend code.** Only the Supabase URL and anon key, which are
   safe by design.
-- **Permission is enforced in the database, never by hiding UI.** 54 RLS
-  policies; `supabase/tests/rls_test.sql` holds six adversarial tests that sign
-  in as the wrong person and require failure. Add to them, never weaken them.
+- **Permission is enforced in the database, never by hiding UI.** Eighty-two RLS
+  policies as of 2026-09-10; `supabase/tests/` holds eight files of adversarial
+  tests that sign in as the wrong person and require failure. Add to them, never
+  weaken them. (These two numbers said 54 and "six adversarial tests" for weeks
+  after both had moved. Run `./scripts/db-test.sh` for the real count rather
+  than trusting this line -- it is prose, and prose drifts. The founder panel's
+  figures do not, and the section on it says why.)
 - **Nothing is silently merged or deleted.** Duplicate detection surfaces a
   decision; it never makes one.
 - **`prefers-reduced-motion` gets a real alternative**, not a faster animation.
@@ -857,6 +861,213 @@ skip locked`. A thousand invocations send the same reminders once. A
 shared-secret header would need a new secret set in two places before reminders
 worked at all, and would buy protection against wasted compute rather than
 against a wrong send.
+
+## The founder panel counts itself now
+
+Every figure on it had drifted: **27 tables against 33, 54 policies against 72,
+117 tests against 318**, on the one page whose argument is that its contents are
+checkable. The rule to prevent exactly this was already written here -- "anything
+that counts them reads the array rather than repeating a number in prose" -- and
+had only ever been applied to the sample calendar, never to the numbers
+describing the project.
+
+**The numbers now have two sources, because they answer to two things.**
+Everything countable from the files (tables, policies, migrations, SQL
+assertions, lines) is substituted by `vite.config.ts` at build time through a
+`define`, so it is exact on every build and there is nothing to keep in step.
+
+A generated, committed file was tried first and is worse: the line counts move
+on **every edit to any source file**, so `npm test` went red on work that had
+nothing to do with the panel. **A check that goes red on unrelated work gets
+deleted rather than obeyed.**
+
+**The count of tests is the exception and has to be committed.** A regex over
+the source gives 314 where vitest gives 318 -- `edgeFunctions.test.ts` has one
+`it.each` over five files, which is one match and five tests, and knowing that
+means evaluating the argument. So it comes from vitest's own JSON report
+(`node_modules/.vitest-report.json`, set in the test config) and lives in
+`src/data/testCount.ts`, checked by `posttest` after the run it describes. It
+changes when tests change and not otherwise.
+
+**`readTestCount()` refuses a partial report.** `npx vitest run one.test.ts`
+leaves behind a perfectly well-formed report saying 8, and writing that into the
+panel is this project's recurring bug in its purest form -- a number taken from
+something that was not the thing being measured. It compares the report's file
+count against the test files on disk and returns null rather than a number it
+cannot stand behind.
+
+`founderFigures.test.ts` guards the substitution itself: drop the `define` and
+every figure is `undefined`, `CountUp` renders NaN on the live page, and nothing
+else fails.
+
+## A pinned scene that cannot hold its content should not pin
+
+Found while measuring the panel above. The founder chapter's hinge is pinned:
+one window tall, `overflow-hidden`, and nothing below the fold can be scrolled
+to. On `main` it was **already cutting the bottom 84px off the disclaimer at
+375x667 and 22px at 414x736** -- the one paragraph on the page that has to be
+readable, cropped on the two smallest screens, because an overflow inside a
+pinned frame looks like nothing at all.
+
+`FounderScene` now measures the panel against the window and pins only where the
+whole thing fits; where it does not, the same card scrolls past like any other
+section. Measured rather than guessed at with a breakpoint, because the panel's
+height depends on how its text wraps and **the windows that fail are not the
+narrow ones -- 1280x700 is a laptop.** Read once on mount, like every other
+mechanism switch on this page.
+
+Of the six harness viewports it pins at 1440x900 and 1024x760 and scrolls at the
+other four. 1280x700 misses by 21px and 390x844 by 3px, and neither was bought
+back by trimming padding: squeezing under by three pixels means the next copy
+edit unpins it anyway, and the fallback is the same card, readable.
+
+**Six figures at display size did not fit.** It pushed the panel 223px past the
+bottom at 375x667. Three are set large (tests, security policies, lines) and
+three are inside the sentence that was already describing what was built.
+Numbers a reader weighs are set large; numbers that are evidence read fine in a
+line of prose.
+
+## Three probes measured themselves
+
+The first two were found while checking the founder panel and the third while
+checking the teaching screens. All three were caught by the rule already here.
+
+**The fit probe failed 12/12** -- which by this file's own standard means the
+probe. It was measuring the reduced-motion path, where the section is a plain
+scrolling block and content above the fold is the reader's next scroll rather
+than a defect; and it called anything wider than the viewport a failure on a
+chapter whose mechanism magnifies content by up to 1.26.
+
+**The scroll probe reported p95 33ms and failed 8/9 on `main` as well.** Stepping
+the scroll from the test runner and awaiting between wheel events paced the page
+at 30fps, so it was reporting its own cadence. **The same numbers before and
+after a change is the tell.** Driven from inside the page with one `scrollBy`
+per animation frame it reports p95 17ms and 910 frames, which is the bar this
+file records.
+
+That rewrite appeared to leave one real finding: **1440x900 dark failed three
+consecutive runs** with one to four frames over 50ms while p95 stayed 17ms. It
+did the same on `main`, so it was never this work's -- but by the repetition
+standard it read as the page rather than the container, and it was written up
+here as the first configuration to meet that standard.
+
+**Retracted on the same day, by the standard's other half.** Measured again
+after the two branches were merged, `1440x900 dark` came back clean and
+`1440x900` *light* failed instead -- twice in three runs, and `main` does the
+same thing at that configuration, three long frames on one run and none on the
+other two. **Which configuration fails is better evidence than how many do,**
+and this one walked. Three consecutive failures are necessary and are not
+sufficient; a run of three on a container that produces one long frame in nine
+hundred at random is not rare enough to mean anything on its own. What would
+mean something is the *same* configuration failing while its neighbours stay
+clean, across measurements taken at different times. That has still never
+happened here.
+
+It is left in rather than deleted because the wrong conclusion is the useful
+part: this file has now stated a satisfying story more strongly than the
+evidence supported four times, and every one of them was one more measurement
+away from being caught.
+
+**The third is the most useful of them.** The teaching screens measured
+**21/21 clean** at six viewports -- no unnamed controls, no overflow, no
+console errors -- and every single configuration reported `h1="Welcome back"`.
+**The same heading on three different routes is the tell.** It had never left
+the landing page: preview mode is read once when its provider mounts, so
+writing the sessionStorage key and then navigating gives it nothing to read,
+and `RequireAuth` sent all 21 to `#/sign-in`.
+
+So the probe now **enters preview by pressing the button a person presses**,
+and its first assertion is `location.hash === the route asked for`. Everything
+else it measures is about whatever page the app actually rendered, and without
+that check twenty-one configurations of the sign-in page are twenty-one clean
+screens.
+
+It also found the real bug underneath: every link on those screens pointed at
+`/app/teaching`, and this app has no `/app`. **Typecheck, lint and 325 tests
+all passed on it** -- a route path is a string, and nothing here was checking
+the strings. `teaching.test.tsx` now holds every `to=` on those screens against
+the routes `App.tsx` declares, and it was verified by breaking a link and
+watching it fail.
+
+## Teachers
+
+Asked for on 2026-09-10 and chosen by the owner from four questions: a real
+role in the app first and a landing chapter only once the features are real;
+publishing dates, private planning, seeing how a class is doing, and
+announcements; a class join code the teacher hands out. The disclaimer question
+he left to judgement, and the answer taken was both safe options at once --
+the copy stays personal ("classes you teach", never "your school") and the
+teacher screens say plainly that a class here is not connected to any school's
+systems.
+
+**A teaching group is one row many students join, and it is not a `class`.**
+`classes` is a student's own row -- their notebook, their marks, their name for
+the subject. Folding the two together puts a teacher's roster inside a
+student's record or a student's notes inside a teacher's. A member row may
+point at the student's own class, which is how "the dates from this group" and
+"my notes for this subject" sit beside each other without either owning the
+other.
+
+**A published date is an ordinary row in `events` with `group_id` set**, read
+by members through an additive policy. Not copied into each student's calendar:
+a copy is correct exactly once, and every edit afterwards has to chase N rows,
+and every one it misses is a student sitting a test on the wrong day. Because
+the whole app already reads `events` through RLS, a published date appears in
+the calendar, the agenda and the `.ics` export with **no client change at
+all** -- and no update or delete policy admits a member, so a student cannot
+move the date of their own test.
+
+**Marks stay private, and the policy needs two things rather than one.** The
+student must turn `share_progress` on for that group *and* have linked which of
+their own classes it is. So sharing Physics is not sharing a History mark. That
+second condition is why the sharing switch on the student's card is disabled
+until a class is linked: an enabled switch with nothing to match would be a
+control that visibly does nothing.
+
+**A roster is the teacher's.** A student sees their own membership row and not
+who else is in the room. `is_group_member()` and `owns_group()` are definer
+functions so a student checking their own membership does not need read access
+to the table that *is* the roster.
+
+Join codes mirror `create_parent_invite()` exactly -- eight characters, no
+`0/O/1/I`. Rotating replaces rather than adds, because two live codes means the
+teacher cannot answer "who can still join". Every failure returns the same
+sentence, so a distinct "that class is closed" cannot confirm a guess.
+
+39 assertions in `supabase/tests/teacher_group_test.sql`, all run against a
+real Postgres.
+
+**Three traps hit while writing it, all already written down here.** `group` is
+reserved, so the definer functions take `target_group`. Two test UUIDs
+contained `g`, which is not a hex digit -- the identical mistake this file
+records from the first local Postgres run. And
+`redeem_group_join_code(join_code text)` shadowed the column of the same name,
+which plpgsql resolves **at call time**: the migration applied cleanly and the
+function failed the first time anybody used it.
+
+**That last one only surfaced because a test checked what refused.** Every
+refusal assertion began as `when others then ok := true`, which made the
+ambiguous-column bug read as the permission boundary working. They check the
+message now, through `refused_properly()`. **A test that cannot tell a refusal
+from a crash is not testing a refusal.**
+
+**The dispatcher had no branch for an announcement, and its no-branch path was
+a bare `continue`** -- while `claim_due_reminders()` marks a row sent as it
+claims it. Every queued announcement would have been recorded as delivered and
+silently dropped. That is the same success-signal-not-downstream-of-success
+shape as the four September bugs, in a fifth costume, and it was written *into*
+a feature by reusing a queue without reading what consumes it. The
+unknown-subject path now records a skip with a reason and counts it.
+
+**Two types named `Role` had appeared** -- the stored one (which has admin) and
+the picker's (which has teacher) -- which is exactly the `shareable` enum/union
+trap already recorded. They are `Role` and `ChosenRole` now, in
+`src/features/auth/roleCopy.ts`, with the reason beside both.
+
+**A teacher is asked nothing on their third sign-up step.** School is the
+obvious question and the one that must not be asked: `profiles.school` is free
+text nothing reads, harmless beside a student's own record and an institutional
+claim beside somebody who teaches.
 
 ## The landing page
 

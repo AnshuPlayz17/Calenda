@@ -14,7 +14,8 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,
-      globals: globals.browser,
+      // Substituted by vite.config.ts at build time; see src/vite-env.d.ts.
+      globals: { ...globals.browser, __PROJECT_STATS__: 'readonly' },
     },
     plugins: {
       'react-hooks': reactHooks,

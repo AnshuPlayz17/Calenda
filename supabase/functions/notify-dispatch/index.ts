@@ -92,8 +92,16 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
 }
 
-/** Looks up what a reminder is actually about. */
-async function describe(r: Reminder): Promise<{ title: string; when: string } | null> {
+/**
+ * Looks up what a reminder is actually about.
+ *
+ * `body` is set only where the message is not "how long until a thing". An
+ * announcement has no future date to count back from -- it is the thing itself
+ * arriving -- so it carries its own words instead of being described.
+ */
+async function describe(
+  r: Reminder,
+): Promise<{ title: string; when: string; body?: string } | null> {
   if (r.subject_type === 'event') {
     const { data } = await supabase
       .from('events').select('title, start_date').eq('id', r.subject_id).maybeSingle()
@@ -103,6 +111,15 @@ async function describe(r: Reminder): Promise<{ title: string; when: string } | 
     const { data } = await supabase
       .from('assignments').select('title, due_at').eq('id', r.subject_id).maybeSingle()
     return data ? { title: data.title, when: data.due_at ?? '' } : null
+  }
+  if (r.subject_type === 'announcement') {
+    const { data } = await supabase
+      .from('announcement_messages')
+      .select('body, group_name').eq('id', r.subject_id).maybeSingle()
+    // The class is the title, so a lock screen says which class before the
+    // words. `when` is unused for this type and is deliberately empty rather
+    // than a made-up date.
+    return data ? { title: data.group_name, when: '', body: data.body } : null
   }
   return null
 }
@@ -253,11 +270,20 @@ Deno.serve(async () => {
   for (const r of (due ?? []) as Reminder[]) {
     try {
       const subject = await describe(r)
-      // The event was deleted after the reminder was queued; nothing to say.
-      if (!subject) continue
+      if (!subject) {
+        // The subject was deleted after the reminder was queued, or this is a
+        // subject_type nothing here knows how to describe. Recorded and
+        // counted rather than `continue`d past: claim_due_reminders() has
+        // already marked this row sent, so a silent skip is a delivery in the
+        // logs and nothing on the phone -- which is the exact shape of the four
+        // bugs that made reminders report success for five days.
+        await skip(r.id, `nothing to say about ${r.subject_type} ${r.subject_id}`)
+        skipped++
+        continue
+      }
 
       const title = subject.title
-      const body = `${leadIn(subject.when, r.offset_minutes)}: ${title}`
+      const body = subject.body ?? `${leadIn(subject.when, r.offset_minutes)}: ${title}`
 
       // A channel with no sender behind it is skipped, not failed. Marking it
       // failed would fill the queue with rows that can never succeed and make
