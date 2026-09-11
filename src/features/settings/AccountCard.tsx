@@ -83,9 +83,10 @@ export function AccountCard() {
       })
       .eq('id', user.id)
 
-    // An admin is left alone. The radios here can only say student or parent,
-    // so calling this for an admin would demote them for pressing Save on a
-    // form they opened to fix a typo in their name.
+    // An admin is left alone. The radios here say student, parent or teacher
+    // and cannot say admin -- that is granted in SQL by somebody who already
+    // has the database -- so calling this for an admin would demote them for
+    // pressing Save on a form they opened to fix a typo in their name.
     const roleError = profile?.role === 'admin' || role === profile?.role
       ? null
       : (await supabase.rpc('set_my_role', { new_role: role })).error
