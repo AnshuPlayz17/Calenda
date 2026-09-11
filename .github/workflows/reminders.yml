@@ -48,14 +48,39 @@ jobs:
           ANON: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail
-          response=$(curl --fail --silent --show-error -X POST \
-            "https://${REF}.supabase.co/functions/v1/notify-dispatch" \
+
+          # `--fail` used to be here, and it threw away the only evidence.
+          # On 2026-09-11 at 06:04 UTC this step ended with
+          #
+          #   curl: (22) The requested URL returned error: 500
+          #
+          # and nothing else. The dispatcher's own 500 branch answers
+          # {"error":"..."} naming what went wrong -- and --fail discards the
+          # body, so the one sentence that would have explained the failure was
+          # deleted by the thing reporting it. That is this project's recurring
+          # bug from the other side: not a success signal detached from the
+          # success, but a failure signal detached from the cause.
+          #
+          # The body is written to a file and printed before anything is
+          # judged, so whatever the next 500 says survives to the log.
+          http=$(curl --silent --show-error \
+            -o response.json -w '%{http_code}' \
+            -X POST "https://${REF}.supabase.co/functions/v1/notify-dispatch" \
             -H "Authorization: Bearer ${ANON}")
-          echo "$response"
+
+          echo "HTTP $http"
+          cat response.json || true
+          echo
+
+          if [ "$http" != "200" ]; then
+            echo "::error::The dispatcher answered HTTP $http. Its reply is printed above."
+            exit 1
+          fi
+
           # The function answers {"sent":n,"failed":n,"skipped":n}. A run where
           # everything failed is a passing curl and a broken feature, so it is
           # read rather than assumed.
-          failed=$(printf '%s' "$response" | sed -n 's/.*"failed":\([0-9]*\).*/\1/p')
+          failed=$(sed -n 's/.*"failed":\([0-9]*\).*/\1/p' response.json)
           if [ -n "${failed:-}" ] && [ "$failed" -gt 0 ]; then
             echo "::error::$failed reminder(s) failed to send."
             exit 1

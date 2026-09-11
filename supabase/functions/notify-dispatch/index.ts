@@ -253,14 +253,49 @@ async function skip(queueId: string, why: string) {
     .eq('id', queueId)
 }
 
+/**
+ * Everything a run answers with, whatever happened.
+ *
+ * `where` is the point it got to. A 500 that says only "500" costs a round of
+ * guessing, and this function has exactly three places outside the per-reminder
+ * loop where one can come from -- so it says which.
+ */
+function problem(where: string, detail: string) {
+  console.error(`[notify-dispatch] ${where}: ${detail}`)
+  return new Response(JSON.stringify({ error: detail, where }), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 Deno.serve(async () => {
+  // The whole body, because an unhandled throw here is an opaque 500 with no
+  // body at all -- which is what the hourly workflow got on 2026-09-11 at
+  // 06:04 UTC and could say nothing about. The per-reminder loop already
+  // catches its own errors; this catches the three calls outside it.
+  try {
+    return await dispatch()
+  } catch (err) {
+    return problem('an unhandled error', String(err).slice(0, 500))
+  }
+})
+
+async function dispatch(): Promise<Response> {
   // Top up the queue first, so a reminder created since the last run is not
   // missed. Both steps are idempotent.
-  await supabase.rpc('schedule_reminders')
+  //
+  // Its result is read. It was called and discarded, so a failure here meant
+  // the queue was silently not topped up and the run went on to report a
+  // perfectly healthy `{"sent":0}` -- a success signal not downstream of the
+  // success, which is the bug this file keeps growing.
+  const scheduled = await supabase.rpc('schedule_reminders')
+  if (scheduled.error) {
+    return problem('topping up the queue', scheduled.error.message)
+  }
 
   const { data: due, error } = await supabase.rpc('claim_due_reminders', { batch: 100 })
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return problem('claiming what is due', error.message)
   }
 
   let sent = 0
@@ -346,4 +381,4 @@ Deno.serve(async () => {
   return new Response(JSON.stringify({ sent, failed, skipped }), {
     headers: { 'Content-Type': 'application/json' },
   })
-})
+}
