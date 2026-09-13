@@ -817,6 +817,62 @@ appears nearby -- hit inside the guard written to prevent it. **Write the
 guard, then break the thing on purpose and watch it fail.** An assertion that
 has never been seen to fail is a comment.
 
+## The reminders list said "Reminder" to everybody, for everything
+
+Found on 2026-09-11 by reading, not by measuring. The Notifications page lists
+what is coming up, and every row on the live site read
+
+    Reminder
+    1 day before · push
+
+for an event, an assignment, a task and an announcement alike. A list of six
+identical lines is not a list.
+
+`listQueuedReminders` did `select('*')` from `notification_queue`, and **that
+table has no title** -- deliberately, because copying one in means a renamed
+event keeps the old name in its reminder. So `subject_title` was `undefined` at
+runtime and the screen's `?? 'Reminder'` turned that into a word.
+
+This is the `loadProfile` trap one step worse. There a column existed and was
+left out of the select, which made never-fetched indistinguishable from
+never-set. Here **the column never existed at all**, and the reader's `??` --
+the right thing to write -- printed a plausible noun over the hole.
+
+**Nothing caught it because `previewSource` set the field.** Every audit this
+project runs enters through preview, because preview is the only way into the
+app from a container that cannot reach Supabase. So every check saw real titles
+and every real user saw the word "Reminder", for the life of the feature.
+
+**A preview that supplies a field the real source cannot is not a preview of
+the app.** That is worth more than this fix. Preview exists to stand in for
+Supabase; the moment it answers something Supabase would not, it stops being a
+stand-in and starts being a second implementation that hides the first one's
+gaps. When adding a field to `previewSource`, the question is not "what would
+be nice here" but "what does `supabaseSource` return for this".
+
+`queued_reminders` (`20260911000100`) resolves the title on read by joining the
+subject, so a renamed event renames its reminder. `security_invoker = true`,
+so it runs as the caller and a title you could not open in a tab is a title it
+will not show you. An announcement's title is its class's name, matching what
+the dispatcher puts on the push.
+
+Eight assertions in `supabase/tests/reminder_title_test.sql`, run against a
+real Postgres, including the rename and a stranger seeing nothing.
+
+**The fourth vacuous guard, and the second in two days.** The assertion that the
+view still declares `security_invoker = true` passed with that property
+deleted, because the migration's own header comment explains what
+security_invoker does and the regex matched the paragraph. SQL comments are
+stripped now, exactly as the TypeScript ones already were two guards ago.
+
+This keeps happening for one reason: **the explanation and the thing explained
+sit next to each other, and a file search cannot tell them apart.** The rule is
+already written here twice. What is new is the habit that makes it reliable --
+**write the guard, then break the thing it guards and watch it fail.** Four
+mutations were run against this one; three passed first time and the fourth did
+not, and without running them the fourth would have shipped looking like the
+other three.
+
 ## The timetable cycle
 
 Some schools run Day 1 to Day 6 rather than Monday to Friday, carrying the

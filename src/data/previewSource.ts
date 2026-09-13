@@ -584,6 +584,13 @@ export const previewSource: DataSource = {
             scheduled_for: new Date(at).toISOString(),
             state: 'pending',
             sent_at: null,
+            // Preview may only supply what the real source can. This field
+            // was set here while the Supabase source could not produce it at
+            // all, so preview showed titles and the live site showed the word
+            // "Reminder" -- and every audit goes in through preview, so no
+            // check ever saw the defect. It comes from the queued_reminders
+            // view now (20260911000100); this is the same value that view
+            // resolves, not an invention.
             subject_title: e.title,
           })
         }

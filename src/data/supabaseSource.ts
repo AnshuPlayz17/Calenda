@@ -343,7 +343,12 @@ export const supabaseSource: DataSource = {
 
   async listQueuedReminders(limit) {
     const { data, error } = await supabase
-      .from('notification_queue')
+      // The view, not the table. `notification_queue` has no title -- titles
+      // are resolved on read so a renamed event renames its reminder -- so
+      // selecting the table gave every row `subject_title: undefined`, and the
+      // screen's `?? 'Reminder'` turned that into a list of six identical
+      // lines on the live site. See 20260911000100.
+      .from('queued_reminders')
       .select('*')
       .order('scheduled_for')
       .limit(limit)
