@@ -29,6 +29,19 @@
  */
 import { chromium } from 'playwright'
 const base = process.argv[2]
+/**
+ * Optional substring filter over the configuration tag, e.g.
+ *
+ *   node scripts/authcheck.mjs http://localhost:4173/Calenda/ "step3 parent"
+ *   node scripts/authcheck.mjs http://localhost:4173/Calenda/ "1440x900 desktop"
+ *
+ * This exists because the standard for a frame failure in this container is
+ * repetition, not a single run -- one long frame at p95 17ms is contention and
+ * the same configuration measured alone comes back clean. Re-measuring one
+ * configuration was the prescribed response and there was no way to do it
+ * short of editing the file.
+ */
+const only = process.argv[3] ?? ''
 
 const VIEWPORTS = [
   [1440, 900, 'desktop'], [1280, 700, 'laptop-short'], [1024, 760, 'tablet'],
@@ -58,7 +71,14 @@ async function withBrowser(fn) {
 }
 let bad = 0
 
+function tagFor(route, w, h, name, opts) {
+  return `${route} ${w}x${h} ${name}${opts.form === 3 ? ` [step3 ${(opts.role ?? 'Student').toLowerCase()}]` : opts.form === 2 ? ' [step2]' : opts.form ? ' [form]' : ''}${opts.reduce ? ' [reduced]' : ''}${opts.dark ? ' [dark]' : ''}`
+}
+
 async function check(route, w, h, name, opts = {}) {
+ // Filtered before the browser launches, so a single re-measurement costs one
+ // launch rather than fifty-two.
+ if (only && !tagFor(route, w, h, name, opts).includes(only)) return
  return withBrowser(async (browser) => {
   const page = await browser.newPage({
     viewport: { width: w, height: h },
@@ -112,7 +132,21 @@ async function check(route, w, h, name, opts = {}) {
       // accessible name and this is stable against the copy being reworded
       // again -- which is the actual failure mode here.
       if (opts.role) {
-        await page.getByRole('radio', { name: opts.role, exact: true }).check()
+        // Click the LABEL, which is what a person clicks. The radio itself is
+        // sr-only -- clipped to a pixel -- so aiming at it makes Playwright
+        // find the option's own icon on top and retry for thirty seconds
+        // ("<svg ...lucide-users...> intercepts pointer events"). That is this
+        // repo's own rule about sr-only: the element stays in the tree and the
+        // visible thing beside it is the control.
+        const radio = page.getByRole('radio', { name: opts.role, exact: true })
+        await page.locator('label').filter({ has: radio }).click()
+        // And assert it took. A click that silently does nothing would leave
+        // this branch unmeasured while reporting ok, which is the exact failure
+        // being fixed here -- a coverage claim not downstream of the coverage.
+        await radio.waitFor({ state: 'attached' })
+        if (!(await radio.isChecked())) {
+          throw new Error(`role "${opts.role}" did not take -- the branch was not measured`)
+        }
       }
       await page.waitForTimeout(200)
       const next = page.getByRole('button', { name: /^Continue$/ })
@@ -180,7 +214,7 @@ async function check(route, w, h, name, opts = {}) {
   if (errors.length) problems.push(`errors: ${errors.slice(0, 2).join(' | ')}`)
   if (problems.length) bad++
   const notes = r.secondary.length ? `  (links below fold: ${r.secondary.join(' ')})` : ''
-  const tag = `${route} ${w}x${h} ${name}${opts.form === 3 ? ` [step3 ${(opts.role ?? 'Student').toLowerCase()}]` : opts.form === 2 ? ' [step2]' : opts.form ? ' [form]' : ''}${opts.reduce ? ' [reduced]' : ''}${opts.dark ? ' [dark]' : ''}`
+  const tag = tagFor(route, w, h, name, opts)
   console.log(`${problems.length ? 'FAIL' : 'ok  '} ${tag.padEnd(38)} p95=${String(r.p95).padStart(3)}ms  ${problems.join('; ')}${notes}`)
   await page.close()
  })
