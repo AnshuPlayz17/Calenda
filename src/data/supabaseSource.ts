@@ -1369,15 +1369,30 @@ export const supabaseSource: DataSource = {
   async joinGroup(code) {
     const { data, error } = await supabase.rpc('redeem_group_join_code', { code_text: code })
     if (error) {
-      // The function raises a sentence written for a person -- "That code is
-      // not valid. Ask your teacher for a new one." -- so it is passed through
-      // rather than replaced with something vaguer.
+      // Still possible -- "You need to be signed in." -- and it is a sentence
+      // written for a person, so it is passed through rather than replaced.
       throw new Error(error.message)
     }
+
+    // NO ROWS IS A REFUSAL, AND THIS IS WHERE IT BECOMES A SENTENCE.
+    //
+    // The function stopped raising on a bad code in 20260917000200: a raise
+    // rolls back the rate limiter's own increment, which made every wrong
+    // guess free and the limiter decoration. So a wrong code, a closed class,
+    // your own class and a spent allowance all come back the same way -- zero
+    // rows -- and all say the same thing, because telling a guesser which one
+    // it was tells them how to guess better.
+    //
+    // Before this, `?? 'that class'` turned an empty result into a cheerful
+    // "You joined that class", which is the worst possible reading of a
+    // refusal.
     const row = (data as Array<Record<string, unknown>> | null)?.[0]
+    if (!row?.out_group_id) {
+      throw new Error('That code is not valid. Ask your teacher for a new one.')
+    }
     return {
-      groupName: (row?.out_group_name as string) ?? 'that class',
-      teacherName: (row?.out_teacher_name as string | null) ?? null,
+      groupName: (row.out_group_name as string) ?? 'that class',
+      teacherName: (row.out_teacher_name as string | null) ?? null,
     }
   },
 

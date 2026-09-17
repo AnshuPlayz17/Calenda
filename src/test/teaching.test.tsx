@@ -313,3 +313,22 @@ describe('joining from the Classes page', () => {
     expect(screen.getByRole('button', { name: 'Join' })).toBeDisabled()
   })
 })
+
+describe('a refused join', () => {
+  it('is never reported as a success', async () => {
+    // The database stopped raising on a bad code in 20260917000200, because a
+    // raise rolls back the rate limiter's own count and made every wrong guess
+    // free. It returns no rows instead -- and `?? 'that class'` in the client
+    // turned that into a cheerful "You joined that class", which is the worst
+    // possible reading of a refusal.
+    const src = readFileSync('src/data/supabaseSource.ts', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    const fn = src.slice(src.indexOf('async joinGroup'))
+    const body = fn.slice(0, fn.indexOf('\n  },'))
+    expect(body, 'joinGroup was not found').toContain('redeem_group_join_code')
+    // An empty result has to end in a throw, not in a default.
+    expect(body).toMatch(/if \(!row\?\.\w+\)/)
+    expect(body).toMatch(/throw new Error\(/)
+  })
+})

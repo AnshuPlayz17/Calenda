@@ -32,21 +32,22 @@
  * than a parameter.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsFor } from '../_shared/cors.ts'
 import { ask, configured, providerName } from './model.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
 
-function json(body: unknown, status = 200) {
+/**
+ * `cors` is a parameter rather than a module constant because the allowed
+ * origin is now decided per request, from that request's own Origin header.
+ */
+function json(body: unknown, cors: Record<string, string>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
   })
 }
 
@@ -57,10 +58,11 @@ const LIMITS = { events: 25, assignments: 20, tasks: 15, notes: 8, classes: 20, 
 type Source = { kind: string; id: string; title: string }
 
 Deno.serve(async (req) => {
+  const CORS = corsFor(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   const auth = req.headers.get('Authorization') ?? ''
-  if (!auth.startsWith('Bearer ')) return json({ error: 'not signed in' }, 401)
+  if (!auth.startsWith('Bearer ')) return json({ error: 'not signed in' }, CORS, 401)
 
   // Everything read below goes through this client, so RLS applies to all of
   // it. `persistSession: false` because a server has no session to persist and
@@ -72,21 +74,21 @@ Deno.serve(async (req) => {
 
   const { data: userData, error: userError } = await asUser.auth.getUser()
   const user = userData?.user
-  if (userError || !user) return json({ error: 'not signed in' }, 401)
+  if (userError || !user) return json({ error: 'not signed in' }, CORS, 401)
 
   let body: { threadId?: string; message?: string }
   try {
     body = await req.json()
   } catch {
-    return json({ error: 'bad request' }, 400)
+    return json({ error: 'bad request' }, CORS, 400)
   }
 
   const threadId = body.threadId
   const message = (body.message ?? '').trim()
-  if (!threadId || !message) return json({ error: 'bad request' }, 400)
+  if (!threadId || !message) return json({ error: 'bad request' }, CORS, 400)
   // A very long question is a way to spend the shared allowance quickly, and
   // no genuine question about a timetable is four thousand characters.
-  if (message.length > 4000) return json({ error: 'That message is too long.' }, 400)
+  if (message.length > 4000) return json({ error: 'That message is too long.' }, CORS, 400)
 
   /**
    * The thread must be the caller's, checked with the caller's own token.
@@ -107,27 +109,27 @@ Deno.serve(async (req) => {
     .select('id')
     .eq('id', threadId)
     .maybeSingle()
-  if (threadError) return json({ error: 'could not read the conversation' }, 500)
+  if (threadError) return json({ error: 'could not read the conversation' }, CORS, 500)
   // Not found and not yours are the same answer on purpose: distinguishing them
   // tells anyone holding a uuid whether it names a real conversation.
-  if (!thread) return json({ error: 'no such conversation' }, 404)
+  if (!thread) return json({ error: 'no such conversation' }, CORS, 404)
 
   if (!configured()) {
     return json({
       error: 'not_configured',
       // Said plainly, so the app can show the truth rather than a failure.
       message: 'The assistant has no model key set, so it cannot answer yet.',
-    }, 503)
+    }, CORS, 503)
   }
 
   // Before anything is spent. If this is false the model is never asked.
   const { data: allowed, error: quotaError } = await asUser.rpc('claim_chat_message')
-  if (quotaError) return json({ error: 'quota check failed' }, 500)
+  if (quotaError) return json({ error: 'quota check failed' }, CORS, 500)
   if (allowed !== true) {
     return json({
       error: 'quota',
       message: "That's all the assistant can answer today. It resets tomorrow.",
-    }, 429)
+    }, CORS, 429)
   }
 
   // ------------------------------------------------------------- context --
@@ -247,7 +249,7 @@ Deno.serve(async (req) => {
   const { error: questionError } = await admin.from('chat_messages').insert({
     thread_id: threadId, owner_id: user.id, role: 'user', content: message,
   })
-  if (questionError) return json({ error: 'could not save the question' }, 500)
+  if (questionError) return json({ error: 'could not save the question' }, CORS, 500)
 
   let answer: string
   let failure: string | null = null
@@ -301,7 +303,7 @@ Deno.serve(async (req) => {
     .select('*')
     .single()
 
-  if (saveError) return json({ error: 'could not save the reply' }, 500)
+  if (saveError) return json({ error: 'could not save the reply' }, CORS, 500)
 
   // Owner-scoped as well as id-scoped. The ownership check above already makes
   // this unreachable for a thread that is not the caller's -- but this runs as
@@ -311,5 +313,5 @@ Deno.serve(async (req) => {
     .update({ updated_at: new Date().toISOString() })
     .eq('id', threadId).eq('owner_id', user.id)
 
-  return json({ reply: saved })
+  return json({ reply: saved }, CORS)
 })

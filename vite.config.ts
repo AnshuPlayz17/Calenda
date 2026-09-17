@@ -2,6 +2,7 @@
 // one file can configure both without a cast.
 import { defineConfig } from 'vitest/config'
 import { computeStats } from './scripts/projectStats.mjs'
+import { cspPlugin } from './scripts/csp.mjs'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -27,7 +28,7 @@ export default defineConfig({
    * src/data/testCount.ts, which changes when tests do and not otherwise.
    */
   define: { __PROJECT_STATS__: JSON.stringify(computeStats()) },
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), cspPlugin()],
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
   build: {
     outDir: 'dist',

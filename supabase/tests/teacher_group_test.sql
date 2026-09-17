@@ -103,7 +103,7 @@ set client_min_messages = notice;
 
 -- (1) Joining ----------------------------------------------------------------
 do $$
-declare code text; joined text; ok boolean := false;
+declare code text; joined text; ok boolean := false; joined_rows int;
 begin
   perform tg_as('00000000-0000-0000-0000-0000000000c1');
   code := rotate_group_join_code('00000000-0000-0000-0000-00000000c9a1');
@@ -127,12 +127,12 @@ begin
   perform tg_as('00000000-0000-0000-0000-0000000000c1');
   perform close_group_join_code('00000000-0000-0000-0000-00000000c9a1');
 
+  -- No rows rather than an exception, since 20260917000200: a raise rolls back
+  -- the rate limiter's own count, which made every wrong guess free. Same
+  -- outcome for the caller, and the counter survives.
   perform tg_as('00000000-0000-0000-0000-0000000000c5');
-  begin
-    perform redeem_group_join_code(code);
-  exception when others then ok := refused_properly(sqlerrm);
-  end;
-  perform expect('a closed class refuses a code that used to work', ok, true);
+  select count(*) into joined_rows from redeem_group_join_code(code);
+  perform expect('a closed class refuses a code that used to work', joined_rows, 0);
   perform expect('and the members it already had are untouched',
     (select count(*) from teacher_group_members
       where group_id = '00000000-0000-0000-0000-00000000c9a1' and left_at is null),

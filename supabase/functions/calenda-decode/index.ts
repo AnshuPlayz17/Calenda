@@ -31,6 +31,7 @@
  * report card with no marks on it.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsFor } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -76,15 +77,15 @@ const VISION_MODEL = Deno.env.get('MODEL_VISION_NAME')
  */
 const MAX_OUTPUT = Number(Deno.env.get('MODEL_MAX_OUTPUT') ?? '900')
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
 
-function json(body: unknown, status = 200) {
+/**
+ * `cors` is a parameter rather than a module constant because the allowed
+ * origin is now decided per request, from that request's own Origin header.
+ */
+function json(body: unknown, cors: Record<string, string>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
   })
 }
 
@@ -106,10 +107,11 @@ const INSTRUCTION = [
 ].join('\n')
 
 Deno.serve(async (req) => {
+  const CORS = corsFor(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   const auth = req.headers.get('Authorization') ?? ''
-  if (!auth.startsWith('Bearer ')) return json({ error: 'not signed in' }, 401)
+  if (!auth.startsWith('Bearer ')) return json({ error: 'not signed in' }, CORS, 401)
 
   const asUser = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: auth } },
@@ -117,16 +119,16 @@ Deno.serve(async (req) => {
   })
   const { data: userData } = await asUser.auth.getUser()
   const user = userData?.user
-  if (!user) return json({ error: 'not signed in' }, 401)
+  if (!user) return json({ error: 'not signed in' }, CORS, 401)
 
   let body: { reportCardId?: string }
   try {
     body = await req.json()
   } catch {
-    return json({ error: 'bad request' }, 400)
+    return json({ error: 'bad request' }, CORS, 400)
   }
   const id = body.reportCardId
-  if (!id) return json({ error: 'bad request' }, 400)
+  if (!id) return json({ error: 'bad request' }, CORS, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -148,7 +150,7 @@ Deno.serve(async (req) => {
     await admin.from('report_cards')
       .update({ status: 'failed', error: message })
       .eq('id', id).eq('owner_id', user.id)
-    return json({ error: message }, status)
+    return json({ error: message }, CORS, status)
   }
 
   // RLS decides this, not us. A row the caller cannot see comes back null.
@@ -156,7 +158,7 @@ Deno.serve(async (req) => {
   // reached without it.
   const { data: card } = await asUser
     .from('report_cards').select('*').eq('id', id).maybeSingle()
-  if (!card) return json({ error: 'not found' }, 404)
+  if (!card) return json({ error: 'not found' }, CORS, 404)
 
   if (!KEY) return await fail('The assistant has no model key set, so nothing can be read yet.', 503)
 
@@ -280,7 +282,7 @@ Deno.serve(async (req) => {
     error: null,
   }).eq('id', id).eq('owner_id', user.id)
 
-  return json({ lines: rows.length })
+  return json({ lines: rows.length }, CORS)
 })
 
 // ------------------------------------------------------------- helpers ----
