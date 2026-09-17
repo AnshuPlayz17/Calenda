@@ -435,9 +435,16 @@ result is not checked. That is exactly how one attempt at this shipped broken.
 form.** It existed to catch a submit button below the fold and for its whole
 life measured a state where that button is not rendered — so every field added
 was unchecked. It now walks the choose screen, the form, and all three sign-up
-steps including both branches of the last one: 46 configurations. Anything
-inside `[data-dev-only]` is skipped, because the not-connected card is absent
-whenever a Supabase project is configured.
+steps including all three branches of the last one. Anything inside
+`[data-dev-only]` is skipped, because the not-connected card is absent whenever
+a Supabase project is configured.
+
+**This paragraph said "both branches ... 46 configurations" while the run was
+dying at configuration 39.** See the section at the end of this file: the probe
+selected a role by text that the teacher role reworded, so the parent branch
+went unmeasured for days under a sentence stating it was covered. The count is
+deliberately not repeated here any more -- it is the harness's own summary line
+that knows it, and prose does not.
 
 **It launches a fresh browser per configuration, which helps and does not
 cure.** Reusing one browser across all forty-six made later runs pick up single
@@ -1500,3 +1507,71 @@ anon key, which are safe by design. None of these needed work; all of them
 needed checking, and saying "added rate limiting and XSS protection" about a
 list where half the items were already true is the kind of overclaim this file
 is for.
+
+## The harness had stopped measuring a third of what it claimed
+
+Found on 2026-09-17 while checking a one-line copy change on the sign-up form.
+`authcheck.mjs` died with a `TimeoutError` at configuration 39 of 46, in both
+runs, and the stack trace read exactly like a flaky probe.
+
+It was not flaky. It was **stale**. It selected a role option by the text
+`"I'm a parent"`, and when the teacher role was added those labels were
+reworded -- `aboutYou.tsx` says so in a comment two screens above the array:
+"three answers now, so the labels lost their I'm a". From that commit onward
+the click waited thirty seconds and killed the run, so the **entire parent
+branch and the eight configurations after it went unmeasured**, while this file
+went on stating that the harness "walks ... both branches of the last one: 46
+configurations".
+
+That number is the point. This project's recurring bug is a success signal that
+is not downstream of the success. This is a **coverage claim that is not
+downstream of the coverage**, and it is worse, because a configuration count is
+exactly the sort of fact that gets quoted into a pull request. Both branches
+measure now and both are clean; the teacher branch had never been a
+configuration at all.
+
+**The second locator was wrong too, and the rule against it was already here.**
+`getByRole('radio', …).check()` aims at the radio's own box, and that radio is
+`sr-only` -- clipped to a pixel, with the option's icon painted over it.
+Playwright reported `<svg …lucide-users…> intercepts pointer events` and
+retried for thirty seconds: the same hang, a different cause. `sr-only` clips
+an element, it does not remove it, and the visible thing beside it is the
+control. **It clicks the `<label>`, which is what a person clicks** -- and then
+asserts `isChecked()`, because a click that silently selects nothing would
+measure the student branch twice and print `[step3 parent]` over the second
+one. The same bug, one level down.
+
+**A probe kept outside the repository cannot be kept in step with the app.**
+`authcheck.mjs` lives in `scripts/` now, beside `screencheck.mjs`, for the
+reason already written there. Playwright stays out of `package.json`.
+
+It also takes an optional filter over the configuration tag --
+`node scripts/authcheck.mjs <base> "step3 parent"`. The standard here for a
+frame failure is repetition rather than a single run, and re-measuring one
+configuration alone is the prescribed response; there had been no way to do it
+short of editing the file, which is some of why a single-run failure kept being
+written up instead of re-measured.
+
+### Three readings were mine, not the page's
+
+`sign-up 1440x900 desktop` failed twice with one to two frames over 50ms at p95
+17ms. Measured alone on a quiet machine it is **clean 3/3**. Both failures were
+taken while something else was running -- the first with `typecheck`, `lint`,
+`test` and `build` against the same cores, which this file already forbids and
+which I did anyway.
+
+The second was worse and is the useful one. **Two processes were writing the
+same output file.** An earlier backgrounded loop was still alive, so its lines
+interleaved with the new run's: one configuration line came out byte-mangled
+mid-string, and a `FAIL` appeared directly above a summary reading `all
+configurations clean`. I briefly took that summary for a bug in the harness --
+it is not; the two lines came from different processes. **A contradiction
+between a row and its own summary is a sign of two writers before it is a sign
+of a bug.** Each run gets its own file now.
+
+**And `pkill -f` kills the shell that runs it**, three times in one session,
+for the reason this file already records about `pgrep -f`: the pattern matches
+the waiter's own command line. `pkill -f 'authcheck[.]mjs'` is the fix -- the
+regex matches the process and not the literal text sitting in the command that
+issued it.
+
