@@ -37,6 +37,11 @@ const AppShell = lazy(() => import('./AppShell').then((m) => ({ default: m.AppSh
 const Welcome = lazy(() => import('@/routes/Welcome').then((m) => ({ default: m.Welcome })))
 const Dashboard = lazy(() => import('@/routes/Dashboard').then((m) => ({ default: m.Dashboard })))
 const NotFound = lazy(() => import('@/routes/NotFound').then((m) => ({ default: m.NotFound })))
+// Lazy for the reason every other rarely-opened screen is: two documents of
+// prose are dead weight in the bundle a first-time visitor downloads, and
+// nobody arrives at Calenda to read the terms.
+const Privacy = lazy(() => import('@/routes/Privacy').then((m) => ({ default: m.Privacy })))
+const Terms = lazy(() => import('@/routes/Terms').then((m) => ({ default: m.Terms })))
 const NotificationsPage = lazy(() => import('@/routes/Notifications').then((m) => ({ default: m.NotificationsPage })))
 const ClassesPage = lazy(() => import('@/routes/Classes').then((m) => ({ default: m.ClassesPage })))
 const ClassWorkspace = lazy(() => import('@/routes/ClassWorkspace').then((m) => ({ default: m.ClassWorkspace })))
@@ -140,6 +145,11 @@ export function App() {
               <Route path="/first-run" element={<FirstRun />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              {/* Public, and they have to be. A privacy policy you must sign in
+                  to read is not a privacy policy, and the sign-up form links to
+                  both from a screen where nobody has an account yet. */}
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route
                 element={
                   <RequireAuth>

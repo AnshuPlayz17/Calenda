@@ -292,12 +292,29 @@ function Footer() {
         <div className="flex flex-col gap-3 sm:items-end">
           {/* The header is for getting into the product. This belongs at the
               end, where somebody who has read the whole page is the one asking. */}
-          <a
-            href="#founder"
-            className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
-          >
-            About the founder
-          </a>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:justify-end">
+            <a
+              href="#founder"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              About the founder
+            </a>
+            {/* Real links, not a hash. These are routes, and a reader who wants
+                the privacy policy wants it without scrolling back up a page
+                eleven chapters long. */}
+            <Link
+              to="/privacy"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              Privacy
+            </Link>
+            <Link
+              to="/terms"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              Terms
+            </Link>
+          </div>
           <p className="max-w-[60ch] text-xs leading-relaxed text-text-subtle">
             A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
             official product of any school.

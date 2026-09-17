@@ -1366,3 +1366,137 @@ shows where it *works* — the timezone behaviour, which is real, tested and wor
 saying. Its clock readings come from `Intl.DateTimeFormat` at render, so they are
 never a number anybody typed. The map itself is generated: run
 `npm i -D world-atlas topojson-client && node scripts/build-world-dots.mjs`.
+
+## The security pass, and what grounding a privacy policy found
+
+Asked for as twenty-two items on 2026-09-17. Most of them were already true and
+are written up below as such rather than "added"; five were real and are done.
+
+**The school's PDF was in a public repo the whole time.** The fixture guard
+stopped it reaching the *bundle* and was read, for weeks, as though it stopped
+it reaching the *world*. It did not: `docs/discovery/source/` is in the same
+public repository, and no school is named in the file, so the name guard passed
+too. Both the PDF and the JSON extracted from it are deleted, and
+`noSourceDocuments.test.ts` fails on any office document returning. Git history
+still holds them; rewriting that is the owner's call and `FINDINGS.md` says so
+rather than implying the removal is complete.
+
+**CORS was `*` on both browser-facing Edge Functions.** It is an allow list now.
+`_shared/cors.ts` says in the file that this is **not** a permission boundary —
+it stops another origin's page reading a response in a browser and stops nothing
+else. The JWT and RLS were already doing the actual work, and the risk of adding
+this is somebody later reading it as the protection.
+
+**A CSP, in a `<meta>` tag, because GitHub Pages cannot set headers.**
+`scripts/csp.mjs` hashes the inline scripts Vite emits and names those hashes,
+so the policy is derived from the build instead of maintained beside it.
+`frame-ancestors` and `report-uri` are ignored in a meta tag; the file says so
+instead of listing them for the look of the thing. `cspcheck.mjs` drives four
+injection vectors at a built page and requires all four blocked.
+
+**The rate limiter counted nothing, and the test is the only reason that is
+known.** The obvious shape — count the attempt, then `raise` on a bad code — is
+useless, because **`raise` rolls back the whole statement including the counter's
+own increment**. Every wrong guess was free. A refused call returns no rows now,
+and the count is claimed before anything is looked up. Found by the assertion
+that 25 attempts had been recorded finding zero.
+
+**`revoke ... from public` does not revoke from `authenticated`.** Supabase
+grants execute to `anon`/`authenticated`/`service_role` explicitly, and that is
+a different grant from the implicit PUBLIC one. Revoke from all three by name or
+the function stays callable by every signed-in client.
+
+### The privacy policy, and why it is a data structure
+
+A privacy policy is a claim about what a system does, which is the exact shape
+of claim this file exists because of. Written as paragraphs it would describe
+the tables that existed on the afternoon it was typed and would be wrong at the
+next migration, silently, because **prose does not fail**.
+
+So `src/content/legal.ts` names the tables each category covers and
+`legalDrift.test.ts` holds the two together in both directions: every table in
+`supabase/migrations/` must appear in exactly one category, and every table the
+policy names must exist. Add a table and the suite is red until the document
+says what is in it.
+
+**Grounding it found four tables nothing has ever written to.**
+`google_accounts`, `google_calendars`, `google_event_map` and `phone_numbers` —
+and two of them carry the most sensitive columns in the schema, a
+`refresh_token` and a `verification_hash`. The Google import uses the access
+token Supabase hands back with the session, in memory, and asks for no refresh
+token; nothing anywhere collects a phone number. This is the "column read in
+four places and written in none" rule finding whole *tables*. They are named on
+the privacy page rather than omitted from it: "it is empty" is a fact a reader
+can be told, and a policy that quietly leaves out the table with the refresh
+token in it is not one anybody should trust.
+
+**The fifth vacuous guard, and the first one caught by the mutation run rather
+than by reading.** Four properties were broken on purpose. Three failed. The
+one that passed was *adding a migration that creates an undocumented table* —
+the single case the guard exists for — because both file lists came from
+`git ls-files`, copied from the guard next door, and **that lists tracked files
+only, so a migration written five seconds ago is invisible to it.** It walks the
+directory now. The lesson is not new; what is new is that reading the assertion
+would never have shown it, and the habit this file already records — write the
+guard, then break the thing and watch it fail — is what did.
+
+**And the fix exposed a sixth.** Walking the directory picked up `legal.ts`
+itself, which declares `DORMANT_TABLES` and therefore names all four in *code*,
+where stripping comments cannot help. That is this project's oldest trap — an
+assertion anchored on a name that also appears in the thing doing the asserting
+— for the fifth time. The declaring file is excluded by name, and the exclusion
+is asserted to be exactly one file so it cannot grow into a list that swallows a
+real offender.
+
+### What the two documents are allowed to say
+
+Both open with the same paragraph: written by the person who built the app, not
+reviewed by a lawyer, not legal advice. It is the first thing on the page rather
+than a footnote, because somebody who reads one paragraph should read that one.
+
+**Two placeholders are deliberately visible** — a contact address and the
+governing jurisdiction. A plausible-looking wrong contact address on a privacy
+policy silently swallows the requests the document exists to invite; an
+obviously blank one does not. `legal.test.tsx` fails when both are filled, which
+is the right moment for somebody to come and delete that test.
+
+**There is no account-delete button, and the policy says there is not.** It says
+to write to the address instead. Claiming a right to erasure with no mechanism
+would be the fake-feature failure this file forbids; a delete control is real
+work and is a separate piece of it.
+
+**The app sets no cookies**, so there is no cookie banner. It uses
+`localStorage` for a theme, a form step and a draft, none of which leaves the
+device. A banner would be a consent dialog for something that is not happening,
+which is worse than none.
+
+**The consent line on sign-up goes below `Back`, and the first two places it
+was put were both wrong.** Above "Create account" is where it reads best and is
+the one place it cannot go: this page's whole layout exists because that button
+was 41px under the fold at 1280x700, and the rule from it is that the answer to
+a form that does not fit is fewer things above the press.
+
+So it went directly under the button, which is where a consent line
+conventionally sits -- and `authcheck.mjs` answered `PRIMARY below fold:
+Back+20` at 375x667 on the student branch. **`BackLink` renders a `<button>`**,
+so 32px of 12px text above it is a control pushed off the screen, which the
+harness scores as a failure, while the same paragraph *below* it is a footnote
+and scores as a note. That distinction is the whole reason the check has two
+severities, and it had already been written down here: a 12px string once put
+the Back link four pixels under the fold on two steps.
+
+It is recorded as two attempts rather than as the final answer because the
+reasoning for putting it under the button was good and was still wrong by 20
+pixels, and the only thing that knew was the probe.
+
+### Already true, and recorded so it is not "added" twice
+
+Passwords are never seen or stored by this app — Supabase Auth holds a one-way
+hash. Admin is `RequireAdmin` in the app *and* `is_admin()` in the policies, and
+the column grant refuses any client naming `role` before a policy runs. There is
+no `dangerouslySetInnerHTML`, no `innerHTML` and no `eval` anywhere. Sourcemaps
+are off in the build. The only keys in the frontend are the Supabase URL and
+anon key, which are safe by design. None of these needed work; all of them
+needed checking, and saying "added rate limiting and XSS protection" about a
+list where half the items were already true is the kind of overclaim this file
+is for.

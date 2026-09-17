@@ -129,6 +129,26 @@ export function SettingsPage() {
       <motion.section {...rise(8)}>
         <AccountCard />
       </motion.section>
+
+      {/* Last, and not a card. Somebody scrolling Settings is looking for a
+          control; these two are documents, and giving them the same weight as
+          "Appearance" would be pretending there is something here to change.
+
+          They are in Settings at all because this is where a signed-in person
+          looks for them -- the links on the landing page and the sign-up form
+          are for people who do not have an account yet, and a reader who wants
+          to know what is held on them should not have to sign out to find out. */}
+      <motion.section {...rise(9)} className="pb-2">
+        <p className="text-[13px] text-text-subtle">
+          <Link to="/privacy" className="underline underline-offset-2 hover:text-text-muted">
+            Privacy
+          </Link>
+          {' · '}
+          <Link to="/terms" className="underline underline-offset-2 hover:text-text-muted">
+            Terms
+          </Link>
+        </p>
+      </motion.section>
     </div>
   )
 }

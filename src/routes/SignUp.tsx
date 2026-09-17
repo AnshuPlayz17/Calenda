@@ -396,6 +396,34 @@ export function SignUp() {
           <BackLink onClick={() => { setStep('name'); setError(null) }}>
             Back
           </BackLink>
+          {/* Last, and that is a measurement rather than a matter of taste.
+              Written directly under the button -- where a consent line
+              conventionally goes -- it cost 32px above `Back`, and `Back` is a
+              <button>: authcheck reported `PRIMARY below fold: Back+20` at
+              375x667 on the student branch. This page's entire layout exists
+              because "Create account" was 41px under the fold at 1280x700, and
+              the rule that came out of it is that the answer to a form that
+              does not fit is fewer things above the press, never tighter
+              padding.
+
+              So it sits after the one control it was displacing. That is not a
+              downgrade: the harness scores a control below the fold as a
+              failure and a footnote link below it as a note precisely because
+              they are not the same defect, and this is a footnote. It is still
+              the last thing on the form, still directly under the press on
+              every screen that has room, and the two routes it names are in
+              the footer of the landing page and in Settings as well. */}
+          <p className="text-center text-xs leading-relaxed text-text-subtle">
+            By creating an account you agree to the{' '}
+            <Link to="/terms" className="underline underline-offset-2 hover:text-text-muted">
+              Terms
+            </Link>{' '}
+            and the{' '}
+            <Link to="/privacy" className="underline underline-offset-2 hover:text-text-muted">
+              Privacy policy
+            </Link>
+            .
+          </p>
         </form>
       )}
 
