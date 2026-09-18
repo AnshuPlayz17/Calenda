@@ -1,6 +1,23 @@
 # Phase 0 — School Events PDF: inspection findings
 
-Source: `source/important-dates-2026-27.pdf`
+Source: a real school's "Important Dates and Closures" PDF for 2026-27.
+
+**The PDF and the JSON it produced were removed from this repository on
+2026-09-17.** They were a real school's own document and its real calendar,
+sitting in a public repo, while this project's first rule is that Calenda is
+never associated with any named school. Nothing imported either of them; they
+were kept because the import and duplicate-review work needed a real document
+to be honest about, and that need is met by
+`src/test/fixtures/realCalendar2026_27.ts`, which is quarantined behind
+`noRealCalendar.test.ts` so it cannot reach the shipped bundle.
+
+**They are still in this repository's git history**, which a deletion does not
+change. Removing them from history rewrites every commit since, invalidates
+every existing clone, and is the project owner's call rather than a thing to do
+quietly.
+
+The findings below are kept: they are about how a PDF text layer can silently
+corrupt dates, which is worth knowing and names nobody.
 Title metadata: `Important Dates and Closures 2026-27 School Year`
 Producer: `Skia/PDF m154 Google Docs Renderer` · 7 pages · not encrypted · no tables (plain text flow)
 

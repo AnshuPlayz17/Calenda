@@ -189,3 +189,51 @@ access as the wrong user and requires it to fail:
 - AI study tools
 - SMS delivery
 - Apple and Facebook sign-in (Google, GitHub, Discord are configured)
+
+## Security and privacy (checked 2026-09-17, each with the check)
+
+These are the claims the `/privacy` and `/terms` pages make. They are here for
+the same reason every other line in this file is: a claim that is not downstream
+of the fact drifts away from it silently.
+
+- **No cookies.** `grep document.cookie` across `src/` and across every built
+  chunk in `dist/` finds nothing, bracketed access included. Guarded by
+  `legalDrift.test.ts`, mutation-tested by adding one and watching it fail.
+  This is why there is no cookie banner: consent UI for something that is not
+  happening is worse than none.
+- **No analytics, no error-reporting SDK, no third-party script or stylesheet.**
+  `index.html` contains no remote `src`/`href` at all; the fonts are bundled.
+  Guarded in the same file, and enforced at runtime by `script-src 'self'` in
+  the CSP, which `cspcheck.mjs` verifies blocks four injection vectors.
+- **Passwords are never seen or stored by this app.** Sign-in is Supabase Auth,
+  which holds a one-way hash. There is no password column anywhere in
+  `supabase/migrations/`.
+- **The privacy page's inventory matches the database.** Every table in
+  `supabase/migrations/` appears in exactly one category, and every table named
+  exists. `legalDrift.test.ts`, both directions, mutation-tested four ways.
+- **Four tables exist and have never had a row written to them:**
+  `google_accounts`, `google_calendars`, `google_event_map`, `phone_numbers`.
+  Nothing under `src/` or `supabase/functions/` names any of them outside a
+  comment. Held by a test, so a first write turns the suite red.
+
+### Correction to the RLS list above
+
+Item 6 in the adversarial list reads "Google refresh tokens are private, even
+from an admin". **That policy is real and the test passes; the table it protects
+is empty and always has been.** `useGoogleToken.ts` reads the access token
+Supabase returns with the session and uses it in the page — no refresh token is
+ever requested, and nothing Google-related is written to the database. The line
+is true as a statement about the policy and reads as a statement about stored
+credentials, which is the kind of gap this file exists to close. Nothing on the
+marketing pages may say Calenda holds a Google credential, because it does not.
+
+### Not verified, and not to be claimed
+
+- **Email reminders have still never been delivered to anybody.** Unchanged
+  since 2026-09-10.
+- **The rate limits have not run against the hosted project.** They pass against
+  a local Postgres, all twelve assertions, and `20260917000200` is unapplied
+  until the owner merges.
+- **Neither legal document has been reviewed by a lawyer**, and both say so at
+  the top. Two placeholders in them still need a person: a contact address and
+  the governing jurisdiction.

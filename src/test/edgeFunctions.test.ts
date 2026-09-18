@@ -247,6 +247,31 @@ describe('the Edge Functions', () => {
     ).toBe(1)
   })
 
+  it('no browser-facing function answers every origin', () => {
+    // Not a permission boundary and must not be described as one: both of
+    // these require a Bearer token and read through a client carrying it, so
+    // RLS is the control. What a wildcard costs is narrower -- another site's
+    // page spending this project's free-tier quota through a visitor's browser
+    // -- and it reads to anybody auditing as though nobody had considered it.
+    //
+    // notify-dispatch is the deliberate exception and takes no request object
+    // at all; it is invoked with the public anon key on purpose.
+    for (const file of files.filter((f) => !f.includes('notify-dispatch'))) {
+      const src = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(src, `${file} answers every origin`)
+        .not.toMatch(/'Access-Control-Allow-Origin':\s*'\*'/)
+    }
+
+    // And the allowlist has to actually be consulted rather than merely exist.
+    const cors = readFileSync(join(ROOT, '_shared', 'cors.ts'), 'utf8')
+    expect(cors).toMatch(/includes\(origin\)/)
+    // Vary: Origin, or a shared cache hands one origin's headers to another
+    // and a correct allowlist becomes an incorrect one.
+    expect(cors).toMatch(/'Vary':\s*'Origin'/)
+  })
+
   it('no function hardcodes a credential', () => {
     for (const file of files) {
       const src = readFileSync(file, 'utf8')

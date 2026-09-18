@@ -5,7 +5,11 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vitest/globals"],
+    // "node" is named explicitly since vitest 5. Under vitest 3 the
+    // `vitest/globals` types pulled Node's in transitively, so the guards that
+    // read files with `node:fs` compiled without it being listed; v5 does not,
+    // and `tsc` then cannot resolve `node:fs` in any test file.
+    "types": ["vitest/globals", "node"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
