@@ -1575,3 +1575,105 @@ the waiter's own command line. `pkill -f 'authcheck[.]mjs'` is the fix -- the
 regex matches the process and not the literal text sitting in the command that
 issued it.
 
+
+## The landing page is a book that becomes a laptop
+
+Replaced on 2026-09-19, after an interview rather than a guess. The eleven
+chapters are gone; the page is three panels cross-faded over one drawing that
+is scrubbed by the scroll. Nothing on it scrolls in the ordinary sense -- the
+header, the footer, the drawing and all three panels are fixed, and the only
+thing with height is an empty track whose whole job is to advance one number.
+
+The old page was not bad. It argued eleven times. This argues three, and every
+headline and sentence on it was lifted from copy already checked into
+`docs/FACTS.md`, because a new front door is the easiest place in a project to
+acquire a claim nobody verified.
+
+**The subject is drawn, not filmed.** The brief described a scroll-scrubbed
+video from a CDN with a Google Fonts link. All three of those were refused for
+reasons already written down here: fonts are bundled and `legalDrift.test.ts`
+now fails on any remote `src`/`href` in `index.html`, because the privacy page
+claims there are none; and `default-src 'self'` with no `media-src` would have
+blocked the video on the live site anyway. A canvas drawing needs no CDN, no
+CSP exception and no eleven-megabyte download, and it can show a real Calenda
+calendar on the screen at the end.
+
+It also gets the original's best property for free. The video was chosen
+all-intra so a scrub could land on any frame instantly; `draw(ctx, p, …)` holds
+no state between calls, so scrubbing backwards costs exactly what scrubbing
+forwards does. That was arrived at by not having a video.
+
+### Four defects, all found by looking at it
+
+Not one of these was visible in the code, and none of them threw.
+
+**An invalid `fillStyle` does not throw -- it is ignored, and the context keeps
+what it had.** The colour helper did string surgery: take `rgb(...)`, make it
+`rgba(...)`, append the alpha after a comma. Given the space-separated form a
+stylesheet is entitled to use -- `rgb(30 55 101)` -- that yields
+`rgba(30 55 101, 0.055)`, which mixes space-separated components with a comma
+alpha and is not a colour. So every fill came out in some earlier frame's
+colour, canvas state survives `clearRect`, and the laptop screen rendered as an
+opaque navy slab with the calendar drawn invisibly underneath it. **Parse the
+numbers; never build a colour by substring.**
+
+**Interpolating two shapes' corners is not a morph.** The book's page has its
+free edge to the right and the laptop's screen has its free edge at the top, so
+corner 1 travels across corner 0, the quad turns inside out on the way, and the
+middle frames are a crumpled sheet with a spike through it. There is one shape
+now and four numbers move it -- how far the hinge has turned, how far the lid
+has lifted, how far the deck has dropped, how the rectangle is proportioned --
+so every frame is a rigid pose of a real object.
+
+**`swing = 0` means facing the camera, so the screen is the small angle.** The
+first version reasoned that a screen "stands up" and therefore wanted the
+larger one, and rendered a laptop lying on its back with the keyboard pointing
+at the ceiling. Read an angle against what zero means, not against the English
+word for the pose.
+
+**A shut cover is coplanar with the pages, so the depth sort is a tie**, and
+whichever leaf the sort happened to put last was painted over the other. The
+first frame of the page was a blank white rectangle with the entire cover
+underneath the page block. It is offset by the thickness of the book now, which
+is both the fix and what a book actually looks like.
+
+The fifth is a layout one and the same lesson: **line art is all edges, and an
+edge through a letterform is worse than a photograph behind one.** At the first
+scale the ruled lines of an agenda page ran straight through "Everything you
+need for school". The object is sized as a background, dropped below centre, and
+sits under a radial wash that is heaviest exactly where the headline is.
+
+### The mono switch is a palette, not a filter
+
+`filter: grayscale(1)` on the wrapper is one line and is the wrong line. **A
+filter on an ancestor makes it the containing block for every fixed
+descendant**, and every single thing on this page is fixed -- the header, the
+footer, the drawing and all three panels would have stopped being pinned to the
+viewport. That is the same class of trap as `overflow-x` on `<html>` silently
+killing sticky, which this file already records. Mono redeclares the tokens
+instead, and the drawing follows because it reads them too.
+
+It redeclares the *type* tokens as well. The first version changed the brand and
+the ink only, which turned the button black and left the headline navy -- a
+black button, not black and white.
+
+### What moved rather than being deleted
+
+**`/created-by` is a real page now.** It was the tenth chapter, reached from the
+app sidebar as `/about#founder`, and a chapter that no longer exists would have
+left that link scrolling to nothing -- a navigation control that fails by doing
+no harm. It renders the same `FounderPanel`, so the figures still come from
+`projectStats` and the disclaimer still exists in exactly one place. `/about`
+redirects `#founder` there rather than swallowing it.
+
+**The old scenes are still in the tree, unreferenced.** The agreed undo for this
+work is reverting one commit, and deleting twelve scene files would have made
+that revert enormous for no gain.
+
+`landingSections.test.tsx` was rewritten rather than deleted. Its old job was
+holding the companion rail against the page; there is no rail now, but the same
+silent failure is available in three new shapes -- a cue that never reaches full
+opacity is a panel invisible for the life of the page, overlapping cues are two
+headlines on top of each other, and an anchor outside its own panel's window
+scrolls to a blank frame. All three are arithmetic, so they are tested as
+arithmetic, and all three were broken on purpose and watched to fail.

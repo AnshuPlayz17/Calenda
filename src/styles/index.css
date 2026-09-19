@@ -735,3 +735,143 @@
 @media (prefers-reduced-motion: reduce) {
   .circuit-pulse { animation: none; opacity: 0; }
 }
+
+/* ------------------------------------------------------------------ */
+/* The scrubbed drawing on the landing page                           */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A canvas cannot inherit a custom property, so the landing page publishes the
+ * two colours its drawing needs and the renderer reads them back through
+ * getComputedStyle. Declaring them here rather than in the component is what
+ * makes the drawing follow all three themes for free: light, dark and vivid
+ * each redefine --text and --surface already, and these ride along.
+ *
+ * They resolve to rgb() rather than to a var chain because the renderer needs
+ * a colour it can push an alpha into, and `color-mix(...)` coming back from
+ * getComputedStyle is not something a canvas fillStyle can be given a
+ * transparency of.
+ */
+.landing-scrub {
+  --scrub-ink: rgb(30 55 101);
+  --scrub-paper: rgb(255 255 255);
+}
+
+:root[data-theme='dark'] .landing-scrub,
+:root[data-theme='vivid'] .landing-scrub {
+  --scrub-ink: rgb(233 238 247);
+  --scrub-paper: rgb(18 22 32);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='vivid']) .landing-scrub {
+    --scrub-ink: rgb(233 238 247);
+    --scrub-paper: rgb(18 22 32);
+  }
+}
+
+/*
+ * Black and white.
+ *
+ * A `filter: grayscale(1)` on the wrapper would be one line and is the wrong
+ * line: a filter on an ancestor makes it the containing block for every fixed
+ * descendant, and every single thing on this page is fixed. The header, the
+ * footer, the drawing and all three panels would stop being pinned to the
+ * viewport and start being pinned to the wrapper -- which is the same class of
+ * trap as putting overflow-x on <html> and silently killing sticky.
+ *
+ * So mono is a palette, not an effect. Only the tokens the page actually uses
+ * are redeclared, and the drawing follows because it reads them too.
+ */
+.landing-scrub[data-mono='on'] {
+  --scrub-ink: rgb(24 24 24);
+  --scrub-paper: rgb(252 252 252);
+  --brand: #1c1c1c;
+  --brand-hover: #000000;
+  --brand-contrast: #ffffff;
+  --accent: oklch(0.52 0 0);
+  /* The type too, or "black and white" turns the button black and leaves the
+     headline navy -- which is not black and white, it is a black button. */
+  --bg: #f7f7f7;
+  --surface: #ffffff;
+  --surface-2: #f0f0f0;
+  --text: #151515;
+  --text-muted: rgb(80 80 80);
+  --text-subtle: rgb(122 122 122);
+  --border: rgb(214 214 214);
+  --border-strong: rgb(176 176 176);
+}
+
+:root[data-theme='dark'] .landing-scrub[data-mono='on'],
+:root[data-theme='vivid'] .landing-scrub[data-mono='on'] {
+  --scrub-ink: rgb(240 240 240);
+  --scrub-paper: rgb(14 14 14);
+  --brand: #ededed;
+  --brand-hover: #ffffff;
+  --brand-contrast: #0c0c0c;
+  --accent: oklch(0.78 0 0);
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface-2: #1e1e1e;
+  --text: #f2f2f2;
+  --text-muted: rgb(178 178 178);
+  --text-subtle: rgb(134 134 134);
+  --border: rgb(52 52 52);
+  --border-strong: rgb(84 84 84);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='vivid']) .landing-scrub[data-mono='on'] {
+    --scrub-ink: rgb(240 240 240);
+    --scrub-paper: rgb(14 14 14);
+    --brand: #ededed;
+    --brand-hover: #ffffff;
+    --brand-contrast: #0c0c0c;
+    --accent: oklch(0.78 0 0);
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface-2: #1e1e1e;
+    --text: #f2f2f2;
+    --text-muted: rgb(178 178 178);
+    --text-subtle: rgb(134 134 134);
+    --border: rgb(52 52 52);
+    --border-strong: rgb(84 84 84);
+  }
+}
+
+/*
+ * The wash over the drawing.
+ *
+ * Three layers, heaviest through the middle band where the headline and its
+ * paragraph sit, and clearing at the left and right so the object is not
+ * entirely erased by the thing it exists to sit behind.
+ */
+.landing-veil {
+  background:
+    radial-gradient(64% 46% at 50% 48%,
+      color-mix(in oklab, var(--bg) 74%, transparent) 0%,
+      color-mix(in oklab, var(--bg) 54%, transparent) 55%,
+      transparent 100%),
+    linear-gradient(to bottom,
+      color-mix(in oklab, var(--bg) 70%, transparent) 0%,
+      transparent 20%,
+      transparent 80%,
+      color-mix(in oklab, var(--bg) 74%, transparent) 100%);
+}
+
+@media (max-width: 900px) {
+  /* A phone is brighter, the type is proportionally larger, and the object has
+     less room to be clear of it -- so the middle band gets heavier. */
+  .landing-veil {
+    background:
+      radial-gradient(86% 54% at 50% 48%,
+        color-mix(in oklab, var(--bg) 94%, transparent) 0%,
+        color-mix(in oklab, var(--bg) 82%, transparent) 60%,
+        transparent 100%),
+      linear-gradient(to bottom,
+        color-mix(in oklab, var(--bg) 80%, transparent) 0%,
+        transparent 22%,
+        transparent 78%,
+        color-mix(in oklab, var(--bg) 84%, transparent) 100%);
+  }
+}
