@@ -1244,9 +1244,22 @@ scratch three times and caught something every time. Playwright is deliberately
 not a dependency -- `npm i -D playwright && node scripts/screencheck.mjs`, the
 same arrangement `build-world-dots.mjs` already has.
 
-## The landing page
+## The eleven-chapter landing page (REPLACED 2026-09-19 -- read this as history)
 
-Eleven chapters, and the rule that governs them is that no two adjacent ones
+**This page is no longer the front door.** It was replaced by the scrub page
+described at the end of this file, and everything below is in the past tense
+however it reads. It is kept for three reasons and not as a description of what
+ships: the scene files are still in the tree unreferenced, so anyone reviving
+one needs these notes; several paragraphs are *constraints* rather than
+descriptions and still bind (the schools wording, "there is no map of users",
+the Motion range traps); and this file's own rule is that a reversal is
+recorded rather than quietly deleted.
+
+Two paragraphs in here are still live rules and are repeated so they cannot be
+lost with the rest: **no school may be named outside `src/data/schools.ts`**,
+and **there must never be a map of users.**
+
+Eleven chapters, and the rule that governed them was that no two adjacent ones
 move the same way — a fourth identical pinned section is the failure mode of
 this genre. `src/features/landing/sections.ts` is the list, in order; the route
 wraps each scene with the matching id and the companion rail reads the same

@@ -346,15 +346,26 @@ export function draw(
   // this, and an object big enough to be the picture is an object the headline
   // cannot be read against -- measured at 0.46, where the ruled lines of the
   // page ran straight through "Everything you need for school".
+  // Two compositions, because a 1440px window and a phone are not the same
+  // problem. Wide, the type takes the left half and the object takes the
+  // right, so neither is on top of the other and the object can be the size it
+  // deserves. Narrow, there is only one column, so it goes back behind the
+  // type and gets out of the way under the wash.
+  //
+  // The first build used the narrow arrangement at every width: a 46ch column
+  // centred in 1440px, with a small faint drawing behind it and about four
+  // hundred pixels of nothing down each side.
+  const wide = w >= 1024
+
   // Eased down through the turn. A rectangle rotated forty-five degrees needs
   // about 1.4x the width of the same rectangle square on, so holding the scale
-  // constant runs the corners off both sides at exactly the moment the object
+  // constant runs the corners off the sides at exactly the moment the object
   // is doing the thing worth watching.
-  const scale = Math.min(w, h) * 0.36 * (1 - 0.15 * Math.sin(turning * Math.PI))
-  // Dropped below centre so the screen sits under the headline rather than
-  // behind it -- the object is the lower half of the composition and the type
-  // is the upper half, which is the only arrangement where both are legible.
-  const pr = projector(w / 2, h * 0.63, scale)
+  const room = wide ? Math.min(w * 0.46, h * 1.05) : Math.min(w, h)
+  const scale = room * (wide ? 0.60 : 0.36) * (1 - 0.15 * Math.sin(turning * Math.PI))
+  const pr = wide
+    ? projector(w * 0.71, h * 0.52, scale)
+    : projector(w / 2, h * 0.63, scale)
 
   // Painter's order, recomputed every frame: which leaf is nearer changes as
   // the hinge comes round, and a fixed order puts the deck through the screen
