@@ -42,6 +42,7 @@ const NotFound = lazy(() => import('@/routes/NotFound').then((m) => ({ default: 
 // nobody arrives at Calenda to read the terms.
 const Privacy = lazy(() => import('@/routes/Privacy').then((m) => ({ default: m.Privacy })))
 const Terms = lazy(() => import('@/routes/Terms').then((m) => ({ default: m.Terms })))
+const CreatedBy = lazy(() => import('@/routes/CreatedBy').then((m) => ({ default: m.CreatedBy })))
 const NotificationsPage = lazy(() => import('@/routes/Notifications').then((m) => ({ default: m.NotificationsPage })))
 const ClassesPage = lazy(() => import('@/routes/Classes').then((m) => ({ default: m.ClassesPage })))
 const ClassWorkspace = lazy(() => import('@/routes/ClassWorkspace').then((m) => ({ default: m.ClassWorkspace })))
@@ -132,7 +133,10 @@ export function App() {
               {/* The same page, but it does not bounce a signed-in reader to
                   the dashboard -- this is the one the app links to. */}
               <Route path="/about" element={<Landing redirectSignedIn={false} />} />
-              <Route path="/created-by" element={<Navigate to="/about#founder" replace />} />
+              {/* Its own page now. It was a chapter of the landing page, and
+                  the landing page is three panels -- so a redirect to a
+                  fragment that no longer exists would scroll to nothing. */}
+              <Route path="/created-by" element={<CreatedBy />} />
               <Route path="/sign-in" element={<SignIn />} />
               <Route path="/sign-up" element={<SignUp />} />
               {/* Both redirect to sign-in while email delivery is off, so a

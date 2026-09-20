@@ -96,7 +96,7 @@ export function FounderScene() {
     return (
       <section id="founder" className="border-t border-border bg-bg px-5 py-20 sm:px-8">
         <div className="mx-auto max-w-[1000px]">
-          <Panel />
+          <FounderPanel />
         </div>
       </section>
     )
@@ -106,7 +106,7 @@ export function FounderScene() {
     return (
       <section id="founder" className="border-t border-border bg-bg px-5 py-20 sm:px-8">
         <div ref={cardRef} className={CARD}>
-          <Panel />
+          <FounderPanel />
         </div>
       </section>
     )
@@ -150,7 +150,7 @@ function Lid({ progress }: { progress: MotionValue<number> }) {
       className={CARD}
     >
       <motion.div style={{ opacity: inner }}>
-        <Panel />
+        <FounderPanel />
       </motion.div>
     </motion.div>
   )
@@ -172,7 +172,16 @@ function Lid({ progress }: { progress: MotionValue<number> }) {
  * unpinned the hinge on a 1280x700 laptop. Numbers a reader weighs are set
  * large; numbers that are evidence read fine in a line of prose.
  */
-function Panel() {
+/**
+ * The founder panel's contents, exported so the `/created-by` route can render
+ * the same words the landing page used to.
+ *
+ * Exported rather than copied: these numbers come from `projectStats`, which is
+ * substituted at build time precisely so nothing anywhere repeats them in
+ * prose. A second copy of this markup would be a second place for the
+ * disclaimer to drift, and the disclaimer is load-bearing.
+ */
+export function FounderPanel() {
   return (
     <>
       <p className="label-caps text-accent">Created by</p>

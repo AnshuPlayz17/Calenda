@@ -252,7 +252,7 @@ export function AppShell() {
             About Calenda
           </Link>
           <Link
-            to="/about#founder"
+            to="/created-by"
             className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[12.5px] text-text-subtle no-underline transition-colors duration-150 hover:bg-surface-2 hover:text-text"
           >
             <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
