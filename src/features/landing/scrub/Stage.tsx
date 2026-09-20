@@ -127,12 +127,12 @@ export function Stills({ paletteOf }: { paletteOf: () => Palette }) {
   }, [paletteOf])
 
   return (
-    <div className="grid gap-6 sm:grid-cols-3">
+    <div className="grid gap-8 sm:grid-cols-3">
       {['Closed', 'Open', 'On screen'].map((label, i) => (
         <figure key={label} className="m-0">
           <canvas
             ref={(el) => { refs.current[i] = el }}
-            className="aspect-[4/3] w-full"
+            className="aspect-[5/4] w-full"
             aria-hidden
           />
           <figcaption className="mt-2 text-center text-xs text-text-subtle">{label}</figcaption>

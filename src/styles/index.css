@@ -859,6 +859,29 @@
       color-mix(in oklab, var(--bg) 74%, transparent) 100%);
 }
 
+@media (min-width: 1024px) {
+  /*
+   * Wide, the drawing is beside the type rather than under it, so the wash
+   * stops being a scrim over everything and becomes a gradient across the
+   * page: solid where the column of type is, gone by the time it reaches the
+   * object. Dimming the whole viewport here would be dimming the one thing
+   * worth looking at in order to protect type that is no longer on top of it.
+   */
+  .landing-veil {
+    background:
+      linear-gradient(to right,
+        var(--bg) 0%,
+        color-mix(in oklab, var(--bg) 92%, transparent) 34%,
+        color-mix(in oklab, var(--bg) 40%, transparent) 50%,
+        transparent 64%),
+      linear-gradient(to bottom,
+        color-mix(in oklab, var(--bg) 70%, transparent) 0%,
+        transparent 18%,
+        transparent 82%,
+        color-mix(in oklab, var(--bg) 72%, transparent) 100%);
+  }
+}
+
 @media (max-width: 900px) {
   /* A phone is brighter, the type is proportionally larger, and the object has
      less room to be clear of it -- so the middle band gets heavier. */

@@ -37,6 +37,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
   const root = useRef<HTMLDivElement | null>(null)
   const panels = useRef<Array<HTMLElement | null>>([])
   const meter = useRef<HTMLSpanElement | null>(null)
+  const ticks = useRef<Array<HTMLElement | null>>([])
 
   const [mono, setMono] = useState(() => {
     // Per-viewer convenience, so it is browser storage rather than the
@@ -84,6 +85,11 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
       el.style.opacity = String(o)
       el.style.transform = `translate3d(0, ${y}px, 0)`
       el.style.pointerEvents = o > 0.6 ? 'auto' : 'none'
+      const tick = ticks.current[i]
+      // The rail is written from the same loop for the same reason the panels
+      // are: it is three opacities, and routing them through React state would
+      // re-render the page sixty times a second to change a number.
+      if (tick) tick.style.opacity = String(0.34 + o * 0.66)
     })
   }, [])
 
@@ -131,17 +137,56 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
             className="fixed left-0 top-0 z-50 h-0.5 w-full origin-left scale-x-0 bg-text/55"
           />
 
+          {/* The rail, in the left margin the 1240px container leaves over.
+              It answers "through what" rather than "how far" -- the hairline
+              above already does the second -- and it is the only thing on the
+              page that shows all three claims at once.
+
+              2xl, not xl. A 1240px container inside a 1280px window leaves
+              twenty pixels a side, and the first version put a labelled rail
+              in them: the words landed directly on top of the paragraph. The
+              rail only exists where there is genuinely a margin to put it in,
+              which starts at 1536. */}
+          <nav
+            aria-label="Sections"
+            className="pointer-events-none fixed left-0 top-1/2 z-30 hidden -translate-y-1/2
+                       flex-col gap-6 pl-8 2xl:flex 2xl:pl-12"
+          >
+            {PANELS.map((panel, i) => (
+              <a
+                key={panel.id}
+                href={`#${panel.id}`}
+                ref={(el) => { ticks.current[i] = el }}
+                style={{ opacity: 0.34 }}
+                className="pointer-events-auto flex items-center gap-3 no-underline"
+              >
+                <span className="h-px w-6 bg-text" aria-hidden />
+                <span className="label-caps whitespace-nowrap text-[11px] text-text">
+                  {panel.label}
+                </span>
+              </a>
+            ))}
+          </nav>
+
           <main className="pointer-events-none fixed inset-0 z-20">
             {PANELS.map((panel, i) => (
               <section
                 key={panel.id}
                 ref={(el) => { panels.current[i] = el }}
                 style={{ opacity: 0 }}
-                className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center
-                           pt-[max(104px,calc(env(safe-area-inset-top,0px)+88px))]
+                className="absolute inset-0 flex items-center
+                           px-5 pt-[max(104px,calc(env(safe-area-inset-top,0px)+88px))]
                            pb-[max(96px,calc(env(safe-area-inset-bottom,0px)+80px))] sm:px-8"
               >
-                <Copy panel={panel} first={i === 0} action={action} />
+                {/* One container at the app's own width, so the page has the
+                    same margins as every screen behind the front door. The
+                    type takes the left column; the right is left empty for the
+                    drawing to occupy. */}
+                <div className="mx-auto grid w-full max-w-[1240px] gap-10 lg:grid-cols-2 lg:gap-16">
+                  <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+                    <Copy panel={panel} first={i === 0} action={action} />
+                  </div>
+                </div>
               </section>
             ))}
           </main>
@@ -210,11 +255,31 @@ function Copy({ panel, first, action }: { panel: typeof PANELS[number]; first: b
   return (
     <>
       <p className="label-caps text-text-subtle">{panel.eyebrow}</p>
-      <Heading className="mt-4 max-w-[15ch] font-display text-display font-medium leading-[0.98] tracking-[-0.03em] lg:text-display-lg">
+      <Heading className="mt-4 max-w-[13ch] font-display text-display font-medium leading-[0.98] tracking-[-0.03em] lg:text-display-lg">
         {panel.title}
       </Heading>
-      <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-text-muted">{panel.body}</p>
-      <div className="pointer-events-auto mt-8 flex w-full justify-center">
+      <p className="mt-5 max-w-[46ch] text-[15px] leading-relaxed text-text-muted sm:hidden">
+        {panel.short}
+      </p>
+      <p className="mt-5 hidden max-w-[46ch] text-lg leading-relaxed text-text-muted sm:block">
+        {panel.body}
+      </p>
+
+      {/* The detail. Three panels of one sentence each read as a placeholder
+          however true the sentences are, and every figure here is read from
+          the sample data or the schools list rather than typed. */}
+      <dl className="mt-6 flex w-full max-w-[46ch] flex-col divide-y divide-border border-y border-border sm:mt-8">
+        {panel.facts.map((f) => (
+          <div key={f.note} className="flex items-baseline gap-3 py-2 text-left sm:gap-4 sm:py-3">
+            <dt className="w-[5.5rem] shrink-0 font-display text-[13.5px] font-medium leading-snug tracking-tight text-text sm:w-[6.5rem] sm:text-[15px]">
+              {f.figure}
+            </dt>
+            <dd className="text-[12.5px] leading-snug text-text-muted sm:text-[13.5px]">{f.note}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="pointer-events-auto mt-6 flex w-full justify-center sm:mt-8 lg:justify-start">
         {panel.action === 'join' ? (
           <Link
             to={action.to}
@@ -253,28 +318,44 @@ function Copy({ panel, first, action }: { panel: typeof PANELS[number]; first: b
  */
 function StillPage({ paletteOf, action }: { paletteOf: () => Palette; action: Action }) {
   return (
-    <main className="mx-auto max-w-[760px] px-5 pb-24 pt-32 sm:px-8">
+    <main className="mx-auto max-w-[1240px] px-5 pb-24 pt-32 sm:px-8">
       <Stills paletteOf={paletteOf} />
-      <div className="mt-16 flex flex-col gap-16">
+      <div className="mt-20 flex flex-col gap-20">
         {PANELS.map((panel, i) => (
-          <section key={panel.id} id={panel.id}>
-            <p className="label-caps text-text-subtle">{panel.eyebrow}</p>
-            {i === 0 ? (
-              <h1 className="mt-3 font-display text-display font-medium leading-[1.0] tracking-[-0.03em]">
-                {panel.title}
-              </h1>
-            ) : (
-              <h2 className="mt-3 font-display text-title-lg font-medium tracking-[-0.01em]">
-                {panel.title}
-              </h2>
-            )}
-            <p className="mt-3 text-[15px] leading-relaxed text-text-muted">{panel.body}</p>
+          <section key={panel.id} id={panel.id} className="grid gap-8 lg:grid-cols-2 lg:gap-16">
+            <div>
+              <p className="label-caps text-text-subtle">{panel.eyebrow}</p>
+              {i === 0 ? (
+                <h1 className="mt-3 max-w-[14ch] font-display text-display font-medium leading-[1.0] tracking-[-0.03em]">
+                  {panel.title}
+                </h1>
+              ) : (
+                <h2 className="mt-3 max-w-[14ch] font-display text-display-sm font-medium leading-[1.05] tracking-[-0.02em]">
+                  {panel.title}
+                </h2>
+              )}
+              <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted sm:text-lg">
+                {panel.body}
+              </p>
+            </div>
+            {/* The same figures the moving page shows. A reader who asked for
+                no motion is not asking for less evidence. */}
+            <dl className="flex flex-col divide-y divide-border border-y border-border lg:mt-9">
+              {panel.facts.map((f) => (
+                <div key={f.note} className="flex items-baseline gap-4 py-3">
+                  <dt className="w-[6.5rem] shrink-0 font-display text-[15px] font-medium leading-snug tracking-tight text-text">
+                    {f.figure}
+                  </dt>
+                  <dd className="text-[13.5px] leading-snug text-text-muted">{f.note}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
         ))}
       </div>
       <Link
         to={action.to}
-        className="mt-12 inline-flex h-12 items-center gap-2 rounded-full bg-brand px-7 text-[15px]
+        className="mt-16 inline-flex h-12 items-center gap-2 rounded-full bg-brand px-7 text-[15px]
                    font-medium text-brand-contrast no-underline"
       >
         {action.label}
@@ -284,14 +365,6 @@ function StillPage({ paletteOf, action }: { paletteOf: () => Palette; action: Ac
   )
 }
 
-/**
- * `pinned` is false on the reduced-motion page, and that is not a style choice.
- *
- * The scrub page has nothing that scrolls, so a fixed footer sits over an empty
- * track. The still page is an ordinary document, and a fixed footer over an
- * ordinary document is a translucent band parked on top of whatever paragraph
- * happens to be at the fold -- which is what it did to the third panel.
- */
 function Foot({ pinned }: { pinned: boolean }) {
   return (
     <footer

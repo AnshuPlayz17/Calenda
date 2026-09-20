@@ -14,17 +14,42 @@
  * turning into a hinge, and no two panels are ever readable at once.
  */
 
+/**
+ * A figure and what it means, under each panel.
+ *
+ * Every number here is read from the sample data or the schools list rather
+ * than typed, which is this project's oldest rule and the reason the old
+ * landing page's figures could not drift. A word in the `figure` slot is fine
+ * -- "Impossible" is a claim the database actually enforces -- but a NUMBER in
+ * it must come from an array.
+ */
+import { SCHOOLS } from '@/data/schools'
+import { sampleRepeatedCount, sampleSchoolYear } from '@/data/sampleSchoolYear'
+
+export type Fact = { figure: string; note: string }
+
 export type Panel = {
   id: string
   label: string
   eyebrow: string
   title: string
   body: string
+  /**
+   * The same claim, short enough for a phone.
+   *
+   * Not a nicety. The panels are fixed and the page does not scroll, so a
+   * column taller than the window is not scrolled to -- it is lost behind the
+   * header and the footer, which is exactly what the full body plus three
+   * facts did at 375x667. Shortening the sentence is the honest fix; dropping
+   * the facts would mean the smallest screen gets the least evidence.
+   */
+  short: string
   /** Where the anchor for this panel sits in the track, 0..1. */
   anchor: number
   cue: readonly [number, number, number, number]
   /** The primary action belongs on the first and last panels only. */
   action: 'join' | 'privacy'
+  facts: readonly Fact[]
 }
 
 export const PANELS: readonly Panel[] = [
@@ -36,9 +61,17 @@ export const PANELS: readonly Panel[] = [
     body:
       'PA days, exams and assemblies. Your own calendar. Class notes, assignments and '
       + 'deadlines. Calenda holds all of it, and tells you what actually matters today.',
+    short:
+      'PA days, exams, class notes and deadlines \u2014 in one place, with what actually '
+      + 'matters today on top.',
     anchor: 0.02,
     cue: [0.0, 0.0, 0.15, 0.23],
     action: 'join',
+    facts: [
+      { figure: String(SCHOOLS.length), note: 'schools whose published calendars it reads' },
+      { figure: String(sampleSchoolYear.length), note: 'dates in the sample year, read in one pass' },
+      { figure: 'Three', note: 'roles \u2014 student, parent and teacher' },
+    ],
   },
   {
     id: 'import',
@@ -48,9 +81,17 @@ export const PANELS: readonly Panel[] = [
     body:
       'Calenda reads the calendar your school publishes and stages every date for you to '
       + 'review. Nothing is ever silently merged or deleted — you see both entries and choose.',
+    short:
+      'Every imported date is staged for you to review. Nothing is ever silently merged '
+      + 'or deleted.',
     anchor: 0.50,
     cue: [0.35, 0.43, 0.57, 0.65],
     action: 'privacy',
+    facts: [
+      { figure: String(sampleRepeatedCount), note: 'dates share one title in that year' },
+      { figure: 'None', note: 'are merged or dropped without you choosing' },
+      { figure: 'Every', note: 'imported date is staged for review first' },
+    ],
   },
   {
     id: 'reminders',
@@ -61,9 +102,17 @@ export const PANELS: readonly Panel[] = [
       'Pick the timings per category — a week before an exam, an hour before a meeting — '
       + 'and set quiet hours nothing is scheduled inside. A second reminder for the same thing '
       + 'is impossible: the database refuses to store it.',
+    short:
+      'Timings per category, quiet hours you set, and a second reminder for one thing '
+      + 'that the database simply refuses.',
     anchor: 0.92,
     cue: [0.77, 0.85, 1.10, 1.20],
     action: 'join',
+    facts: [
+      { figure: 'Per category', note: 'a week before an exam, an hour before a meeting' },
+      { figure: 'Quiet hours', note: 'nothing is ever scheduled inside them' },
+      { figure: 'Impossible', note: 'a second reminder for one thing \u2014 the database refuses it' },
+    ],
   },
 ]
 
