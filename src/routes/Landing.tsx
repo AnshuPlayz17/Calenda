@@ -18,6 +18,7 @@ import { ProofScene } from '@/features/landing/ProofScene'
 import { OpeningScene } from '@/features/landing/OpeningScene'
 import { SchoolsScene } from '@/features/landing/SchoolsScene'
 import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
+import { SeamMorph } from '@/features/landing/SeamMorph'
 import { Approach, Chapter } from '@/features/landing/Chapter'
 import { useChapters } from '@/features/landing/useChapters'
 import { LANDING_SECTIONS } from '@/features/landing/sections'
@@ -96,6 +97,7 @@ export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolea
           order of the rail are the same list. FounderScene carries its own id
           already -- it is linked to from the app sidebar. */}
       {page}
+      <SeamMorph />
       <Footer />
       <ScrollCompanion
         active={chapters.active}
