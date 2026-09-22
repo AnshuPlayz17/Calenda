@@ -50,12 +50,25 @@ describe('the privacy page', () => {
     expect(screen.getByText(/stores no Google credentials/i)).toBeInTheDocument()
   })
 
-  it('is honest that there is no delete button yet', () => {
+  /**
+   * This replaces an assertion that the page admitted having no delete button.
+   * That one existed to fail the day the control was built, and it did its job
+   * on 2026-09-22: the control exists, the paragraph was rewritten, and the
+   * test was rewritten with it rather than deleted.
+   *
+   * What it checks now is the harder half. A deletion that quietly leaves rows
+   * behind is the thing a privacy policy cannot afford to be vague about, and
+   * two rows do survive -- `event_reviews.reviewer_id` and
+   * `import_batches.admin_id` are set to null rather than cascaded, so the
+   * record of an approval or an import outlives the person who made it. If
+   * that ever stops being said on this page, the page is claiming a cleaner
+   * erasure than the schema performs.
+   */
+  it('says the account can be deleted, and what survives it', () => {
     renderPage(<Privacy />)
-    // If a delete control is ever built, this fails -- which is the prompt to
-    // rewrite the paragraph instead of leaving it describing the old state.
-    expect(screen.getByText(/not yet a button that deletes your whole account/i))
+    expect(screen.getByText(/Settings has a button that deletes your whole account/i))
       .toBeInTheDocument()
+    expect(screen.getByText(/set to nobody/i)).toBeInTheDocument()
   })
 })
 
