@@ -1712,3 +1712,56 @@ opacity is a panel invisible for the life of the page, overlapping cues are two
 headlines on top of each other, and an anchor outside its own panel's window
 scrolls to a blank frame. All three are arithmetic, so they are tested as
 arithmetic, and all three were broken on purpose and watched to fail.
+
+## The probes are committed now, and two of them measured themselves first
+
+`scripts/seamcheck.mjs` and `scripts/scrollcheck.mjs` join `screencheck.mjs`
+and `authcheck.mjs` in the repository. Playwright stays out of
+`package.json` -- `npm i -D playwright && node scripts/<probe>.mjs`, the same
+arrangement `build-world-dots.mjs` has. Every uncommitted probe this project
+has described has been rebuilt from memory at least once, and each rebuild
+repeated a mistake already written down here.
+
+**The boundary is not the mark, and measuring the first says nothing about the
+second.** `seamcheck` reports the quietest moment in a window either side of
+each chapter boundary. `pipeline -> import` measures exactly zero at four
+viewports, so a seam was built there and a paragraph was written into
+`SeamMorph.tsx` declaring that the earlier removal of that seam had been a
+mistake. Then the probe was extended to ask about the mark instead: ink at
+that mark's own peak is 0.011, 0.039 and 0.113 at three of the four sizes. The
+gap at the end of an `Approach` chapter is real and is not centred on the
+boundary, so the mark lands just outside it. The earlier removal was right and
+the correction was wrong -- **the fifth time this file has stated a satisfying
+story more strongly than the evidence supported**, and the first caught before
+it shipped rather than after.
+
+**Three probe bugs in one session, all recorded here already.**
+`div[id][data-accent]` is what `Chapter` renders and misses `FounderScene`,
+which writes its own `<section id="founder">` -- so the first run reported ten
+boundaries where there are eleven and labelled one of them `privacy -> start`,
+which is two boundaries with a chapter between them. `[aria-hidden] > span`
+matched twenty-five elements and produced confident numbers about none of them;
+the marks carry `data-seam` and are asked for by name now. And `kill $!` killed
+the npm wrapper rather than vite, so with `--strictPort` the next batch could
+not bind and measured the *previous* build -- the runner prints the
+content-hashed bundle filename per batch now, which is the only thing that
+makes a run's claim about which tree it measured checkable.
+
+**`pkill -f '[v]ite preview'` still killed the shell that ran it.** The bracket
+trick protects against the pattern matching itself, and the command that
+*wrote* the runner contained the literal string `vite preview` inside a
+heredoc, so the outer shell's own command line matched. This file already says
+to put a multi-step script in a file and run the file; the fix is to write it
+in one call and run it in another, because a heredoc quoting the pattern is
+the pattern.
+
+**Frame times, A/B against `984b9a1`, three runs each, back to back, nothing
+else running.** Baseline p95 22/22/21 with 1/0/0 frames over 50ms; with the six
+added seam marks, p95 20/22/21 with 2/0/0. Identical within noise. Page height
+is unchanged at 35,455px, because the seam layer is fixed and adds none.
+
+These are at `STEP=24` -- 1,474 frames for the traversal -- and are **not
+comparable to the 17-19ms figures elsewhere in this file**, which were taken at
+a much finer step. A p95 is a function of how much work each frame is asked to
+do, so a frame figure quoted without its step is meaningless. They are
+comparable to each other, which is what an A/B needs.
