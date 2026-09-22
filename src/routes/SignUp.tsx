@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, Mail } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AuthLayout } from '@/features/auth/AuthLayout'
 import {
   AuthError, BackLink, NotConnected, ProviderButtons, Separator, StepMark,
+  Reveal,
 } from '@/features/auth/AuthParts'
 import {
   HeardFrom, ParentFields, RolePicker, StudentFields, TeacherFields,
@@ -431,37 +432,5 @@ export function SignUp() {
         Creating an account needs a Supabase project. You can still look around.
       </NotConnected>
     </AuthLayout>
-  )
-}
-
-
-/**
- * A reveal button sitting on the password box it belongs to.
- *
- * Three password entries were typed blind. On a phone, with a password manager
- * not involved, that is the most common reason a sign-up is abandoned halfway:
- * a typo you cannot see, twice.
- *
- * A wrapper rather than a prop on Input, because Input is shared with every
- * other form in the app and only this page has two boxes holding one secret.
- */
-function Reveal({ on, onToggle, children }: {
-  on: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="relative">
-      {children}
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-pressed={on}
-        aria-label={on ? 'Hide password' : 'Show password'}
-        className="absolute right-2 top-[26px] grid h-9 w-9 place-items-center rounded-lg text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
-      >
-        {on ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-      </button>
-    </div>
   )
 }

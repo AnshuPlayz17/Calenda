@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import type { Provider } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/Button'
 import { ProviderIcon } from '@/components/ProviderIcon'
@@ -158,5 +158,41 @@ export function BackLink({ onClick, children }: { onClick: () => void; children:
     >
       <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {children}
     </button>
+  )
+}
+
+/**
+ * A reveal button sitting on the password box it belongs to.
+ *
+ * Three password entries were typed blind. On a phone, with a password manager
+ * not involved, that is the most common reason a sign-up is abandoned halfway:
+ * a typo you cannot see, twice.
+ *
+ * A wrapper rather than a prop on Input, because Input is shared with every
+ * other form in the app and only a password form has two boxes holding one
+ * secret.
+ *
+ * It lives here rather than in SignUp because Settings has a password form
+ * too now. A second copy is how the two drift -- one gains an aria-pressed
+ * and the other does not, and nothing anywhere says they were meant to match.
+ */
+export function Reveal({ on, onToggle, children }: {
+  on: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative">
+      {children}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={on}
+        aria-label={on ? 'Hide password' : 'Show password'}
+        className="absolute right-2 top-[26px] grid h-9 w-9 place-items-center rounded-lg text-text-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-text"
+      >
+        {on ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </div>
   )
 }
