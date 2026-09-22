@@ -346,26 +346,20 @@ export function draw(
   // this, and an object big enough to be the picture is an object the headline
   // cannot be read against -- measured at 0.46, where the ruled lines of the
   // page ran straight through "Everything you need for school".
-  // Two compositions, because a 1440px window and a phone are not the same
-  // problem. Wide, the type takes the left half and the object takes the
-  // right, so neither is on top of the other and the object can be the size it
-  // deserves. Narrow, there is only one column, so it goes back behind the
-  // type and gets out of the way under the wash.
+  // One composition. This drew a full-bleed background once, and carried a
+  // wide/narrow split so the object could sit beside a column of type at one
+  // size and hide behind it at another. It is a framed panel inside a chapter
+  // now -- it has its own box and nothing is written over it -- so the split
+  // was two branches where the page only ever takes one, and the narrow one
+  // sized the object for hiding: a 600px canvas rendered a book about a third
+  // of the height it had room for.
   //
-  // The first build used the narrow arrangement at every width: a 46ch column
-  // centred in 1440px, with a small faint drawing behind it and about four
-  // hundred pixels of nothing down each side.
-  const wide = w >= 1024
-
   // Eased down through the turn. A rectangle rotated forty-five degrees needs
   // about 1.4x the width of the same rectangle square on, so holding the scale
   // constant runs the corners off the sides at exactly the moment the object
   // is doing the thing worth watching.
-  const room = wide ? Math.min(w * 0.46, h * 1.05) : Math.min(w, h)
-  const scale = room * (wide ? 0.60 : 0.36) * (1 - 0.15 * Math.sin(turning * Math.PI))
-  const pr = wide
-    ? projector(w * 0.71, h * 0.52, scale)
-    : projector(w / 2, h * 0.63, scale)
+  const scale = Math.min(w, h) * 0.62 * (1 - 0.15 * Math.sin(turning * Math.PI))
+  const pr = projector(w / 2, h * 0.54, scale)
 
   // Painter's order, recomputed every frame: which leaf is nearer changes as
   // the hinge comes round, and a fixed order puts the deck through the screen

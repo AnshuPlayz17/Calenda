@@ -1,392 +1,330 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion, useScroll, useSpring } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
 import { Brand } from '@/components/Brand'
-import { Stage, Stills } from '@/features/landing/scrub/Stage'
-import type { Palette } from '@/features/landing/scrub/draw'
-import { PANELS, panelAt } from '@/features/landing/scrub/panels'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { Atmosphere } from '@/features/landing/Atmosphere'
+import { NumbersScene } from '@/features/landing/NumbersScene'
+import { QuestionScene } from '@/features/landing/QuestionScene'
+import { Spotlight } from '@/components/motion/Spotlight'
+import { MorphScene } from '@/features/landing/MorphScene'
+import { PipelineScene } from '@/features/landing/PipelineScene'
+import { WorldScene } from '@/features/landing/WorldScene'
+import { FounderScene } from '@/features/landing/FounderScene'
+import { ImportScene } from '@/features/landing/ImportScene'
+import { StackScene } from '@/features/landing/StackScene'
+import { ProofScene } from '@/features/landing/ProofScene'
+import { OpeningScene } from '@/features/landing/OpeningScene'
+import { SchoolsScene } from '@/features/landing/SchoolsScene'
+import { ScrollCompanion } from '@/features/landing/ScrollCompanion'
+import { SeamMorph } from '@/features/landing/SeamMorph'
+import { Approach, Chapter } from '@/features/landing/Chapter'
+import { useChapters } from '@/features/landing/useChapters'
+import { LANDING_SECTIONS } from '@/features/landing/sections'
 import { useAuth } from '@/lib/auth'
 import { usePreview } from '@/lib/preview'
 
 /**
- * The front door: one drawing, scrubbed by the scroll, and three panels over it.
+ * The same page serves two jobs, and the difference is one redirect.
  *
- * Nothing on this page scrolls in the ordinary sense. The header, the footer,
- * the drawing and all three panels are fixed; the only thing with height is an
- * empty track, and moving down it advances a single number. That number opens a
- * book, turns its spine into a hinge, and cross-fades the three things Calenda
- * actually claims to do.
- *
- * It replaces an eleven-chapter page, and the reason is not that the old one
- * was bad. It was that it argued eleven times. This argues three, and each of
- * the three is a sentence already checked into docs/FACTS.md.
- *
- * The same page still serves two jobs. At `/` it is the front door, so somebody
- * already signed in is sent to their dashboard rather than shown a pitch for
- * what they already have. At `/about` it stays put and points back to the
- * dashboard instead of at a sign-up form.
+ * At `/` it is the front door, so someone already signed in is sent to their
+ * dashboard rather than being shown a pitch for something they already have.
+ * At `/about` it is a page they asked for from inside the app -- so it stays
+ * put, and its calls to action point back to the dashboard instead of to a
+ * sign-up form. Two routes rather than one route with a flag in history state,
+ * because /about survives a refresh and can be sent to someone else.
  */
 export function Landing({ redirectSignedIn = true }: { redirectSignedIn?: boolean }) {
   const { session, loading } = useAuth()
   const preview = usePreview()
   const { hash } = useLocation()
-  const still = useReducedMotion()
-  const signedIn = Boolean(session || preview.active)
+  const chapters = useChapters()
 
-  const root = useRef<HTMLDivElement | null>(null)
-  const panels = useRef<Array<HTMLElement | null>>([])
-  const meter = useRef<HTMLSpanElement | null>(null)
-  const ticks = useRef<Array<HTMLElement | null>>([])
+  // Built once. `useChapters` sets state on every chapter boundary, and this
+  // component renders the whole page -- so without this, crossing into a new
+  // chapter re-rendered all twelve scenes, the import's fifty-one chips and
+  // the world map's thirteen hundred dots included. The harness measured it
+  // exactly: twelve chapter boundaries, nine to twelve frames over 100ms, on
+  // every viewport and under reduced motion, where nothing else was moving.
+  // Stable elements let React skip those subtrees entirely.
+  const page = useMemo(() => (
+    <>
+      <Chapter id="top" accent={accentOf('top')}><Opening /></Chapter>
+      <Chapter id="schools" accent={accentOf('schools')}><SchoolsScene /></Chapter>
+      <Chapter id="morph" accent={accentOf('morph')}><MorphScene /></Chapter>
+      <Chapter id="pipeline" accent={accentOf('pipeline')}><PipelineScene /></Chapter>
+      <Chapter id="import" accent={accentOf('import')}><ImportScene /></Chapter>
+      <Chapter id="more" accent={accentOf('more')}><StackScene /></Chapter>
+      <Chapter id="numbers" accent={accentOf('numbers')}><NumbersScene /></Chapter>
+      <Chapter id="questions" accent={accentOf('questions')}><QuestionScene /></Chapter>
+      <Chapter id="world" accent={accentOf('world')}><WorldScene /></Chapter>
+      <Chapter id="privacy" accent={accentOf('privacy')}><ProofScene /></Chapter>
+      <FounderScene />
+      <Chapter id="start" accent={accentOf('start')}><Closing /></Chapter>
+    </>
+  ), [])
 
-  const [mono, setMono] = useState(() => {
-    // Per-viewer convenience, so it is browser storage rather than the
-    // database -- and every read is wrapped, because a private window can
-    // throw on the way in rather than returning nothing.
-    try { return window.localStorage.getItem('calenda.landing.mono') === '1' } catch { return false }
-  })
-
+  // Hash routing means the browser never scrolls to a fragment itself -- the
+  // whole path already lives in the hash. Anyone arriving from the app sidebar
+  // has asked for one section specifically, so take them there.
+  //
+  // Not to its top, though. That section is a pinned scene whose panel is shut
+  // at scroll progress zero, so landing on the boundary lands on a blank frame.
+  // Aim past the point where it has finished opening.
   useEffect(() => {
-    try { window.localStorage.setItem('calenda.landing.mono', mono ? '1' : '0') } catch { /* no-op */ }
-  }, [mono])
-
-  /**
-   * The ink the drawing uses, read from the page rather than hard-coded.
-   *
-   * It has to come from computed style: the app has three themes and this page
-   * adds a mono switch on top of them, and a canvas cannot inherit a custom
-   * property. Read on demand rather than cached, so a theme change is picked up
-   * by the next frame without anything having to know a change happened.
-   */
-  const paletteOf = useCallback((): Palette => {
-    const el = root.current
-    if (!el) return { ink: 'rgb(30, 55, 101)', paper: 'rgb(255, 255, 255)', tint: 1 }
-    const cs = getComputedStyle(el)
-    return {
-      ink: cs.getPropertyValue('--scrub-ink').trim() || 'rgb(30, 55, 101)',
-      paper: cs.getPropertyValue('--scrub-paper').trim() || 'rgb(255, 255, 255)',
-      tint: mono ? 0 : 1,
-    }
-  }, [mono])
-
-  /**
-   * Written straight onto style properties out of the rAF callback.
-   *
-   * Not React state: this runs sixty times a second and there is nothing to
-   * reconcile -- three opacities, three transforms and one scale. Routing that
-   * through a re-render is how a scroll page starts dropping frames.
-   */
-  const onFrame = useCallback((p: number) => {
-    if (meter.current) meter.current.style.transform = `scaleX(${p})`
-    PANELS.forEach((panel, i) => {
-      const el = panels.current[i]
+    if (hash !== '#founder') return
+    const id = window.setTimeout(() => {
+      const el = document.getElementById('founder')
       if (!el) return
-      const { o, y } = panelAt(panel.cue, p)
-      el.style.opacity = String(o)
-      el.style.transform = `translate3d(0, ${y}px, 0)`
-      el.style.pointerEvents = o > 0.6 ? 'auto' : 'none'
-      const tick = ticks.current[i]
-      // The rail is written from the same loop for the same reason the panels
-      // are: it is three opacities, and routing them through React state would
-      // re-render the page sixty times a second to change a number.
-      if (tick) tick.style.opacity = String(0.34 + o * 0.66)
-    })
-  }, [])
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const track = Math.max(0, el.offsetHeight - window.innerHeight)
+      window.scrollTo({ top: top + track * 0.55, behavior: 'auto' })
+    }, 60)
+    return () => window.clearTimeout(id)
+  }, [hash])
 
-  // The founder panel is not on this page any more; it is its own route. An
-  // old link that lands here still has somewhere to go, because a link that
-  // used to work and now silently does nothing is worse than a missing page.
-  if (hash === '#founder') return <Navigate to="/created-by" replace />
-
-  if (redirectSignedIn && !loading && signedIn) {
+  if (redirectSignedIn && !loading && (session || preview.active)) {
     return <Navigate to="/dashboard" replace />
   }
 
-  const action = signedIn
-    ? { to: '/dashboard', label: 'Back to dashboard' }
-    : { to: '/sign-up', label: 'Create an account' }
-
   return (
-    <div
-      ref={root}
-      data-mono={mono ? 'on' : 'off'}
-      className="landing-scrub relative min-h-dvh bg-bg text-text"
-    >
-      <Chrome mono={mono} onMono={() => setMono((v) => !v)} action={action} />
-
-      {still ? (
-        <StillPage paletteOf={paletteOf} action={action} />
-      ) : (
-        <>
-          {/* The drawing. Fixed, behind everything, and the only thing the
-              scroll actually moves. */}
-          <div className="pointer-events-none fixed inset-0 z-0">
-            <Stage onFrame={onFrame} paletteOf={paletteOf} />
-            {/* The wash. Line art is all edges, and an edge crossing a
-                letterform is worse than a photograph behind one -- the first
-                build ran the ruled lines of an agenda page straight through
-                'Everything you need for school'. Heavier in the middle, where
-                the headline is, and clearing at the sides so the object is
-                still visibly an object. */}
-            <div className="landing-veil absolute inset-0" />
-          </div>
-
-          <span
-            ref={meter}
-            aria-hidden
-            className="fixed left-0 top-0 z-50 h-0.5 w-full origin-left scale-x-0 bg-text/55"
-          />
-
-          {/* The rail, in the left margin the 1240px container leaves over.
-              It answers "through what" rather than "how far" -- the hairline
-              above already does the second -- and it is the only thing on the
-              page that shows all three claims at once.
-
-              2xl, not xl. A 1240px container inside a 1280px window leaves
-              twenty pixels a side, and the first version put a labelled rail
-              in them: the words landed directly on top of the paragraph. The
-              rail only exists where there is genuinely a margin to put it in,
-              which starts at 1536. */}
-          <nav
-            aria-label="Sections"
-            className="pointer-events-none fixed left-0 top-1/2 z-30 hidden -translate-y-1/2
-                       flex-col gap-6 pl-8 2xl:flex 2xl:pl-12"
-          >
-            {PANELS.map((panel, i) => (
-              <a
-                key={panel.id}
-                href={`#${panel.id}`}
-                ref={(el) => { ticks.current[i] = el }}
-                style={{ opacity: 0.34 }}
-                className="pointer-events-auto flex items-center gap-3 no-underline"
-              >
-                <span className="h-px w-6 bg-text" aria-hidden />
-                <span className="label-caps whitespace-nowrap text-[11px] text-text">
-                  {panel.label}
-                </span>
-              </a>
-            ))}
-          </nav>
-
-          <main className="pointer-events-none fixed inset-0 z-20">
-            {PANELS.map((panel, i) => (
-              <section
-                key={panel.id}
-                ref={(el) => { panels.current[i] = el }}
-                style={{ opacity: 0 }}
-                className="absolute inset-0 flex items-center
-                           px-5 pt-[max(104px,calc(env(safe-area-inset-top,0px)+88px))]
-                           pb-[max(96px,calc(env(safe-area-inset-bottom,0px)+80px))] sm:px-8"
-              >
-                {/* One container at the app's own width, so the page has the
-                    same margins as every screen behind the front door. The
-                    type takes the left column; the right is left empty for the
-                    drawing to occupy. */}
-                <div className="mx-auto grid w-full max-w-[1240px] gap-10 lg:grid-cols-2 lg:gap-16">
-                  <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-                    <Copy panel={panel} first={i === 0} action={action} />
-                  </div>
-                </div>
-              </section>
-            ))}
-          </main>
-
-          {/* The anchors the header's section links jump to. They are the only
-              things inside the track, because the track's whole job is height:
-              scrolling to one of these lands the scrub on that panel. */}
-          <div className="relative z-[1] h-[560vh] min-h-[3200px]">
-            {PANELS.map((panel) => (
-              <span
-                key={panel.id}
-                id={panel.id}
-                aria-hidden
-                className="absolute left-0 h-px w-px"
-                style={{ top: `${panel.anchor * 100}%` }}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      <Foot pinned={!still} />
+    <div className="relative min-h-dvh bg-bg">
+      <Atmosphere />
+      <Header accent={chapters.section.accent} chapter={chapters.active} />
+      {/* The ids are the anchors the companion rail jumps to, and they live
+          here rather than inside each scene so the order of the page and the
+          order of the rail are the same list. FounderScene carries its own id
+          already -- it is linked to from the app sidebar. */}
+      {page}
+      <SeamMorph />
+      <Footer />
+      <ScrollCompanion
+        active={chapters.active}
+        accent={chapters.section.accent}
+        ready={chapters.ready}
+        goTo={chapters.goTo}
+      />
     </div>
   )
 }
 
-type Action = { to: string; label: string }
+/** The chapter list is the single source for a section's colour. */
+function accentOf(id: string) {
+  return LANDING_SECTIONS.find((s) => s.id === id)?.accent ?? 'indigo'
+}
 
-function Chrome({ mono, onMono, action }: { mono: boolean; onMono: () => void; action: Action }) {
+/** Signed in, or exploring the preview -- either way, not a prospect. */
+function useSignedIn() {
+  const { session } = useAuth()
+  const preview = usePreview()
+  return Boolean(session || preview.active)
+}
+
+function Header({ accent, chapter }: { accent: string; chapter: number }) {
+  const [scrolled, setScrolled] = useState(false)
+  const signedIn = useSignedIn()
+  const reduce = useReducedMotion()
+  const { scrollYProgress } = useScroll()
+  // Sprung, so a flick of the wheel does not make the rail twitch. Not sprung
+  // under reduced motion, where it becomes a plain readout rather than a moving
+  // thing -- the position is still useful, the movement is what was objected to.
+  const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 })
+  const readProgress = reduce ? scrollYProgress : smooth
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
+    // The accent is set here rather than on the page wrapper. It was on the
+    // wrapper first, so that the header and the companion could inherit the
+    // colour of whatever chapter was being read -- and changing an inherited
+    // custom property on an ancestor of the whole document forces a style
+    // recalculation of every element under it. Twelve chapters, twelve full
+    // recalcs, and the harness measured exactly that: nine to twelve frames
+    // over 100ms per traversal on every viewport, reduced motion included.
+    // Two small subtrees each carrying their own copy costs nothing.
     <header
-      className="fixed inset-x-0 top-0 z-40 flex items-center justify-between gap-3
-                 bg-gradient-to-b from-bg via-bg/80 to-transparent
-                 px-4 pb-4 pt-[max(14px,calc(env(safe-area-inset-top,0px)+12px))] sm:px-8"
+      data-accent={accent}
+      className={
+        'sticky top-0 z-40 transition-[background-color,border-color,backdrop-filter] duration-300 '
+        + (scrolled
+          ? 'border-b border-border bg-bg/85 backdrop-blur-xl'
+          : 'border-b border-transparent')
+      }
     >
-      <Brand size="sm" to="/" />
-      <nav className="flex shrink-0 items-center gap-3 sm:gap-5">
-        {/* Says what it will do, not what is on. A switch labelled with its own
-            current state is read as a label by half the people who see it. */}
-        <button
-          type="button"
-          onClick={onMono}
-          aria-pressed={mono}
-          className="hidden h-9 items-center rounded-lg border border-border px-3 text-[13px]
-                     text-text-muted transition-colors duration-150
-                     hover:border-border-strong hover:text-text sm:inline-flex"
-        >
-          {mono ? 'Colour' : 'Black and white'}
-        </button>
-        <Link
-          to={action.to}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-[14.5px]
-                     font-medium text-brand-contrast no-underline transition-transform duration-200
-                     hover:-translate-y-0.5"
-        >
-          {action.label}
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
-      </nav>
+      {/* How far through, in the one bar of chrome that is always on screen.
+          It takes the colour of the chapter being read, so it is a readout of
+          where you are as well as how far -- the only element that can be,
+          since it is the only one present in all twelve. */}
+      <motion.span
+        aria-hidden
+        style={{ scaleX: readProgress }}
+        className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-accent transition-colors duration-700"
+      />
+      <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between px-5 sm:px-8">
+        <div className="flex min-w-0 items-center gap-3">
+          <Brand size="sm" to="/" />
+          {/* Which chapter, beside the mark. Twelve names stacked in one slot
+              so the width never moves, cross-fading as the reader crosses each
+              boundary -- the header already knows where they are, and until now
+              only said it with a colour. */}
+          <span aria-hidden className="relative hidden h-4 items-center md:flex">
+            <span className="block h-4 w-px bg-border" />
+            <span className="relative ml-3 block">
+              {LANDING_SECTIONS.map((section, i) => (
+                <span
+                  key={section.id}
+                  className={
+                    'label-caps whitespace-nowrap transition-opacity duration-500 '
+                    + (i === 0 ? 'block ' : 'absolute inset-0 block ')
+                    + (i === chapter ? 'opacity-100' : 'opacity-0')
+                  }
+                >
+                  {section.label}
+                </span>
+              ))}
+            </span>
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <ThemeToggle />
+          <Link
+            to={signedIn ? '/dashboard' : '/sign-in'}
+            className="inline-flex h-9 items-center rounded-lg bg-text px-4 text-[13.5px] font-medium text-bg no-underline transition-opacity duration-150 hover:opacity-85"
+          >
+            {signedIn ? 'Back to dashboard' : 'Sign in'}
+          </Link>
+        </div>
+      </div>
     </header>
   )
 }
 
-function Copy({ panel, first, action }: { panel: typeof PANELS[number]; first: boolean; action: Action }) {
-  const Heading = first ? 'h1' : 'h2'
-  return (
-    <>
-      <p className="label-caps text-text-subtle">{panel.eyebrow}</p>
-      <Heading className="mt-4 max-w-[13ch] font-display text-display font-medium leading-[0.98] tracking-[-0.03em] lg:text-display-lg">
-        {panel.title}
-      </Heading>
-      <p className="mt-5 max-w-[46ch] text-[15px] leading-relaxed text-text-muted sm:hidden">
-        {panel.short}
-      </p>
-      <p className="mt-5 hidden max-w-[46ch] text-lg leading-relaxed text-text-muted sm:block">
-        {panel.body}
-      </p>
-
-      {/* The detail. Three panels of one sentence each read as a placeholder
-          however true the sentences are, and every figure here is read from
-          the sample data or the schools list rather than typed. */}
-      <dl className="mt-6 flex w-full max-w-[46ch] flex-col divide-y divide-border border-y border-border sm:mt-8">
-        {panel.facts.map((f) => (
-          <div key={f.note} className="flex items-baseline gap-3 py-2 text-left sm:gap-4 sm:py-3">
-            <dt className="w-[5.5rem] shrink-0 font-display text-[13.5px] font-medium leading-snug tracking-tight text-text sm:w-[6.5rem] sm:text-[15px]">
-              {f.figure}
-            </dt>
-            <dd className="text-[12.5px] leading-snug text-text-muted sm:text-[13.5px]">{f.note}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="pointer-events-auto mt-6 flex w-full justify-center sm:mt-8 lg:justify-start">
-        {panel.action === 'join' ? (
-          <Link
-            to={action.to}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-brand px-7 text-[15px]
-                       font-medium text-brand-contrast no-underline shadow-md
-                       transition-transform duration-200 hover:-translate-y-0.5"
-          >
-            {action.label}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-        ) : (
-          <Link
-            to="/privacy"
-            // Carries its own ground. An outline button over line art is an
-            // outline among other outlines -- it read as part of the drawing.
-            className="inline-flex h-12 items-center rounded-full border border-border bg-surface px-7
-                       text-[15px] text-text no-underline shadow-sm transition-colors duration-150
-                       hover:border-border-strong"
-          >
-            What it stores
-          </Link>
-        )}
-      </div>
-    </>
-  )
+/** The opening chapter needs to know whether the reader is already a user. */
+function Opening() {
+  return <OpeningScene signedIn={useSignedIn()} />
 }
 
-/**
- * The no-motion page: an ordinary document.
- *
- * The three panels are read in order with the three drawings above them, which
- * is the same argument the scrub makes and none of the mechanism. Rendering
- * this branch first and asking whether it still makes the point is the test
- * this project applies to every animation, and it does: a book, a book opening,
- * a laptop, with the three sentences underneath.
- */
-function StillPage({ paletteOf, action }: { paletteOf: () => Palette; action: Action }) {
+function Closing() {
+  const signedIn = useSignedIn()
+
   return (
-    <main className="mx-auto max-w-[1240px] px-5 pb-24 pt-32 sm:px-8">
-      <Stills paletteOf={paletteOf} />
-      <div className="mt-20 flex flex-col gap-20">
-        {PANELS.map((panel, i) => (
-          <section key={panel.id} id={panel.id} className="grid gap-8 lg:grid-cols-2 lg:gap-16">
-            <div>
-              <p className="label-caps text-text-subtle">{panel.eyebrow}</p>
-              {i === 0 ? (
-                <h1 className="mt-3 max-w-[14ch] font-display text-display font-medium leading-[1.0] tracking-[-0.03em]">
-                  {panel.title}
-                </h1>
-              ) : (
-                <h2 className="mt-3 max-w-[14ch] font-display text-display-sm font-medium leading-[1.05] tracking-[-0.02em]">
-                  {panel.title}
-                </h2>
+    // The last thing on a page that has spent nine thousand pixels showing
+    // rather than telling, so it does the opposite: no demo, no motion beyond
+    // the reveal, one sentence and a door.
+    <section className="relative z-10 overflow-hidden border-t border-border bg-surface px-5 py-28 sm:px-8 sm:py-36">
+      <Spotlight className="bg-accent/[0.10] blur-[90px]" size={460} />
+      {/* Arrived at the way every other chapter is -- out of depth, on the
+          reader's own scroll. It was a timed reveal, which is the one entrance
+          on the page that happens *to* the reader rather than because of them,
+          and after ten chapters of travelling into things a fade on a timer
+          reads as the page having stopped listening. */}
+      <Approach className="mx-auto max-w-[1240px]" depth={200}>
+        <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-end">
+          <div>
+            <p className="label-caps text-accent">Ready when you are</p>
+            <h2 className="mt-4 max-w-[16ch] font-display text-display font-medium leading-[1.02] tracking-[-0.02em] lg:text-display-lg">
+              Start the year knowing what's coming.
+            </h2>
+            <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-text-muted">
+              {signedIn
+                ? 'All three are already done on your account. This page is here so you can show someone what Calenda is.'
+                : 'Sign up and the school calendar is already there. Add your classes and everything else follows from them.'}
+            </p>
+            <div className="mt-9 flex flex-wrap items-center gap-4">
+              <Link
+                to={signedIn ? '/dashboard' : '/sign-up'}
+                className="group inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-7 text-[15px] font-medium text-accent-contrast no-underline shadow-md transition-transform duration-200 hover:-translate-y-0.5"
+              >
+                {signedIn ? 'Back to dashboard' : 'Create an account'}
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
+              </Link>
+              {!signedIn && (
+                <Link
+                  to="/sign-in"
+                  className="text-[15px] text-text-muted underline-offset-4 hover:text-text hover:underline"
+                >
+                  or sign in
+                </Link>
               )}
-              <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-text-muted sm:text-lg">
-                {panel.body}
-              </p>
             </div>
-            {/* The same figures the moving page shows. A reader who asked for
-                no motion is not asking for less evidence. */}
-            <dl className="flex flex-col divide-y divide-border border-y border-border lg:mt-9">
-              {panel.facts.map((f) => (
-                <div key={f.note} className="flex items-baseline gap-4 py-3">
-                  <dt className="w-[6.5rem] shrink-0 font-display text-[15px] font-medium leading-snug tracking-tight text-text">
-                    {f.figure}
-                  </dt>
-                  <dd className="text-[13.5px] leading-snug text-text-muted">{f.note}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
-      </div>
-      <Link
-        to={action.to}
-        className="mt-16 inline-flex h-12 items-center gap-2 rounded-full bg-brand px-7 text-[15px]
-                   font-medium text-brand-contrast no-underline"
-      >
-        {action.label}
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Link>
-    </main>
+          </div>
+
+          {/* What actually happens, in order, so the first minute holds no
+              surprises. */}
+          <ol className="flex flex-col divide-y divide-border border-y border-border">
+            {[
+              'Sign in with Google, GitHub or Discord',
+              'The school calendar is already imported',
+              'Add your classes, and deadlines follow',
+            ].map((step, i) => (
+              <li
+                key={step}
+                className="group relative flex items-baseline gap-5 py-4 transition-[padding] duration-200 hover:pl-2"
+              >
+                {/* A rule that draws in from the left edge under the pointer.
+                    Three steps, and this is the only thing on the last screen
+                    that answers a hover at all. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-px origin-top scale-y-0 bg-accent transition-transform duration-300 group-hover:scale-y-100"
+                />
+                <span className="label-caps tabular shrink-0 text-accent">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-[15px] leading-snug text-text">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </Approach>
+    </section>
   )
 }
 
-function Foot({ pinned }: { pinned: boolean }) {
+function Footer() {
+  // The extra bottom padding is for the companion pill, which is fixed to the
+  // bottom of the window on anything narrower than xl. Without it the last line
+  // of the disclaimer ends up underneath the control.
   return (
-    <footer
-      className={
-        'z-40 flex flex-col items-center gap-1 px-5 pt-3 text-center'
-        + ' pb-[max(14px,calc(env(safe-area-inset-bottom,0px)+10px))]'
-        + (pinned
-          ? ' fixed inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/75 to-transparent'
-          : ' mt-16 border-t border-border')
-      }
-    >
-      <p className="text-[11px] leading-relaxed text-text-subtle">
-        A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an official
-        product of any school.
-      </p>
-      <p className="text-[11px] text-text-subtle">
-        <Link to="/privacy" className="underline underline-offset-2 hover:text-text-muted">Privacy</Link>
-        {' · '}
-        <Link to="/terms" className="underline underline-offset-2 hover:text-text-muted">Terms</Link>
-        {' · '}
-        <Link to="/created-by" className="underline underline-offset-2 hover:text-text-muted">Who built it</Link>
-      </p>
+    <footer className="relative z-10 border-t border-border px-5 pb-24 pt-12 sm:px-8 xl:pb-12">
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Brand size="sm" showMark={false} />
+        <div className="flex flex-col gap-3 sm:items-end">
+          {/* The header is for getting into the product. This belongs at the
+              end, where somebody who has read the whole page is the one asking. */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:justify-end">
+            <a
+              href="#founder"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              About the founder
+            </a>
+            {/* Real links, not a hash. These are routes, and a reader who wants
+                the privacy policy wants it without scrolling back up a page
+                eleven chapters long. */}
+            <Link
+              to="/privacy"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              Privacy
+            </Link>
+            <Link
+              to="/terms"
+              className="text-sm font-medium text-text-muted no-underline underline-offset-4 transition-colors duration-150 hover:text-text hover:underline"
+            >
+              Terms
+            </Link>
+          </div>
+          <p className="max-w-[60ch] text-xs leading-relaxed text-text-subtle">
+            A personal project by Anshu Arunav. Not affiliated with, endorsed by, or an
+            official product of any school.
+          </p>
+        </div>
+      </div>
     </footer>
   )
 }

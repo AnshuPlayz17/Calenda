@@ -40,6 +40,11 @@ export const LANDING_SECTIONS: LandingSection[] = [
   // centring.
   { id: 'glance', label: 'A day', blurb: 'The same card, opened up', accent: 'indigo' },
   { id: 'schools', label: 'Schools', blurb: 'Fifteen independent schools across the GTA', accent: 'violet' },
+  // One object transforming, between many objects arriving (schools) and a
+  // line being drawn (the path). Placed here by the no-two-adjacent-chapters-
+  // move-alike rule rather than by theme: at the other end of the page it
+  // would sit beside the founder chapter, which is also a hinge swinging open.
+  { id: 'morph', label: 'From paper', blurb: 'A document becomes a calendar', accent: 'blue' },
   { id: 'pipeline', label: 'The path', blurb: 'Where a date comes from, end to end', accent: 'azure' },
   { id: 'import', label: 'The import', blurb: 'Fifty-one dates, fifteen of them identical', accent: 'cyan' },
   { id: 'more', label: 'What else', blurb: 'Classes, deadlines and reminders', accent: 'teal' },
