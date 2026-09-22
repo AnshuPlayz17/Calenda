@@ -46,6 +46,28 @@ overflow, any element wider than the viewport, and console errors.
 The bar the landing page currently holds: **p95 17 ms, zero frames over 50 ms,
 all nine configurations clean.** Do not regress it.
 
+**"Zero frames over 50 ms" does not survive a full traversal of this page, and
+never did.** That figure comes from a harness measuring nine configurations of
+a few thousand pixels each. Driven end to end -- one `scrollBy` per animation
+frame down all 31,855 pixels, about 75,000 frames -- the untouched
+eleven-chapter page measures **p95 18-19 ms with 12 to 23 frames over 50 ms**,
+twice, with nothing else running. p95 is honest; the zero is an artifact of how
+far the old harness scrolled, and it has been quoted since as though it
+described the whole page.
+
+Measured on 2026-09-22 by building the page from before that day's work in a
+separate worktree and running both through the identical probe, back to back.
+The same run on the branch that adds a chapter and a seam layer gives 18-19 ms
+and 22/15 long frames -- inside the baseline's own spread, which is 12 to 23
+with no code change at all. **A difference smaller than the control's variance
+is not a difference.**
+
+That comparison exists because the first reading of the branch was p95 28 ms
+with 58 long frames, and it was taken seconds after a build finished. This file
+already says not to run the gates beside the harness; it has now been ignored
+three times in one session by the same reader. **A number that alarming is a
+reason to re-measure alone before it is a reason to look at the code.**
+
 **`pgrep -f "node appcheck"` matches the shell that is waiting for it.** A
 wait-loop whose own command line contains the pattern it greps for never exits,
 and the thing it was supposed to start never starts. Two audit runs were
