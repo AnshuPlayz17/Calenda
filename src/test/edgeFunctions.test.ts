@@ -272,6 +272,79 @@ describe('the Edge Functions', () => {
     expect(cors).toMatch(/'Vary':\s*'Origin'/)
   })
 
+  /**
+   * Comments off before anything is searched for.
+   *
+   * This project has now shipped six guards that passed while the thing they
+   * guarded was broken, and every one of them matched the paragraph explaining
+   * the property rather than the code implementing it. `calenda-delete-account`
+   * has forty lines of header saying, in English, that the id comes from the
+   * token and never from the request -- which is exactly the sentence a naive
+   * regex for that property would find.
+   */
+  function code(file: string): string {
+    return readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+  }
+
+  it('the delete function can only ever name the caller\'s own account', () => {
+    const src = code(join(ROOT, 'calenda-delete-account', 'index.ts'))
+
+    // The uid is read out of the verified token, and that is the only place it
+    // can come from.
+    expect(src).toMatch(/const uid = user\.id/)
+    expect(src).toMatch(/deleteUser\(uid\)/)
+
+    // Nothing reads the request body or the query string. This is the whole
+    // control: a function that accepts an id is a function that deletes any
+    // account the moment somebody moves a check, and this project has already
+    // found three service-role writes keyed on a caller-supplied id.
+    expect(src, 'it parses the request body').not.toMatch(/req\.(json|text|formData)\(/)
+    expect(src, 'it reads the query string').not.toMatch(/searchParams/)
+
+    // And the delete is called exactly once, so a second call site cannot be
+    // added carrying something else.
+    expect(src.match(/deleteUser\(/g) ?? []).toHaveLength(1)
+  })
+
+  it('the delete function clears the uploads before the account that names them', () => {
+    const src = code(join(ROOT, 'calenda-delete-account', 'index.ts'))
+
+    // The CALLS, not the names. Both appear in the header's prose.
+    const removeAt = src.indexOf('.remove(')
+    const deleteAt = src.indexOf('deleteUser(uid)')
+    expect(removeAt).toBeGreaterThan(-1)
+    expect(deleteAt).toBeGreaterThan(-1)
+
+    // `storage.objects` has no foreign key into `profiles`, so the cascade
+    // that takes every row does not take the files. Once the auth user is
+    // gone the uid is the only thing that names their folder and nothing is
+    // left that knows it -- report cards would sit in the private bucket
+    // forever with no record they belong to a deleted account.
+    expect(removeAt).toBeLessThan(deleteAt)
+  })
+
+  it('the delete function says what failed under the key the client reads', () => {
+    const src = code(join(ROOT, 'calenda-delete-account', 'index.ts'))
+
+    // supabase-js reports every non-2xx as one generic FunctionsHttpError, so
+    // the sentence the function wrote is recoverable only from `body.message`.
+    // Written under any other key it arrives as "please try again", which is
+    // the one thing a person deleting their account must not be told.
+    // The RESPONSE LITERAL, not the function that builds it. Anchoring on
+    // `function problem` and searching the body for `message:` passed with the
+    // key renamed, because `problem` narrows its argument with
+    // `(detail as { message: unknown })` three lines above the response -- a
+    // type annotation, matched by a regex looking for an object key. That is
+    // the same trap as the four before it, hit inside the guard written after
+    // reading about them. Watch a guard fail before believing it.
+    const body = src.slice(src.indexOf('function problem'))
+    const literal = body.slice(body.indexOf('return json({'), body.indexOf('}, cors, 500)'))
+    expect(literal).toMatch(/\bmessage:/)
+    expect(literal).toMatch(/deleted: false/)
+  })
+
   it('no function hardcodes a credential', () => {
     for (const file of files) {
       const src = readFileSync(file, 'utf8')

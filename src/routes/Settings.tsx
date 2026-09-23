@@ -8,6 +8,8 @@ import { ParentsSection } from '@/features/parents/ParentsSection'
 import { useSchoolYear } from '@/features/schoolYear/SchoolYearProvider'
 import { CycleCard } from '@/features/timetable/CycleCard'
 import { AccountCard } from '@/features/settings/AccountCard'
+import { DeleteAccountCard } from '@/features/settings/DeleteAccountCard'
+import { SignInCard } from '@/features/settings/SignInCard'
 import { JoinedClassesCard } from '@/features/teaching/JoinedClassesCard'
 import { agendaLabel } from '@/lib/datetime'
 
@@ -130,6 +132,17 @@ export function SettingsPage() {
         <AccountCard />
       </motion.section>
 
+      <motion.section {...rise(9)}>
+        <SignInCard />
+      </motion.section>
+
+      {/* After the account card, because it is the last thing you would do to
+          an account and the first thing you would hit by accident if it sat
+          above the form for correcting a typo in your name. */}
+      <motion.section {...rise(10)}>
+        <DeleteAccountCard />
+      </motion.section>
+
       {/* Last, and not a card. Somebody scrolling Settings is looking for a
           control; these two are documents, and giving them the same weight as
           "Appearance" would be pretending there is something here to change.
@@ -138,7 +151,7 @@ export function SettingsPage() {
           looks for them -- the links on the landing page and the sign-up form
           are for people who do not have an account yet, and a reader who wants
           to know what is held on them should not have to sign out to find out. */}
-      <motion.section {...rise(9)} className="pb-2">
+      <motion.section {...rise(11)} className="pb-2">
         <p className="text-[13px] text-text-subtle">
           <Link to="/privacy" className="underline underline-offset-2 hover:text-text-muted">
             Privacy

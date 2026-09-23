@@ -279,10 +279,17 @@ export const PRIVACY: Section[] = [
       'browser, with no request to any server. It opens in Google Calendar, Apple Calendar, ' +
       'Outlook and anything else that reads the format. An app you can only leave by abandoning ' +
       'your data is a trap, and this is the way out of that.',
-      'There is not yet a button that deletes your whole account. Until there is, write to the ' +
-      'address below and it will be deleted -- the account and everything attached to it, which ' +
-      'the database removes together. This page will change when the button exists rather than ' +
-      'describing one that does not.',
+      'Settings has a button that deletes your whole account. It removes the account itself and ' +
+      'everything attached to it -- classes and notes, calendar and assignments, marks and any ' +
+      'report card you uploaded, reminders, and any link with a parent -- along with every file ' +
+      'you uploaded. It asks you to type your email address first, because it cannot be undone ' +
+      'and there is no copy kept.',
+      'Two things deliberately survive it, and neither names you afterwards. If you ever ' +
+      'approved a community event or imported a school calendar, the record that it was ' +
+      'approved or imported stays, with the person on it set to nobody. Deleting those would ' +
+      'destroy the history of shared data rather than erase you from it.',
+      'If the button fails it says so and says which step it failed at, and your account is ' +
+      'still there. Writing to the address below still works.',
     ],
   },
   {
@@ -392,7 +399,7 @@ export const TERMS: Section[] = [
     heading: 'Ending it',
     body: [
       'You can stop using Calenda whenever you like. Export your calendar first if you want ' +
-      'it, then ask for your account to be deleted using the address on the privacy page.',
+      'it, then delete your account from Settings.',
       'Access can be withdrawn if an account is being used in the ways listed above, or if ' +
       'Calenda shuts down. If it is shutting down there will be notice, and enough time to ' +
       'get your data out.',

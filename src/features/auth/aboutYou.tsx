@@ -157,18 +157,29 @@ export function RelationPicker({ value, onChange }: {
  * way out is not a validation, it is a door shut on everybody else -- so
  * choosing it reveals a box and that box is required in its place.
  */
-export function SchoolPicker({ value, other, onChange, onOther }: {
+export function SchoolPicker({ value, other, onChange, onOther, required = true }: {
   value: string
   other: string
   onChange: (v: string) => void
   onOther: (v: string) => void
+  /**
+   * Required on the sign-up form, where every answer is; optional in Settings,
+   * where it is not.
+   *
+   * An account can reach Settings with no school -- everybody who signed in
+   * with Google before /first-run existed, and everybody who answered the
+   * question before this picker did. A `required` select with an empty value
+   * blocks the whole form, so the card for correcting a typo in your name
+   * would refuse to save for exactly the people with the most to correct.
+   */
+  required?: boolean
 }) {
   return (
     <div>
       <label htmlFor="school" className="text-[13px] font-medium text-text">School</label>
       <select
         id="school"
-        required
+        required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1.5 h-11 w-full rounded-lg border border-border bg-surface px-3 text-[14px] text-text transition-colors duration-150 hover:border-border-strong focus:border-brand focus:outline-none"
@@ -184,7 +195,7 @@ export function SchoolPicker({ value, other, onChange, onOther }: {
         <div className="mt-3">
           <Input
             label="Which school?"
-            required
+            required={required}
             value={other}
             onChange={(e) => onOther(e.target.value)}
           />

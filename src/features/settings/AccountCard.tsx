@@ -3,6 +3,9 @@ import { Check, Loader2 } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { SCHOOLS } from '@/data/schools'
+import { SchoolPicker } from '@/features/auth/aboutYou'
+import { OTHER_SCHOOL, schoolValue } from '@/features/auth/schoolChoice'
 import type { ChosenRole } from '@/features/auth/roleCopy'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -17,13 +20,23 @@ import { supabase } from '@/lib/supabase'
  * screen worse rather than better: a typo made once at sign-up would have been
  * permanent.
  *
- * Email and time zone stay read-only, for different reasons. Changing an
- * address is an auth operation with its own confirmation flow. The time zone
- * genuinely is read from the device now -- a claim this comment made one
- * commit too early, before anything in the app called resolvedOptions() and
- * while every account in the world still said America/Toronto. Offering a
- * picker would be offering a setting the app then overwrites on next load, so
- * it says where the value comes from instead.
+ * School joined the editable list on 2026-09-22, for the reason the name and
+ * the role are here at all: it is asked on the sign-up form and was correctable
+ * nowhere, which is the same defect one field along. It renders only for a
+ * student, because the sign-up form deliberately does not ask a teacher -- see
+ * `asksSchool` below.
+ *
+ * Email moved OUT of this card rather than becoming editable in it. Changing
+ * an address is an auth operation with a confirmation round trip and nothing
+ * to do with the profile row this form writes, so it lives in `SignInCard`
+ * with the password, which has the same shape.
+ *
+ * Time zone stays read-only and is the one field that should. It genuinely is
+ * read from the device -- a claim this comment made one commit too early,
+ * before anything in the app called resolvedOptions() and while every account
+ * in the world still said America/Toronto. Offering a picker would be offering
+ * a setting the app then overwrites on next load, so it says where the value
+ * comes from instead.
  */
 /**
  * The stored role, as one of the three the picker offers.
@@ -45,6 +58,11 @@ export function AccountCard() {
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<ChosenRole>('student')
   const [grade, setGrade] = useState('')
+  // Two pieces of state for one stored value: which option is selected, and
+  // what was typed when that option is "another school". `schoolValue()`
+  // collapses them, the same way the sign-up form does.
+  const [school, setSchool] = useState('')
+  const [schoolOther, setSchoolOther] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,12 +73,35 @@ export function AccountCard() {
     setFullName(profile.full_name ?? '')
     setRole(pickerRole(profile.role))
     setGrade(profile.grade ?? '')
+
+    // A stored school that is not one of the fifteen came from the "another
+    // school" box, so it goes back into that box rather than being silently
+    // dropped by a select that has no option matching it. Getting this wrong
+    // shows an empty picker to somebody who answered, and saving would then
+    // erase the answer they could still see a moment ago.
+    const stored = profile.school ?? ''
+    if (stored === '') { setSchool(''); setSchoolOther('') }
+    else if (SCHOOLS.some((s) => s.name === stored)) { setSchool(stored); setSchoolOther('') }
+    else { setSchool(OTHER_SCHOOL); setSchoolOther(stored) }
   }, [profile])
 
   const isAdmin = profile?.role === 'admin'
+
+  /**
+   * School is a student's question and nobody else's.
+   *
+   * The sign-up form deliberately asks a teacher nothing on its last step, and
+   * school is the reason: `profiles.school` is free text that nothing reads,
+   * which is harmless beside a student's own record and an institutional claim
+   * beside somebody who teaches. Rendering it here for a teacher would reopen
+   * exactly the question that form refuses to ask. A parent is not asked
+   * either -- the child's school is the child's answer, not theirs.
+   */
+  const asksSchool = role === 'student'
   const dirty = Boolean(profile) && (
     fullName !== (profile?.full_name ?? '')
     || grade !== (profile?.grade ?? '')
+    || (asksSchool && schoolValue(school, schoolOther) !== (profile?.school ?? ''))
     // An admin's radios never match their stored role, so counting that as an
     // edit would leave Save permanently lit for them.
     || (!isAdmin && role !== pickerRole(profile?.role))
@@ -80,6 +121,11 @@ export function AccountCard() {
       .update({
         full_name: fullName.trim() || null,
         grade: grade.trim() || null,
+        // Only sent where it is asked. A patch that always carried `school`
+        // would blank a student's answer the moment they switched their role
+        // to teacher and pressed Save, because the field is not rendered
+        // there and its state would be empty.
+        ...(asksSchool ? { school: schoolValue(school, schoolOther) || null } : {}),
       })
       .eq('id', user.id)
 
@@ -157,11 +203,17 @@ export function AccountCard() {
           hint="Optional. Only you and a linked parent can see it."
         />
 
+        {asksSchool && (
+          <SchoolPicker
+            required={false}
+            value={school}
+            other={schoolOther}
+            onChange={(v) => { setSchool(v); setSaved(false) }}
+            onOther={(v) => { setSchoolOther(v); setSaved(false) }}
+          />
+        )}
+
         <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-          <div>
-            <dt className="label-caps">Email</dt>
-            <dd className="mt-0.5 truncate text-[13.5px] text-text">{user?.email ?? '—'}</dd>
-          </div>
           <div>
             <dt className="label-caps">Time zone</dt>
             <dd className="mt-0.5 text-[13.5px] text-text">{profile?.timezone ?? '—'}</dd>
